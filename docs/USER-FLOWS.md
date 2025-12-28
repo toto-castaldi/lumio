@@ -1,0 +1,696 @@
+# Lumio — User Flows
+
+**Versione:** 1.0  
+**Data:** 2025-12-28  
+**Status:** Draft
+
+---
+
+## 1. Overview
+
+Questo documento descrive i principali percorsi utente in Lumio. Ogni flow include stati, azioni, e condizioni per guidare lo sviluppo dell'interfaccia.
+
+### Legenda
+
+```
+[Schermata]     → Pagina/view dell'app
+(Azione)        → Azione dell'utente
+{Condizione}    → Branch logico
+<Sistema>       → Azione automatica del sistema
+```
+
+---
+
+## 2. Onboarding (Primo Accesso)
+
+### 2.1 Flow Diagram
+
+```
+┌─────────────────┐
+│  Landing Page   │
+│  [Web/Mobile]   │
+└────────┬────────┘
+         │
+         ▼
+    (Login Google)
+         │
+         ▼
+┌─────────────────┐
+│  Supabase Auth  │
+│  <crea utente>  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────┐
+│  [Setup API Keys]               │
+│                                 │
+│  "Per generare le domande,      │
+│   Lumio usa AI. Configura       │
+│   le tue API keys."             │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │ Provider: [OpenAI ▼]    │    │
+│  │ API Key:  [••••••••••]  │    │
+│  │ [Test Connessione]      │    │
+│  └─────────────────────────┘    │
+│                                 │
+│  [Continua →]                   │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+        {API Key valida?}
+           │       │
+          No      Sì
+           │       │
+           ▼       ▼
+    [Errore]    ┌─────────────────────────────────┐
+    "Chiave     │  [Aggiungi Repository]          │
+     invalida"  │                                 │
+                │  "Aggiungi il tuo primo deck    │
+                │   di flashcard"                 │
+                │                                 │
+                │  ┌─────────────────────────┐    │
+                │  │ URL: [github.com/...]   │    │
+                │  │ Tipo: [Pubblico ▼]      │    │
+                │  │ [+ Aggiungi]            │    │
+                │  └─────────────────────────┘    │
+                │                                 │
+                │  [Continua →]                   │
+                └────────────────┬────────────────┘
+                                 │
+                                 ▼
+                        {Repo valido?}
+                           │       │
+                          No      Sì
+                           │       │
+                           ▼       ▼
+                    [Errore]    <Sync repository>
+                    "Formato         │
+                     non valido"     ▼
+                             ┌─────────────────────────────────┐
+                             │  [Crea Obiettivo]               │
+                             │                                 │
+                             │  "Cosa vuoi studiare?"          │
+                             │                                 │
+                             │  Tag disponibili:               │
+                             │  [pilates] [respirazione]       │
+                             │  [postura] [core] ...           │
+                             │                                 │
+                             │  Target: [85%] mastery          │
+                             │  Entro:  [📅 15 Mar 2025]       │
+                             │                                 │
+                             │  [Inizia a studiare →]          │
+                             └────────────────┬────────────────┘
+                                              │
+                                              ▼
+                                      ┌───────────────┐
+                                      │  [Dashboard]  │
+                                      │  Home App     │
+                                      └───────────────┘
+```
+
+### 2.2 Step-by-Step
+
+| Step | Schermata | Azione Utente | Sistema | Next |
+|------|-----------|---------------|---------|------|
+| 1 | Landing | Click "Accedi con Google" | Redirect OAuth | 2 |
+| 2 | Google OAuth | Autorizza | Crea utente in DB | 3 |
+| 3 | Setup API Keys | Inserisce API key, click "Test" | Valida key con LLM provider | 4 |
+| 4 | Setup API Keys | Click "Continua" | Salva key (encrypted) | 5 |
+| 5 | Aggiungi Repository | Inserisce URL, click "Aggiungi" | Valida formato, avvia sync | 6 |
+| 6 | Aggiungi Repository | Click "Continua" | - | 7 |
+| 7 | Crea Obiettivo | Seleziona tag, imposta target e deadline | Crea obiettivo, calcola piano | 8 |
+| 8 | Dashboard | - | Mostra home con prima sessione pronta | - |
+
+### 2.3 Validazioni
+
+| Campo | Regola | Messaggio Errore |
+|-------|--------|------------------|
+| API Key OpenAI | Inizia con `sk-`, test call funziona | "Chiave non valida o scaduta" |
+| API Key Anthropic | Inizia con `sk-ant-`, test call funziona | "Chiave non valida o scaduta" |
+| URL Repository | URL Git valido, README con lumio_format_version | "Repository non compatibile con Lumio" |
+| Obiettivo Tag | Almeno 1 tag selezionato | "Seleziona almeno un tag" |
+| Obiettivo Deadline | Data futura | "La deadline deve essere nel futuro" |
+
+---
+
+## 3. Sessione di Studio
+
+### 3.1 Flow Diagram
+
+```
+┌─────────────────────────────────┐
+│  [Dashboard]                    │
+│                                 │
+│  Obiettivo: Pilates             │
+│  Progresso: 45% → 85%           │
+│  Card da studiare oggi: 12      │
+│                                 │
+│  [▶ Studia]                     │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+         {Obiettivo attivo?}
+           │           │
+          No          Sì
+           │           │
+           ▼           ▼
+    ┌───────────┐    ┌─────────────────────────────────┐
+    │ [Crea     │    │  [Studio - Domanda]             │
+    │ Obiettivo]│    │                                 │
+    └───────────┘    │  Card 1 di 12                   │
+                     │                                 │
+                     │  ┌─────────────────────────┐    │
+                     │  │                         │    │
+                     │  │  Qual è il principio    │    │
+                     │  │  fondamentale della     │    │
+                     │  │  respirazione nel       │    │
+                     │  │  Pilates?               │    │
+                     │  │                         │    │
+                     │  └─────────────────────────┘    │
+                     │                                 │
+                     │  ○ A) Respirazione addominale   │
+                     │  ○ B) Respirazione laterale     │
+                     │  ○ C) Respirazione toracica     │
+                     │  ○ D) Apnea controllata         │
+                     │                                 │
+                     └────────────────┬────────────────┘
+                                      │
+                                (Seleziona risposta)
+                                      │
+                                      ▼
+                     ┌─────────────────────────────────┐
+                     │  [Studio - Feedback]            │
+                     │                                 │
+                     │  ✅ Corretto!                   │
+                     │  ── oppure ──                   │
+                     │  ❌ Sbagliato                   │
+                     │                                 │
+                     │  La risposta corretta è B.      │
+                     │                                 │
+                     │  ┌─────────────────────────┐    │
+                     │  │  📖 Approfondimento     │    │
+                     │  │                         │    │
+                     │  │  La respirazione        │    │
+                     │  │  laterale permette di   │    │
+                     │  │  mantenere il core      │    │
+                     │  │  attivo durante...      │    │
+                     │  │  [leggi tutto]          │    │
+                     │  └─────────────────────────┘    │
+                     │                                 │
+                     │  Qualità domanda:               │
+                     │  [😠-2] [🙁-1] [😐0] [🙂+1] [😄+2] │
+                     │                                 │
+                     │  [Prossima →]                   │
+                     └────────────────┬────────────────┘
+                                      │
+                            <Aggiorna SM-2 score>
+                            <Salva feedback qualità>
+                                      │
+                                      ▼
+                              {Altre card?}
+                               │       │
+                              Sì      No
+                               │       │
+                               ▼       ▼
+                     [Domanda]    ┌─────────────────────────────────┐
+                     (loop)      │  [Studio - Completato]          │
+                                 │                                 │
+                                 │  🎉 Sessione completata!        │
+                                 │                                 │
+                                 │  Card studiate: 12              │
+                                 │  Corrette: 9 (75%)              │
+                                 │  Tempo: 8 minuti                │
+                                 │                                 │
+                                 │  Progresso obiettivo:           │
+                                 │  ████████░░ 52% (+7%)           │
+                                 │                                 │
+                                 │  {Obiettivo giornaliero?}       │
+                                 │       │           │             │
+                                 │   Raggiunto   Non ancora        │
+                                 │       │           │             │
+                                 │       ▼           ▼             │
+                                 │  [Continua?]  [Continua]        │
+                                 │  [Torna dom.] [Torna dash.]     │
+                                 │                                 │
+                                 └─────────────────────────────────┘
+```
+
+### 3.2 Step-by-Step
+
+| Step | Schermata | Azione Utente | Sistema | Next |
+|------|-----------|---------------|---------|------|
+| 1 | Dashboard | Click "Studia" | Carica card prioritarie | 2 |
+| 2 | Domanda | Legge domanda | - | 3 |
+| 3 | Domanda | Seleziona risposta | - | 4 |
+| 4 | Feedback | Legge feedback e approfondimento | Mostra risultato | 5 |
+| 5 | Feedback | Vota qualità domanda (-2 a +2) | Salva rating | 6 |
+| 6 | Feedback | Click "Prossima" | Aggiorna SM-2, carica prossima | 2 o 7 |
+| 7 | Completato | Vede recap | Aggiorna progresso obiettivo | 8 |
+| 8 | Completato | "Continua" o "Torna domani" | - | 1 o Dashboard |
+
+### 3.3 Logica Selezione Card
+
+```
+1. Filtra card con tag = obiettivo attivo
+2. Ordina per:
+   a. Card mai studiate (priorità alta)
+   b. Card con SM-2 due_date <= oggi
+   c. Card con mastery < target obiettivo
+3. Limita a N card (calcolato da study-planner per raggiungere deadline)
+```
+
+### 3.4 Generazione Domanda AI
+
+**Input al LLM:**
+```
+Card content: [contenuto markdown della card]
+Difficulty: [1-5]
+Language: [it/en]
+User history: [risposte precedenti su questa card, se esistono]
+```
+
+**Output atteso:**
+```json
+{
+  "question": "Qual è il principio...",
+  "options": [
+    {"id": "A", "text": "Respirazione addominale", "correct": false},
+    {"id": "B", "text": "Respirazione laterale", "correct": true},
+    {"id": "C", "text": "Respirazione toracica", "correct": false},
+    {"id": "D", "text": "Apnea controllata", "correct": false}
+  ],
+  "explanation": "La respirazione laterale permette di...",
+  "deep_dive": "Approfondimento più lungo..."
+}
+```
+
+---
+
+## 4. Gestione Obiettivi
+
+### 4.1 Flow Diagram — Creazione
+
+```
+┌─────────────────────────────────┐
+│  [Dashboard]                    │
+│                                 │
+│  Nessun obiettivo attivo        │
+│                                 │
+│  [+ Nuovo Obiettivo]            │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│  [Nuovo Obiettivo]              │
+│                                 │
+│  I tuoi repository:             │
+│  ☑ pilates-deck (45 card)       │
+│  ☑ yoga-basics (32 card)        │
+│  ☐ cooking-101 (28 card)        │
+│                                 │
+│  Tag disponibili (dai repo ☑):  │
+│  [pilates ●] [respirazione ●]   │
+│  [yoga ○] [postura ●] ...       │
+│                                 │
+│  Card totali selezionate: 28    │
+│                                 │
+│  ──────────────────────────     │
+│                                 │
+│  Target mastery: [85%]          │
+│  Deadline: [📅 ___________]     │
+│                                 │
+│  ──────────────────────────     │
+│                                 │
+│  Stima: ~15 card/giorno         │
+│  per raggiungere l'obiettivo    │
+│                                 │
+│  [Annulla]  [Crea Obiettivo]    │
+└────────────────┬────────────────┘
+                 │
+          (Crea Obiettivo)
+                 │
+                 ▼
+          <Disattiva obiettivo precedente>
+          <Crea nuovo obiettivo>
+          <Calcola piano studio>
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│  [Dashboard]                    │
+│                                 │
+│  Obiettivo attivo: Pilates      │
+│  0% → 85% entro 15 Mar          │
+│                                 │
+│  [▶ Studia]                     │
+└─────────────────────────────────┘
+```
+
+### 4.2 Flow Diagram — Dashboard Obiettivo
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  [Dashboard Obiettivo]                                      │
+│                                                             │
+│  📎 Pilates Fundamentals                                    │
+│  Tag: pilates, respirazione, postura                        │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Progresso                                          │   │
+│  │  ████████████░░░░░░░░░ 52% / 85%                    │   │
+│  │                                                     │   │
+│  │  Card: 28 totali                                    │   │
+│  │  • 14 completate (≥85% mastery)                     │   │
+│  │  • 8 in corso                                       │   │
+│  │  • 6 non iniziate                                   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Timeline                                           │   │
+│  │                                                     │   │
+│  │  Deadline: 15 Mar 2025 (18 giorni)                  │   │
+│  │  Ritmo attuale: 12 card/giorno                      │   │
+│  │  Ritmo necessario: 10 card/giorno                   │   │
+│  │                                                     │   │
+│  │  ✅ Sei in linea con l'obiettivo!                   │   │
+│  │  ── oppure ──                                       │   │
+│  │  ⚠️ Sei in ritardo, aumenta il ritmo               │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Oggi                                               │   │
+│  │                                                     │   │
+│  │  Card da studiare: 12                               │   │
+│  │  Card completate: 5                                 │   │
+│  │  ████████████░░░░░░░░░ 5/12                         │   │
+│  │                                                     │   │
+│  │  [▶ Continua a studiare]                            │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  [Modifica Obiettivo]  [Abbandona Obiettivo]               │
+│                                                             │
+│  ──────────────────────────────────────────────────────    │
+│                                                             │
+│  Storico obiettivi completati:                             │
+│  ✅ Yoga Basics — 85% — completato 10 Gen                  │
+│  ✅ Cooking 101 — 90% — completato 5 Dic                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 4.3 Regole Obiettivi
+
+| Regola | Descrizione |
+|--------|-------------|
+| Un solo obiettivo attivo | Creare un nuovo obiettivo disattiva quello precedente |
+| Calcolo automatico ritmo | `card_per_day = remaining_cards / days_to_deadline` |
+| Status "in linea" | `cards_studied_today >= daily_target` |
+| Obiettivo completato | Quando tutte le card hanno mastery ≥ target |
+
+---
+
+## 5. Gestione Repository
+
+### 5.1 Flow Diagram — Lista Repository
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  [I Miei Repository]                                        │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  📁 pilates-deck                                    │   │
+│  │  github.com/user/pilates-deck                       │   │
+│  │  45 card • Ultimo sync: 2 ore fa                    │   │
+│  │  Tag: pilates, respirazione, postura, core          │   │
+│  │  [🔄 Sync] [🗑️ Rimuovi]                             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  📁 yoga-basics                                     │   │
+│  │  github.com/user/yoga-basics                        │   │
+│  │  32 card • Ultimo sync: 1 giorno fa                 │   │
+│  │  Tag: yoga, stretching, meditazione                 │   │
+│  │  [🔄 Sync] [🗑️ Rimuovi]                             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  🔒 private-deck                                    │   │
+│  │  github.com/company/internal-training               │   │
+│  │  18 card • Ultimo sync: 5 ore fa                    │   │
+│  │  Tag: onboarding, compliance                        │   │
+│  │  [🔄 Sync] [🗑️ Rimuovi]                             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  [+ Aggiungi Repository]                                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Flow Diagram — Aggiungi Repository
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  [Aggiungi Repository]                                      │
+│                                                             │
+│  URL Repository Git:                                        │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ https://github.com/user/deck-name                   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Tipo:                                                      │
+│  ○ Pubblico                                                 │
+│  ● Privato (richiede autenticazione)                       │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Personal Access Token:                             │   │
+│  │  [••••••••••••••••••••••••••••••]                   │   │
+│  │                                                     │   │
+│  │  ℹ️ Crea un token con permesso "repo" su GitHub    │   │
+│  │  [Come creare un PAT →]                             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  [Annulla]  [Verifica e Aggiungi]                          │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                    (Verifica e Aggiungi)
+                             │
+                             ▼
+                    <Fetch README.md>
+                    <Valida lumio_format_version>
+                             │
+                             ▼
+                      {Formato valido?}
+                        │         │
+                       No        Sì
+                        │         │
+                        ▼         ▼
+              ┌───────────────┐  <Avvia sync completo>
+              │ [Errore]      │         │
+              │               │         ▼
+              │ "Repository   │  ┌───────────────────────┐
+              │  non          │  │ [Sync in corso]       │
+              │  compatibile" │  │                       │
+              │               │  │ Sincronizzazione...   │
+              │ Dettagli:     │  │ ████████░░ 80%        │
+              │ - README      │  │                       │
+              │   mancante    │  │ Card trovate: 45      │
+              │ - Versione    │  │ Card valide: 42       │
+              │   non         │  │ Card ignorate: 3      │
+              │   supportata  │  └───────────┬───────────┘
+              └───────────────┘              │
+                                             ▼
+                                    ┌───────────────────────┐
+                                    │ [Sync completato]     │
+                                    │                       │
+                                    │ ✅ Repository aggiunto │
+                                    │                       │
+                                    │ 42 card importate     │
+                                    │ 3 card ignorate       │
+                                    │ [Vedi dettagli]       │
+                                    │                       │
+                                    │ [Vai ai Repository]   │
+                                    └───────────────────────┘
+```
+
+### 5.3 Stati Sync Repository
+
+| Stato | Icona | Descrizione |
+|-------|-------|-------------|
+| `synced` | ✅ | Ultimo sync completato con successo |
+| `syncing` | 🔄 | Sync in corso |
+| `error` | ❌ | Ultimo sync fallito |
+| `outdated` | ⚠️ | Repository remoto ha nuovi commit |
+
+---
+
+## 6. Notifiche (Mobile)
+
+### 6.1 Tipi di Notifica
+
+| Trigger | Titolo | Body | Azione |
+|---------|--------|------|--------|
+| Mattina (configurabile) | "Buongiorno! 📚" | "Hai 12 card da studiare oggi per restare in linea con il tuo obiettivo." | Apre sessione studio |
+| Metà giornata (se non studiato) | "Non dimenticare! ⏰" | "Ti mancano ancora 8 card per oggi." | Apre sessione studio |
+| Sera (se non completato) | "Ultimo promemoria 🌙" | "Completa le ultime 5 card prima di dormire!" | Apre sessione studio |
+| Obiettivo raggiunto | "Obiettivo completato! 🎉" | "Hai raggiunto l'85% su Pilates!" | Apre dashboard obiettivo |
+| Repository aggiornato | "Nuove card disponibili" | "pilates-deck ha 3 nuove card." | Apre repository |
+| Deadline vicina (3 giorni) | "Deadline in arrivo ⚡" | "Mancano 3 giorni. Aumenta il ritmo!" | Apre dashboard obiettivo |
+
+### 6.2 Preferenze Notifiche
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  [Impostazioni Notifiche]                                   │
+│                                                             │
+│  Promemoria studio                                          │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Attivo: [●]                                        │   │
+│  │  Orario primo reminder: [08:00]                     │   │
+│  │  Reminder se non studio: [●] (max 2 al giorno)      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Altre notifiche                                            │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Obiettivo completato: [●]                          │   │
+│  │  Aggiornamenti repository: [●]                      │   │
+│  │  Avvisi deadline: [●]                               │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  [Salva]                                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Configurazione API Keys
+
+### 7.1 Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  [Impostazioni > API Keys]                                  │
+│                                                             │
+│  Le tue chiavi API per la generazione delle domande.        │
+│  Lumio non memorizza le chiavi in chiaro.                   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  OpenAI                                             │   │
+│  │  Status: ✅ Configurata                             │   │
+│  │  Ultimo test: 2 ore fa                              │   │
+│  │                                                     │   │
+│  │  [Modifica] [Rimuovi] [🔄 Test]                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Anthropic                                          │   │
+│  │  Status: ⚪ Non configurata                         │   │
+│  │                                                     │   │
+│  │  [+ Configura]                                      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ──────────────────────────────────────────────────────    │
+│                                                             │
+│  Provider preferito per le domande:                         │
+│  [OpenAI ▼]                                                 │
+│                                                             │
+│  Modello:                                                   │
+│  [gpt-4o-mini ▼]                                            │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 Modelli Supportati (v1)
+
+| Provider | Modelli |
+|----------|---------|
+| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo |
+| Anthropic | claude-3-5-sonnet, claude-3-5-haiku |
+
+---
+
+## 8. Navigation Map
+
+### 8.1 Web App
+
+```
+/
+├── /login                    # Login con Google
+├── /setup                    # Onboarding (se nuovo utente)
+│   ├── /setup/api-keys
+│   ├── /setup/repository
+│   └── /setup/goal
+├── /dashboard                # Home principale
+├── /study                    # Sessione di studio
+├── /goals                    # Gestione obiettivi
+│   ├── /goals/new
+│   └── /goals/:id
+├── /repositories             # Gestione repository
+│   ├── /repositories/new
+│   └── /repositories/:id
+├── /settings                 # Impostazioni
+│   ├── /settings/api-keys
+│   ├── /settings/notifications
+│   └── /settings/account
+└── /public/decks             # Pagina pubblica deck compatibili
+```
+
+### 8.2 Mobile App
+
+```
+(tabs)
+├── Home (Dashboard)
+├── Study (Sessione studio)
+├── Progress (Dashboard obiettivo)
+└── Settings
+    ├── API Keys
+    ├── Repositories
+    ├── Notifications
+    └── Account
+```
+
+---
+
+## 9. Stati dell'App
+
+### 9.1 Condizioni e Redirect
+
+| Condizione | Stato App | Redirect |
+|------------|-----------|----------|
+| Non autenticato | `logged_out` | → /login |
+| Autenticato, no API key | `needs_setup` | → /setup/api-keys |
+| Autenticato, no repository | `needs_setup` | → /setup/repository |
+| Autenticato, no obiettivo | `no_goal` | → Dashboard (con CTA "Crea obiettivo") |
+| Autenticato, tutto configurato | `ready` | → Dashboard |
+
+### 9.2 Empty States
+
+| Schermata | Condizione | Messaggio | CTA |
+|-----------|------------|-----------|-----|
+| Dashboard | No obiettivo | "Imposta un obiettivo per iniziare a studiare" | "Crea Obiettivo" |
+| Repository | Nessun repo | "Aggiungi il tuo primo deck di flashcard" | "Aggiungi Repository" |
+| Studio | No card da studiare | "Hai completato tutte le card per oggi! 🎉" | "Torna domani" / "Continua comunque" |
+
+---
+
+## 10. Responsive Behavior
+
+### 10.1 Breakpoints
+
+| Breakpoint | Width | Layout |
+|------------|-------|--------|
+| Mobile | < 768px | Single column, bottom nav |
+| Tablet | 768px - 1024px | Two column where appropriate |
+| Desktop | > 1024px | Sidebar + main content |
+
+### 10.2 Differenze Web vs Mobile
+
+| Feature | Web | Mobile |
+|---------|-----|--------|
+| Navigazione | Sidebar | Bottom tabs |
+| Studio | Click per rispondere | Tap per rispondere |
+| Notifiche push | No | Sì |
+| Configurazione API | Completa | Completa |
+| Gestione repository | Completa | Completa |
+
+---
+
+*Documento generato durante sessione di brainstorming. Da revisionare e approvare prima dello sviluppo.*
