@@ -35,6 +35,7 @@
     }
   },
   "standard-version": {
+    "releaseCommitMessageFormat": "chore(release): {{currentTag}} [skip ci]",
     "bumpFiles": [
       {
         "filename": "packages/shared/src/version.ts",

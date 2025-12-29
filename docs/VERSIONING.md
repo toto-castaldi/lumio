@@ -620,30 +620,33 @@ git add .
 pnpm commit
 # → Commitizen chiede: feat? fix? docs? chore? ...
 # → Genera commit message tipo: feat(study): add timer component
+
+# Push
+git push origin main
 ```
 
-### Release
+### Release Automatica (CI/CD)
+
+La release è **completamente automatica**. Quando fai push su `main`:
+
+1. CI esegue lint + typecheck
+2. Se ci sono commit `feat` o `fix`, la pipeline:
+   - Bumpa la versione in `version.ts` e `app.json`
+   - Genera/aggiorna `CHANGELOG.md`
+   - Crea commit `chore(release): vX.Y.Z [skip ci]`
+   - Crea tag `vX.Y.Z`
+   - Pusha il release commit
+3. Deploy web, Supabase functions e build Android con la nuova versione
+
+### Release Manuale (opzionale)
 
 ```bash
-# Quando sei pronto a rilasciare
-pnpm release:dry    # Preview: mostra cosa farebbe senza eseguire
+# Preview senza eseguire
+pnpm release:dry
 
-pnpm release        # Esegue:
-                    # 1. Analizza commits dalla ultima release
-                    # 2. Determina bump (patch/minor/major)
-                    # 3. Aggiorna VERSION in version.ts
-                    # 4. Aggiorna version in app.json
-                    # 5. Genera/aggiorna CHANGELOG.md
-                    # 6. Crea commit "chore(release): 1.2.0"
-                    # 7. Crea tag v1.2.0
-
-# Push con tag
+# Esegui release manualmente (se necessario)
+pnpm release
 git push --follow-tags origin main
-
-# CI automaticamente:
-# → Builda con BUILD_NUMBER e GIT_SHA
-# → Deploya web su DigitalOcean
-# → Deploya Supabase functions
 ```
 
 ### Verifica versione in produzione
