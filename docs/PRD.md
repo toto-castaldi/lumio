@@ -218,17 +218,7 @@ Lumio risolve questi problemi con un approccio innovativo:
 
 ## 10. Roadmap
 
-### v1.0 — MVP (questo documento)
-- Core study loop con AI
-- Web + Mobile
-- Repository pubblici e privati
-- Obiettivi tag-based
-
-### v1.x — Iterazioni successive (fuori scope)
-- Offline mode con sync
-- Gamification leggera
-- Deck marketplace
-- Social features
+Vedere [ROADMAP.md](./ROADMAP.md) per lo stato dettagliato di implementazione.
 
 ---
 

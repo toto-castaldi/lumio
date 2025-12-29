@@ -15,6 +15,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Schema PostgreSQL, entità, relazioni, RLS policies](./docs/DATA-MODEL.md)
 - [Roadmap](./docs/ROADMAP.md)
 
+## Configuration Files
+
+- [Nginx virtual host](./conf/nginx-lumio.conf) - Configurazione Nginx per `lumio.toto-castaldi.com`
+
 
 ## Rules
 

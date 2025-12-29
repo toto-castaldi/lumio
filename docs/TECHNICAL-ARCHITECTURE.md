@@ -133,9 +133,11 @@ lumio/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # Lint, test, typecheck
-│       ├── deploy-web.yml      # Deploy web app
-│       └── deploy-functions.yml # Deploy Edge Functions
+│       ├── ci.yml              # Lint, typecheck su PR
+│       └── deploy.yml          # Deploy web app + Edge Functions
+│
+├── conf/
+│   └── nginx-lumio.conf        # Virtual host Nginx per produzione
 │
 ├── pnpm-workspace.yaml
 ├── package.json                # Root package.json
@@ -514,41 +516,14 @@ main (production)
 
 La web app viene deployata su un droplet esistente con Nginx.
 
-**Nginx Configuration** (`/etc/nginx/sites-available/lumio`):
+**Nginx Configuration**: vedere [`conf/nginx-lumio.conf`](../conf/nginx-lumio.conf)
 
-```nginx
-server {
-    listen 80;
-    server_name lumio.example.com;
-    return 301 https://$server_name$request_uri;
-}
+Il file va copiato in `/etc/nginx/sites-available/lumio` e abilitato con:
 
-server {
-    listen 443 ssl http2;
-    server_name lumio.example.com;
-
-    ssl_certificate /etc/letsencrypt/live/lumio.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/lumio.example.com/privkey.pem;
-
-    root /var/www/lumio;
-    index index.html;
-
-    # SPA routing
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-}
+```bash
+sudo ln -s /etc/nginx/sites-available/lumio /etc/nginx/sites-enabled/
+sudo certbot --nginx -d lumio.toto-castaldi.com
+sudo systemctl reload nginx
 ```
 
 ### 7.2 Directory Structure on Server

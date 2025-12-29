@@ -40,8 +40,8 @@
 
 ### 1.7 UPDATE BACKEND
 
-- [ ] Deploy Edge Functions tramite `supabase functions deploy`
-- [ ] Placeholder functions: git-sync, llm-proxy, study-planner
+- [x] Deploy Edge Functions tramite `supabase functions deploy`
+- [x] Placeholder functions: git-sync, llm-proxy, study-planner
 
 ### 1.8 UPDATE DESKTOP (Web)
 
