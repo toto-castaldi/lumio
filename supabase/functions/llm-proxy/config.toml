@@ -1,0 +1,4 @@
+# Disable JWT verification at gateway level
+# The function handles authentication internally
+# This is needed because test_key action is called before user is fully authenticated
+verify_jwt = false
