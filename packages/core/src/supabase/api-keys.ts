@@ -60,7 +60,17 @@ export async function testApiKey(
     body: JSON.stringify({ action: 'test_key', provider, apiKey }),
   });
 
-  return response.json();
+  const data = await response.json();
+
+  // Handle HTTP errors (e.g., 401 from Supabase gateway)
+  if (!response.ok) {
+    return {
+      valid: false,
+      error: data.message || data.error || `HTTP error ${response.status}`,
+    };
+  }
+
+  return data;
 }
 
 /**
