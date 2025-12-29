@@ -1,7 +1,20 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Sentry from '@sentry/react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+
+// Initialize Sentry
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    debug: __DEV__,
+    environment: __DEV__ ? 'development' : 'production',
+    tracesSampleRate: 1.0,
+  });
+}
 
 function RootLayoutNav() {
   const { state } = useAuth();
@@ -63,7 +76,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <AuthProvider>
       <RootLayoutNav />
@@ -71,3 +84,6 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+// Wrap with Sentry for error boundary
+export default Sentry.wrap(RootLayout);

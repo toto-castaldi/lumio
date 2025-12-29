@@ -29,7 +29,14 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "lumio",
+          "project": "lumio-mobile"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

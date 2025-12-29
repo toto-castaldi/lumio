@@ -1,4 +1,3 @@
-# Disable JWT verification at gateway level
-# The function handles authentication internally
-# This is needed because test_key action is called before user is fully authenticated
-verify_jwt = false
+# Enable JWT verification at gateway level
+# User is authenticated via OAuth before reaching API key setup
+verify_jwt = true

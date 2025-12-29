@@ -17,6 +17,7 @@
     "@lumio/core": "workspace:*",
     "@lumio/shared": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@sentry/react-native": "^7.8.0",
     "@types/react-dom": "~19.1.7",
     "expo": "~54.0.30",
     "expo-auth-session": "^7.0.10",
