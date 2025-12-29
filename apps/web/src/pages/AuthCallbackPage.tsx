@@ -1,31 +1,67 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getSession } from '@lumio/core';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getSupabaseClient } from '@lumio/core';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleCallback = async () => {
-      // Supabase automatically handles the OAuth callback
-      // and sets the session from URL hash.
-      // We just need to check if it worked and redirect.
-      const {
-        data: { session },
-      } = await getSession();
+      const supabase = getSupabaseClient();
+
+      // Check for error in URL params
+      const errorParam = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
+
+      if (errorParam) {
+        setError(errorDescription || errorParam);
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
+
+      // Check for authorization code (PKCE flow)
+      const code = searchParams.get('code');
+
+      if (code) {
+        // Exchange authorization code for session
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+          console.error('Code exchange error:', exchangeError);
+          setError(exchangeError.message);
+          setTimeout(() => navigate('/login'), 3000);
+          return;
+        }
+      }
+
+      // Check if we have a session now
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
         // Redirect to home - AuthContext will handle routing
         // based on whether user has API keys
         navigate('/');
       } else {
-        // Auth failed, go back to login
-        navigate('/login');
+        // No session, try to get it from URL hash (implicit flow)
+        // Supabase should have processed it automatically
+        setError('Autenticazione fallita. Riprova.');
+        setTimeout(() => navigate('/login'), 3000);
       }
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [navigate, searchParams]);
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2">
+        <p className="text-destructive">{error}</p>
+        <p className="text-sm text-muted-foreground">Reindirizzamento al login...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center">
