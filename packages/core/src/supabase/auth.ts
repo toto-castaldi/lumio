@@ -90,15 +90,38 @@ export function onAuthStateChange(
 
 /**
  * Get the access token for the current session
+ * Automatically refreshes the token if expired
  * @returns Access token string or null
  */
 export async function getAccessToken(): Promise<string | null> {
   const supabase = getSupabaseClient();
+
+  // First try to get the current session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  return session?.access_token || null;
+  if (!session) {
+    return null;
+  }
+
+  // Check if token is about to expire (within 60 seconds)
+  const expiresAt = session.expires_at;
+  const now = Math.floor(Date.now() / 1000);
+
+  if (expiresAt && expiresAt - now < 60) {
+    // Token is expired or about to expire, refresh it
+    const { data: refreshData, error } = await supabase.auth.refreshSession();
+
+    if (error || !refreshData.session) {
+      console.error('Failed to refresh session:', error);
+      return null;
+    }
+
+    return refreshData.session.access_token;
+  }
+
+  return session.access_token;
 }
 
 /**
