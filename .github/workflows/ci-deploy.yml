@@ -69,12 +69,23 @@ jobs:
       - name: Run release
         id: release
         run: |
-          # Check if there are releasable commits
-          if pnpm release:dry 2>&1 | grep -q "tagging release"; then
+          # Get current version
+          CURRENT_VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
+          echo "Current version: $CURRENT_VERSION"
+
+          # Check if there would be a version bump
+          DRY_RUN_OUTPUT=$(pnpm release:dry 2>&1 || true)
+          echo "$DRY_RUN_OUTPUT"
+
+          # Extract the new version from dry run
+          NEW_VERSION=$(echo "$DRY_RUN_OUTPUT" | grep -oP 'bumping version .* to \K[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "")
+
+          if [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "Version bump detected: $CURRENT_VERSION -> $NEW_VERSION"
             pnpm release
             echo "released=true" >> $GITHUB_OUTPUT
           else
-            echo "No releasable commits found"
+            echo "No version change needed (current: $CURRENT_VERSION)"
             echo "released=false" >> $GITHUB_OUTPUT
           fi
 
