@@ -133,8 +133,7 @@ lumio/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml              # Lint, typecheck su PR
-│       └── deploy.yml          # Deploy web app + Edge Functions
+│       └── ci-deploy.yml       # CI/CD unificato (lint, typecheck, deploy)
 │
 ├── conf/
 │   └── nginx-lumio.conf        # Virtual host Nginx per produzione
@@ -377,12 +376,14 @@ export const signInWithGoogle = async () => {
 
 ## 6. CI/CD Pipeline
 
-### 6.1 GitHub Actions Workflows
+### 6.1 GitHub Actions Workflow
 
-#### ci.yml — Continuous Integration
+Il progetto usa un singolo workflow unificato (`ci-deploy.yml`) che gestisce sia CI che deploy.
+
+#### ci-deploy.yml — CI/CD Pipeline
 
 ```yaml
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -391,103 +392,62 @@ on:
     branches: [main, develop]
 
 jobs:
-  lint-and-test:
+  # CI Jobs - sempre eseguiti
+  lint-and-typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
+      - checkout, pnpm setup, install
+      - pnpm build:packages
+      - pnpm typecheck
+
+  build-web:
+    needs: lint-and-typecheck
+    steps:
+      - build web app
+      - upload artifact
+
+  # Deploy Jobs - solo su push a main
+  deploy-web:
+    needs: build-web
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - build web app con secrets produzione
+      - deploy to DigitalOcean via SCP
+      - reload Nginx
+
+  deploy-functions:
+    needs: lint-and-typecheck
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - deploy Edge Functions via Supabase CLI
+
+  build-android:
+    needs: lint-and-typecheck
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - setup EAS
+      - eas build --platform android --profile preview
 ```
 
-#### deploy-web.yml — Deploy Web App
-
-```yaml
-name: Deploy Web
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/web/**'
-      - 'packages/**'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build:web
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      
-      - name: Deploy to DigitalOcean
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: "apps/web/dist/*"
-          target: "/var/www/lumio"
-          strip_components: 3
-          
-      - name: Reload Nginx
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: sudo systemctl reload nginx
+**Flusso:**
 ```
-
-#### deploy-functions.yml — Deploy Edge Functions
-
-```yaml
-name: Deploy Functions
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/functions/**'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-          
-      - run: supabase functions deploy --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+push/PR to main/develop
+       │
+       ▼
+┌─────────────────┐
+│lint-and-typecheck│ ◄── Sempre eseguito
+└────────┬────────┘
+         │
+         ▼
+    ┌─────────┐
+    │build-web│ ◄── Sempre eseguito (validazione)
+    └────┬────┘
+         │
+         │ (solo push a main)
+         ▼
+┌────────────────────────────────────────┐
+│  deploy-web │ deploy-functions │ build-android │
+└────────────────────────────────────────┘
 ```
 
 ### 6.2 Branching Strategy
