@@ -86,13 +86,13 @@ lumio/
 │   │   ├── tailwind.config.ts
 │   │   └── package.json
 │   │
-│   └── mobile/                 # Expo + React Native
-│       ├── src/
-│       │   ├── components/     # UI components
-│       │   ├── screens/        # Screen components
-│       │   ├── hooks/          # React hooks
-│       │   ├── lib/            # Utilities
-│       │   └── App.tsx
+│   └── mobile/                 # Expo SDK 54 + React Native
+│       ├── app/                # Expo Router (file-based routing)
+│       │   ├── _layout.tsx     # Root layout
+│       │   └── index.tsx       # Home screen
+│       ├── components/         # UI components
+│       ├── hooks/              # React hooks
+│       ├── lib/                # Utilities
 │       ├── app.json            # Expo config
 │       ├── eas.json            # EAS Build config
 │       └── package.json
@@ -167,11 +167,11 @@ packages:
     "test": "pnpm -r test"
   },
   "devDependencies": {
-    "typescript": "^5.3.0"
+    "typescript": "^5.7.0"
   },
   "engines": {
     "node": ">=20.0.0",
-    "pnpm": ">=8.0.0"
+    "pnpm": ">=9.0.0"
   }
 }
 ```
@@ -213,9 +213,10 @@ packages:
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Framework | Expo | SDK 50+ |
+| Framework | Expo | SDK 54 |
+| React | React | 19.x |
 | Language | TypeScript | 5.x |
-| Navigation | Expo Router | 3.x |
+| Navigation | Expo Router | 6.x |
 | State | React Query + Zustand | - |
 | Push Notifications | Expo Notifications | - |
 
@@ -797,7 +798,7 @@ Sentry.init({
 ### 13.1 Prerequisites
 
 - Node.js >= 20
-- pnpm >= 8
+- pnpm >= 9
 - Supabase CLI
 - Expo CLI
 
@@ -811,18 +812,29 @@ cd lumio
 # Install dependencies
 pnpm install
 
+# Build shared packages (required before running apps)
+pnpm build:packages
+
 # Setup environment variables
+cp .env.example .env.local
 cp apps/web/.env.example apps/web/.env.local
 cp apps/mobile/.env.example apps/mobile/.env.local
 
-# Start Supabase local
+# Start Supabase local (optional)
 supabase start
+# Studio: http://127.0.0.1:54323
+# API: http://127.0.0.1:54321
 
 # Run web app
 pnpm dev:web
+# http://localhost:5173
 
 # Run mobile app (in another terminal)
 pnpm dev:mobile
+# http://localhost:8081
+
+# Mobile with tunnel (for Expo Go on phone)
+cd apps/mobile && npx expo start --tunnel
 ```
 
 ### 13.3 Local Supabase

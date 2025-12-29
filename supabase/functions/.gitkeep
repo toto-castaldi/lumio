@@ -1,0 +1,5 @@
+# Edge Functions directory
+# Functions will be added here as needed:
+# - git-sync: Sync Git repositories with card database
+# - llm-proxy: Proxy for OpenAI/Anthropic API calls
+# - study-planner: Calculate daily study plans

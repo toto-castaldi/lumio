@@ -1,0 +1,27 @@
+{
+  "name": "lumio",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI-powered flashcard study platform",
+  "scripts": {
+    "dev:web": "pnpm --filter @lumio/web dev",
+    "dev:mobile": "pnpm --filter @lumio/mobile start",
+    "build:web": "pnpm --filter @lumio/web build",
+    "build:packages": "pnpm --filter @lumio/shared build && pnpm --filter @lumio/core build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:functions": "supabase functions serve"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
