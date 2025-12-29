@@ -3,7 +3,7 @@
 AI-powered flashcard study platform.
 
 ```
-Leggi CLAUDE.md e tutta la cartella DOCS. Ora sei pronto.
+Leggi CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pronto.
 ```
 
 

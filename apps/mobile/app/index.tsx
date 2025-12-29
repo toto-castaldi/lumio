@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { VERSION, APP_NAME } from '@lumio/shared';
+import { BUILD_INFO, APP_NAME, getFullVersionString } from '@lumio/shared';
 
 export default function HomeScreen() {
   return (
@@ -11,25 +11,25 @@ export default function HomeScreen() {
         <View style={styles.versionBox}>
           <View style={styles.versionRow}>
             <Text style={styles.label}>Version:</Text>
-            <Text style={styles.value}>{VERSION.version}</Text>
+            <Text style={styles.value}>{BUILD_INFO.version}</Text>
           </View>
           <View style={styles.versionRow}>
             <Text style={styles.label}>Build:</Text>
-            <Text style={styles.value}>{VERSION.buildNumber}</Text>
+            <Text style={styles.value}>{BUILD_INFO.buildNumber}</Text>
           </View>
           <View style={styles.versionRow}>
             <Text style={styles.label}>Commit:</Text>
-            <Text style={styles.value}>{VERSION.commitSha.slice(0, 7)}</Text>
+            <Text style={styles.value}>{BUILD_INFO.gitSha.slice(0, 7)}</Text>
           </View>
           <View style={styles.versionRow}>
             <Text style={styles.label}>Date:</Text>
             <Text style={styles.value}>
-              {new Date(VERSION.buildDate).toLocaleDateString()}
+              {new Date(BUILD_INFO.buildDate).toLocaleDateString()}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.platform}>Platform: Mobile</Text>
+        <Text style={styles.platform}>{getFullVersionString()} • Mobile</Text>
       </View>
     </View>
   );

@@ -57,10 +57,10 @@
 
 ### 1.10 VERSION IDENTIFIER
 
-- [ ] adopt docs/VERSIONING.md conventions
-- [ ] Visualize version in web
-- [ ] Visualize version in mobile
-- [ ] Visualize version in supabase responses
+- [x] adopt docs/VERSIONING.md conventions
+- [x] Visualize version in web
+- [x] Visualize version in mobile
+- [x] Visualize version in supabase responses
 
 ---
 
@@ -69,6 +69,7 @@
 - [ ] Login con Google OAuth
 - [ ] Setup API Keys (OpenAI/Anthropic)
 - [ ] Aggiungi primo repository
+- [ ] Devops : backup db prima di migrazioni
 - [ ] Crea primo obiettivo
 
 ---
