@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   saveApiKey,
   testApiKey as testApiKeyFn,
+  signOut,
   API_KEY_PREFIXES,
   APP_NAME,
   type LLMProvider,
@@ -129,6 +130,11 @@ export function SetupApiKeysPage() {
     setTestStatus('idle');
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-lg">
@@ -225,6 +231,18 @@ export function SetupApiKeysPage() {
                 disabled={isLoading || testStatus === 'testing'}
               >
                 {isLoading ? 'Salvando...' : 'Continua'}
+              </Button>
+            </div>
+
+            <div className="pt-4 border-t text-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-muted-foreground"
+              >
+                Usa un altro account? Logout
               </Button>
             </div>
           </form>
