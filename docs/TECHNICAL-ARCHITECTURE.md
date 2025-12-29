@@ -278,20 +278,47 @@ Flow:
 ```
 
 #### llm-proxy
-Proxy verso OpenAI/Anthropic per generare domande.
+Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.
 
+**Azioni disponibili:**
+
+| Action | Descrizione |
+|--------|-------------|
+| `test_key` | Valida una API key con il provider (non salva) |
+| `save_key` | Valida, cripta e salva la chiave nel database |
+| `get_keys` | Ritorna metadata delle chiavi (senza valori) |
+| `delete_key` | Elimina una chiave |
+| `set_preferred` | Imposta il provider preferito |
+| `has_valid_key` | Verifica se l'utente ha almeno una chiave valida |
+
+**Flusso di salvataggio chiave:**
 ```
-Trigger: Chiamata da client durante studio
-Input: card_content, user_api_key, provider
-Flow:
-  1. Validate API key format
-  2. Build prompt con card content
-  3. Call LLM API
-  4. Parse response (domanda, opzioni, spiegazione)
-  5. Return structured response
+Client                    Edge Function                    Database
+   │                            │                              │
+   │  save_key(provider, key)   │                              │
+   │ ─────────────────────────▶ │                              │
+   │                            │  1. Test con provider        │
+   │                            │ ─────────────────▶ OpenAI/   │
+   │                            │ ◀───────────────── Anthropic │
+   │                            │                              │
+   │                            │  2. Encrypt(key)             │
+   │                            │  AES-256-GCM +               │
+   │                            │  ENCRYPTION_KEY              │
+   │                            │                              │
+   │                            │  3. Upsert encrypted_key     │
+   │                            │ ─────────────────────────────▶│
+   │                            │ ◀─────────────────────────────│
+   │   { success, key metadata }│                              │
+   │ ◀───────────────────────── │                              │
 ```
 
-> ⚠️ Le API key utente transitano criptate e non vengono mai persistite nei log.
+**Crittografia (AES-256-GCM):**
+- La chiave `ENCRYPTION_KEY` (32 bytes base64) è un secret dell'Edge Function
+- IV (12 bytes) generato casualmente per ogni crittografia
+- Formato storage: `base64(IV + ciphertext)`
+- Solo l'Edge Function può leggere/scrivere chiavi
+
+> ⚠️ Le API key in chiaro transitano solo verso l'Edge Function (HTTPS). Non vengono mai persistite nei log o inviate ai client.
 
 #### study-planner
 Calcola il piano di studio per ogni utente.
@@ -502,6 +529,8 @@ sudo systemctl reload nginx
 
 ## 8. Mobile App Build & Distribution
 
+> **Nota**: L'app mobile è dedicata **esclusivamente allo studio**. La configurazione delle API keys, la gestione dei deck e degli obiettivi avviene solo su web. Se l'utente non ha configurato le API keys, l'app mobile mostra un messaggio che invita a completare la configurazione su web.
+
 ### 8.1 Expo Configuration
 
 **app.json**:
@@ -662,9 +691,33 @@ Sentry.init({
 
 ### 11.1 API Keys Handling
 
-- User LLM API keys stored encrypted in database (AES-256)
-- Keys decrypted only in Edge Functions, never sent to client
-- Keys never logged or included in error reports
+Le API keys degli utenti (OpenAI/Anthropic) sono gestite con crittografia server-side:
+
+**Algoritmo:** AES-256-GCM (Galois/Counter Mode)
+- Chiave di crittografia: `ENCRYPTION_KEY` (256 bit, base64)
+- IV: 96 bit, generato casualmente per ogni operazione
+- Autenticazione: Tag GCM integrato
+
+**Flusso sicuro:**
+1. Client invia chiave in chiaro all'Edge Function (HTTPS)
+2. Edge Function valida la chiave con il provider
+3. Edge Function cripta la chiave con `ENCRYPTION_KEY`
+4. Chiave criptata salvata in `user_api_keys.encrypted_key`
+5. Quando serve, l'Edge Function decripta e usa la chiave
+
+**Garanzie di sicurezza:**
+- Le chiavi in chiaro non passano mai attraverso il client Supabase
+- Solo l'Edge Function ha accesso a `ENCRYPTION_KEY`
+- Anche con accesso al database, le chiavi sono illeggibili
+- Keys mai loggate o incluse in error reports
+- RLS impedisce accesso cross-user ai record criptati
+
+**Generare ENCRYPTION_KEY:**
+```bash
+# Genera 32 bytes casuali in base64
+openssl rand -base64 32
+# Esempio output: K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=
+```
 
 ### 11.2 Repository Access
 
@@ -721,11 +774,14 @@ Sentry.init({
 | `SUPABASE_ANON_KEY` | Build time env |
 | `SUPABASE_ACCESS_TOKEN` | Deploy Edge Functions |
 | `SUPABASE_PROJECT_REF` | Deploy Edge Functions |
+| `ENCRYPTION_KEY` | API key encryption (32 bytes base64) |
 | `DO_HOST` | DigitalOcean droplet IP |
 | `DO_USERNAME` | SSH username |
 | `DO_SSH_KEY` | SSH private key |
 | `SENTRY_DSN` | Error tracking |
 | `EXPO_TOKEN` | EAS Build authentication |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 
 ---
 
@@ -776,18 +832,65 @@ cd apps/mobile && npx expo start --tunnel
 ### 13.3 Local Supabase
 
 ```bash
-# Start local Supabase
-supabase start
+# Start local Supabase (con variabili Google OAuth)
+GOOGLE_CLIENT_ID="your-client-id" GOOGLE_CLIENT_SECRET="your-secret" supabase start
 
 # Apply migrations
 supabase db push
 
 # Deploy functions locally
-supabase functions serve
+supabase functions serve --env-file supabase/.env.local
 
 # Stop
 supabase stop
 ```
+
+### 13.4 Dev Login (Local Development Only)
+
+Per facilitare il testing locale senza configurare OAuth, è disponibile un **Dev Login** che appare solo in modalità development:
+
+```
+┌─────────────────────────────┐
+│         Lumio               │
+│                             │
+│  [Accedi con Google]        │
+│                             │
+│  ─── Solo sviluppo ───      │
+│                             │
+│  [🛠️ Dev Login]             │
+│                             │
+└─────────────────────────────┘
+```
+
+**Come funziona:**
+- Crea automaticamente un utente `dev@lumio.local` in Supabase Auth
+- Password predefinita: `devpassword123`
+- Bypass completo di Google OAuth
+- Disponibile su Web (`import.meta.env.DEV`) e Mobile (`__DEV__`)
+
+**Quando usarlo:**
+- Testing locale senza configurare Google OAuth
+- Testing su dispositivo fisico via Expo Go (evita problemi di rete con OAuth)
+- CI/CD per test automatizzati
+
+**Implementazione:**
+```typescript
+// packages/core/src/supabase/auth.ts
+export async function signInWithDevUser() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: 'dev@lumio.local',
+    password: 'devpassword123',
+  });
+  // Se l'utente non esiste, viene creato automaticamente
+  if (error?.message.includes('Invalid login credentials')) {
+    return supabase.auth.signUp({ email, password, ... });
+  }
+  return { data, error };
+}
+```
+
+> ⚠️ **Sicurezza**: Il bottone Dev Login è visibile SOLO in development mode. In produzione non appare e la funzione `signInWithDevUser` non dovrebbe mai essere chiamata.
 
 ---
 

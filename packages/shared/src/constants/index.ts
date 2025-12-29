@@ -23,3 +23,21 @@ export const CARD_FORMAT = {
   defaultDifficulty: 3,
   defaultLanguage: 'en',
 } as const;
+
+// API Key prefixes for validation
+export const API_KEY_PREFIXES = {
+  openai: 'sk-',
+  anthropic: 'sk-ant-',
+} as const;
+
+// Supported LLM models per provider
+export const LLM_MODELS = {
+  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] as const,
+  anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] as const,
+} as const;
+
+// Default LLM model per provider
+export const DEFAULT_LLM_MODEL = {
+  openai: 'gpt-4o-mini',
+  anthropic: 'claude-3-5-haiku-20241022',
+} as const;

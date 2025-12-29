@@ -66,15 +66,22 @@
 
 ## 2 - ONBOARDING
 
-- [ ] Login con Google OAuth
-- [ ] Setup API Keys (OpenAI/Anthropic)
-- [ ] Aggiungi primo repository
-- [ ] Devops : backup db prima di migrazioni
-- [ ] Crea primo obiettivo
+- [x] aggiungere sicurezza RLS
+- [x] Login/logout con Google OAuth Web
+- [x] Login/logout con Google OAuth Mobile
+- [x] pagina di configurazione solo su Web: Setup API Keys (OpenAI/Anthropic)
 
 ---
 
-## 3 - STUDIO
+## 3 - REPO PUBBLICO
+
+- [ ] Aggiungi primo repository
+- [ ] Devops : backup db prima di migrazioni
+- [ ] Crea obiettivo
+
+---
+
+## 4 - STUDIO
 
 - [ ] Sessione di studio
 - [ ] Generazione domande AI
@@ -83,7 +90,7 @@
 
 ---
 
-## 4 - OBIETTIVI
+## 5 - OBIETTIVI
 
 - [ ] Creazione obiettivo per tag
 - [ ] Dashboard progresso
@@ -91,7 +98,7 @@
 
 ---
 
-## 5 - REPOSITORY
+## 6 - REPOSITORY
 
 - [ ] Sync repository Git
 - [ ] Validazione formato card
