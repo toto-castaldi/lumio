@@ -49,11 +49,12 @@
 - [x] SCP a DigitalOcean `/var/www/lumio`
 - [x] Reload Nginx automatico
 
-### 1.9 UPDATE MOBILE
+### 1.9 UPDATE MOBILE (Android only per v1.0)
 
 - [x] EAS Build configuration (`eas.json`)
-- [ ] Build development e preview profiles
-- [ ] Distribuzione interna via TestFlight/APK
+- [x] Asset icons (icon.png, splash.png, adaptive-icon.png)
+- [x] CI: Build APK automatico su push a main
+- [ ] Build APK preview per testing interno
 
 ### 1.10 VERSION IDENTIFIER
 
