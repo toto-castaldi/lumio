@@ -29,6 +29,13 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Initialize Supabase client synchronously BEFORE any component mounts
+// This ensures getSupabaseClient() is available to all child components
+createSupabaseClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [state, setState] = useState<AuthState>('loading');
@@ -54,12 +61,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    // Initialize Supabase client
-    createSupabaseClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
-
     // Check initial auth state
     const checkAuth = async () => {
       try {
