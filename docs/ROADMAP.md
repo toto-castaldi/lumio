@@ -34,9 +34,8 @@
 
 ### 1.6 CONTINUOUS DELIVERY
 
-- [x] `.github/workflows/ci.yml` - lint, typecheck su PR
-- [x] `.github/workflows/deploy.yml` - deploy web su push a main
-- [x] GitHub Secrets configurati
+- [x] `.github/workflows/ci-deploy.yml` - CI/CD unificato (lint, typecheck, deploy, build APK)
+- [x] GitHub Secrets configurati (SUPABASE_*, DO_*, EXPO_TOKEN)
 
 ### 1.7 UPDATE BACKEND
 
@@ -54,14 +53,14 @@
 - [x] EAS Build configuration (`eas.json`)
 - [x] Asset icons (icon.png, splash.png, adaptive-icon.png)
 - [x] CI: Build APK automatico su push a main
-- [ ] Build APK preview per testing interno
+- [x] Build APK preview per testing interno
 
 ### 1.10 VERSION IDENTIFIER
 
-- [x] `VERSION` object in `@lumio/shared`
-- [x] Visualizzazione version/build/commit in web app
-- [x] Visualizzazione version/build/commit in mobile app
-- [x] Injection BUILD_NUMBER, COMMIT_SHA, BUILD_DATE in CI
+- [ ] adopt docs/VERSIONING.md conventions
+- [ ] Visualize version in web
+- [ ] Visualize version in mobile
+- [ ] Visualize version in supabase responses
 
 ---
 
