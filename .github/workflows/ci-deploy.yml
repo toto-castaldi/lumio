@@ -278,3 +278,5 @@ jobs:
       - name: Build Android APK
         working-directory: apps/mobile
         run: eas build --platform android --profile preview --non-interactive
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
