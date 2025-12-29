@@ -1,3 +1,5 @@
-# Enable JWT verification at gateway level
-# User is authenticated via OAuth before reaching API key setup
-verify_jwt = true
+# Disable JWT verification at gateway level
+# The function handles authentication internally for each action
+# - test_key: no user data access, just validates external API keys
+# - All other actions: require valid auth via getUserId()
+verify_jwt = false
