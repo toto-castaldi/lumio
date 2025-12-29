@@ -612,9 +612,9 @@ eas build --profile production --platform all
 
 ### 8.3 Distribution (v1)
 
-Per v1, build distribuite internamente via:
-- **iOS**: TestFlight o link diretto EAS
-- **Android**: APK/AAB via link EAS
+Per v1 (Android only), build distribuite internamente via:
+- **Android**: APK via EAS Build (preview profile)
+- **CI/CD**: Build APK automatico su ogni push a main
 
 ---
 
@@ -765,6 +765,7 @@ Sentry.init({
 | `DO_USERNAME` | SSH username |
 | `DO_SSH_KEY` | SSH private key |
 | `SENTRY_DSN` | Error tracking |
+| `EXPO_TOKEN` | EAS Build authentication |
 
 ---
 
