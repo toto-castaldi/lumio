@@ -28,9 +28,9 @@
 
 ### 1.5 AMBIENTE DI PROD
 
-- [ ] Progetto Supabase su supabase.com
+- [x] Progetto Supabase su supabase.com
 - [x] Configurazione Nginx per subdomain `lumio.toto-castaldi.com`
-- [ ] SSL con Let's Encrypt
+- [x] SSL con Let's Encrypt
 
 ### 1.6 CONTINUOUS DELIVERY
 
