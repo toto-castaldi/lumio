@@ -36,7 +36,7 @@
 
 - [x] `.github/workflows/ci.yml` - lint, typecheck su PR
 - [x] `.github/workflows/deploy.yml` - deploy web su push a main
-- [ ] GitHub Secrets configurati
+- [x] GitHub Secrets configurati
 
 ### 1.7 UPDATE BACKEND
 
