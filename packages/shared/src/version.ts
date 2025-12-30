@@ -4,7 +4,7 @@
  * Questa versione viene aggiornata automaticamente da `pnpm release`.
  * NON modificare manualmente.
  */
-export const VERSION = "0.1.6";
+export const VERSION = "0.1.7";
 
 /**
  * Build info popolate a build time dalla CI.

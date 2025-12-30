@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.7](https://github.com/toto-castaldi/lumio/compare/v0.1.6...v0.1.7) (2025-12-30)
+
+
+### Features
+
+* cambia modello tra una carta e l'altra. vedi carta ([bd2b9e2](https://github.com/toto-castaldi/lumio/commit/bd2b9e22c04d815cbb7be6d14b0a4c089895b0ce))
+
 ### [0.1.6](https://github.com/toto-castaldi/lumio/compare/v0.1.5...v0.1.6) (2025-12-30)
 
 
