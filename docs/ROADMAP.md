@@ -110,30 +110,62 @@
 
 ---
 
-## 4 - PRIMA VERSIONE STUDIO - SOLO WEB - CARTE RANDOM
+## 4 - PRIMA VERSIONE STUDIO (Solo Web - Carte Random)
 
-- L'utente preme su studia. 
-- Lumio inizia ad usare AI del cliente tramite le API KEY.
-- Si crea una chat con un contesto iniziale del tipo :
-```
-Voglio ripassare gli argomenti delle carte che ti invierò una alla volta.
-Una volta ricevuto la carta, la leggi e mi proponi quattro scelte multiple tra cui solo una corretta.
-Non mi devi dare subito la risposta, io la devo scegliere scelgo io e se sbaglio mi correggi.
-Le opzioni che mi proponi devono essere tutte diverse.
-Dopo che ho risposto fai un piccolo ripasso dell'argomento sia nel caso in cui ho sbagliato sia nel caso in cui ho risposto correttamente.
-Vai a capo tra una opzione e l'altra.
-Varia la risposta corretta tra una carta e e l'altra. Può essere corretta la A, B, C o D.
-```
-- Lumio sceglie una carta a caso tra quelle da studiare e la invia alla AI (tutto il file , anche immagini collegate se si riesce).
-- Lumio chiede alla AI : "dimmi le quattro opzioni per questa carta"
-- L'utente risponde
-- L'AI dice se corretta o meno e ripasso
-- Il processo si ripete riscegliendo una carta a caso
+### 4.1 Backend - Edge Function llm-proxy
 
+- [ ] 4.1.1 Aggiungere action `generate_quiz` per generare domande a scelta multipla
+- [ ] 4.1.2 Implementare chiamata a OpenAI API (gpt-4o-mini, gpt-4o)
+- [ ] 4.1.3 Implementare chiamata a Anthropic API (claude-3-5-haiku, claude-3-5-sonnet, claude-3-opus)
+- [ ] 4.1.4 Costruire prompt di sistema per quiz (4 opzioni, risposta variabile, spiegazione)
+- [ ] 4.1.5 Aggiungere action `get_available_models` per lista modelli per provider
 
+### 4.2 Core Package
 
+- [ ] 4.2.1 Creare `packages/core/src/supabase/study.ts` con funzioni per studio
+- [ ] 4.2.2 Aggiungere tipi TypeScript in `@lumio/shared` (QuizQuestion, LLMModel)
+- [ ] 4.2.3 Implementare `getStudyCards()` per ottenere carte utente
 
-# BACKLOG - Miglioramenti Futuri
+### 4.3 Frontend - Pagina Studio
+
+- [ ] 4.3.1 Creare `/study` route in router.tsx
+- [ ] 4.3.2 Creare `StudyPage.tsx` con gestione stati (setup/quiz/completed)
+- [ ] 4.3.3 Creare `ProviderModelSelector.tsx` per selezione provider e modello
+- [ ] 4.3.4 Creare `QuizCard.tsx` per visualizzazione domanda e opzioni
+- [ ] 4.3.5 Creare `StudyCompleted.tsx` per fine sessione
+- [ ] 4.3.6 Implementare logica selezione carta random senza ripetizioni
+
+### 4.4 Frontend - Dashboard
+
+- [ ] 4.4.1 Aggiungere bottone "Studia" prominente sopra la griglia
+- [ ] 4.4.2 Disabilitare bottone se nessuna carta disponibile
+
+### 4.5 Error Handling
+
+- [ ] 4.5.1 Gestire errori chiamata AI con possibilita di riprovare
+- [ ] 4.5.2 Gestire caso nessuna carta disponibile
+- [ ] 4.5.3 Gestire API key non valida/scaduta
+
+### Criteri di Successo Fase 4
+
+- L'utente puo avviare una sessione di studio dalla dashboard
+- L'utente puo scegliere provider (OpenAI/Anthropic) e modello
+- L'AI genera domande a scelta multipla basate sul contenuto delle carte
+- Le carte non si ripetono nella stessa sessione
+- L'utente riceve feedback immediato (corretto/sbagliato + spiegazione)
+- La sessione termina quando tutte le carte sono state viste
+- Gli errori AI sono gestiti con possibilita di riprovare
+
+### Note Fase 4
+
+- **Immagini**: Non supportate in questa fase (solo testo delle carte)
+- **Tracciamento**: Nessun salvataggio progressi/storico in questa fase
+- **Costi API**: Ogni domanda genera una chiamata API a carico dell'utente
+- **Latenza**: Le risposte AI possono richiedere 2-5 secondi
+
+---
+
+## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT
 - [ ] Ogni carta deve spiegare le sue fonti

@@ -302,6 +302,8 @@ Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.
 | `delete_key` | Elimina una chiave |
 | `set_preferred` | Imposta il provider preferito |
 | `has_valid_key` | Verifica se l'utente ha almeno una chiave valida |
+| `get_available_models` | Ritorna lista modelli disponibili per ogni provider |
+| `generate_quiz` | Genera domanda a scelta multipla da contenuto carta |
 
 **Flusso di salvataggio chiave:**
 ```
@@ -331,6 +333,73 @@ Client                    Edge Function                    Database
 - Solo l'Edge Function può leggere/scrivere chiavi
 
 > ⚠️ Le API key in chiaro transitano solo verso l'Edge Function (HTTPS). Non vengono mai persistite nei log o inviate ai client.
+
+**Generazione Quiz (action: `generate_quiz`):**
+
+Genera una domanda a scelta multipla basata sul contenuto di una carta.
+
+```
+Input:
+{
+  "action": "generate_quiz",
+  "cardContent": "# Titolo\n\nContenuto markdown della carta...",
+  "provider": "openai" | "anthropic",
+  "model": "gpt-4o-mini" | "gpt-4o" | "claude-3-5-haiku" | "claude-3-5-sonnet" | "claude-3-opus"
+}
+
+Output:
+{
+  "success": true,
+  "quiz": {
+    "question": "Qual e il principio fondamentale...",
+    "options": [
+      { "id": "A", "text": "Prima opzione" },
+      { "id": "B", "text": "Seconda opzione" },
+      { "id": "C", "text": "Terza opzione" },
+      { "id": "D", "text": "Quarta opzione" }
+    ],
+    "correctAnswer": "B",
+    "explanation": "Spiegazione dettagliata del concetto..."
+  }
+}
+```
+
+**Flusso generazione quiz:**
+```
+Client                    Edge Function                    LLM Provider
+   │                            │                              │
+   │  generate_quiz(...)        │                              │
+   │ ─────────────────────────▶ │                              │
+   │                            │  1. getUserId() (auth)       │
+   │                            │  2. getDecryptedKey()        │
+   │                            │  3. Build system prompt      │
+   │                            │  4. Call LLM API             │
+   │                            │ ─────────────────────────────▶│
+   │                            │ ◀─────────────────────────────│
+   │                            │  5. Parse JSON response      │
+   │                            │  6. Validate structure       │
+   │   { success, quiz }        │                              │
+   │ ◀───────────────────────── │                              │
+```
+
+**Modelli supportati:**
+
+| Provider | Modello | Note |
+|----------|---------|------|
+| OpenAI | `gpt-4o-mini` | Economico, buona qualita |
+| OpenAI | `gpt-4o` | Migliore qualita, piu costoso |
+| Anthropic | `claude-3-5-haiku` | Economico, veloce |
+| Anthropic | `claude-3-5-sonnet` | Bilanciato qualita/costo |
+| Anthropic | `claude-3-opus` | Massima qualita |
+
+**Prompt di sistema per quiz:**
+
+Il prompt istruisce l'AI a:
+1. Leggere il contenuto della carta
+2. Generare una domanda pertinente
+3. Creare 4 opzioni di cui solo una corretta
+4. Variare la posizione della risposta corretta (A, B, C o D)
+5. Fornire una spiegazione/ripasso del concetto
 
 #### study-planner
 Calcola il piano di studio per ogni utente.

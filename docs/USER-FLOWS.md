@@ -262,7 +262,11 @@ Quando l'utente non ha configurato le API keys:
 
 ---
 
-## 3. Sessione di Studio
+## 3. Sessione di Studio (v1 - Semplificata)
+
+> **Nota Fase 4**: Questa e la versione semplificata del flusso di studio implementata nella Fase 4.
+> Non include: tracciamento progressi, SM-2, obiettivi, storico risposte.
+> Include: selezione provider/modello, quiz AI, carte random senza ripetizioni.
 
 ### 3.1 Flow Diagram
 
@@ -270,97 +274,101 @@ Quando l'utente non ha configurato le API keys:
 ┌─────────────────────────────────┐
 │  [Dashboard]                    │
 │                                 │
-│  Obiettivo: Pilates             │
-│  Progresso: 45% → 85%           │
-│  Card da studiare oggi: 12      │
+│  ┌─────────────────────────┐    │
+│  │     [Studia]            │    │  <-- Bottone prominente
+│  └─────────────────────────┘    │
 │                                 │
-│  [▶ Studia]                     │
+│  ┌─────┐ ┌─────┐ ┌─────────┐   │
+│  │Repo │ │Card │ │Obiettivo│   │
+│  │  2  │ │ 45  │ │    -    │   │
+│  └─────┘ └─────┘ └─────────┘   │
 └────────────────┬────────────────┘
                  │
+            (Click Studia)
+                 │
                  ▼
-         {Obiettivo attivo?}
-           │           │
-          No          Sì
-           │           │
-           ▼           ▼
-    ┌───────────┐    ┌─────────────────────────────────┐
-    │ [Crea     │    │  [Studio - Domanda]             │
-    │ Obiettivo]│    │                                 │
-    └───────────┘    │  Card 1 di 12                   │
-                     │                                 │
-                     │  ┌─────────────────────────┐    │
-                     │  │                         │    │
-                     │  │  Qual è il principio    │    │
-                     │  │  fondamentale della     │    │
-                     │  │  respirazione nel       │    │
-                     │  │  Pilates?               │    │
-                     │  │                         │    │
-                     │  └─────────────────────────┘    │
-                     │                                 │
-                     │  ○ A) Respirazione addominale   │
-                     │  ○ B) Respirazione laterale     │
-                     │  ○ C) Respirazione toracica     │
-                     │  ○ D) Apnea controllata         │
-                     │                                 │
-                     └────────────────┬────────────────┘
-                                      │
-                                (Seleziona risposta)
-                                      │
-                                      ▼
-                     ┌─────────────────────────────────┐
-                     │  [Studio - Feedback]            │
-                     │                                 │
-                     │  ✅ Corretto!                   │
-                     │  ── oppure ──                   │
-                     │  ❌ Sbagliato                   │
-                     │                                 │
-                     │  La risposta corretta è B.      │
-                     │                                 │
-                     │  ┌─────────────────────────┐    │
-                     │  │  📖 Approfondimento     │    │
-                     │  │                         │    │
-                     │  │  La respirazione        │    │
-                     │  │  laterale permette di   │    │
-                     │  │  mantenere il core      │    │
-                     │  │  attivo durante...      │    │
-                     │  │  [leggi tutto]          │    │
-                     │  └─────────────────────────┘    │
-                     │                                 │
-                     │  Qualità domanda:               │
-                     │  [😠-2] [🙁-1] [😐0] [🙂+1] [😄+2] │
-                     │                                 │
-                     │  [Prossima →]                   │
-                     └────────────────┬────────────────┘
-                                      │
-                            <Aggiorna SM-2 score>
-                            <Salva feedback qualità>
-                                      │
-                                      ▼
-                              {Altre card?}
-                               │       │
-                              Sì      No
-                               │       │
-                               ▼       ▼
-                     [Domanda]    ┌─────────────────────────────────┐
-                     (loop)      │  [Studio - Completato]          │
+          {Ha carte?}
+           │       │
+          No      Si
+           │       │
+           ▼       ▼
+    [Toast error]  ┌─────────────────────────────────┐
+    "Aggiungi     │  [Studio - Setup]               │
+     repository"  │                                 │
+                  │  Seleziona provider e modello   │
+                  │                                 │
+                  │  Provider:                      │
+                  │  ○ OpenAI     ○ Anthropic       │
+                  │  (solo quelli configurati)      │
+                  │                                 │
+                  │  Modello:                       │
+                  │  [gpt-4o-mini ▼]                │
+                  │                                 │
+                  │  [Inizia a studiare]            │
+                  └────────────────┬────────────────┘
+                                   │
+                          (Click Inizia)
+                                   │
+                                   ▼
+                          <Carica tutte le carte>
+                          <Seleziona carta random>
+                          <Chiama AI per quiz>
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │  [Studio - Quiz]                │
+                  │                                 │
+                  │  Carta 1 di 45                  │
+                  │                                 │
+                  │  ┌─────────────────────────┐    │
+                  │  │  Qual e il principio    │    │
+                  │  │  fondamentale della     │    │
+                  │  │  respirazione nel       │    │
+                  │  │  Pilates?               │    │
+                  │  └─────────────────────────┘    │
+                  │                                 │
+                  │  [A] Respirazione addominale    │
+                  │  [B] Respirazione laterale      │
+                  │  [C] Respirazione toracica      │
+                  │  [D] Apnea controllata          │
+                  │                                 │
+                  │  [Caricamento...] (se AI lenta) │
+                  └────────────────┬────────────────┘
+                                   │
+                          (Seleziona risposta)
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │  [Studio - Feedback]            │
+                  │                                 │
+                  │  Corretto! / Sbagliato          │
+                  │                                 │
+                  │  La risposta corretta e B.      │
+                  │                                 │
+                  │  ┌─────────────────────────┐    │
+                  │  │  Spiegazione:           │    │
+                  │  │  La respirazione        │    │
+                  │  │  laterale permette di   │    │
+                  │  │  mantenere il core...   │    │
+                  │  └─────────────────────────┘    │
+                  │                                 │
+                  │  [Prossima carta]               │
+                  └────────────────┬────────────────┘
+                                   │
+                          <Marca carta come vista>
+                                   │
+                                   ▼
+                           {Altre carte?}
+                            │        │
+                           Si       No
+                            │        │
+                            ▼        ▼
+                  [Quiz]         ┌─────────────────────────────────┐
+                  (loop)         │  [Studio - Completato]          │
                                  │                                 │
-                                 │  🎉 Sessione completata!        │
+                                 │  Hai completato tutte le carte! │
                                  │                                 │
-                                 │  Card studiate: 12              │
-                                 │  Corrette: 9 (75%)              │
-                                 │  Tempo: 8 minuti                │
-                                 │                                 │
-                                 │  Progresso obiettivo:           │
-                                 │  ████████░░ 52% (+7%)           │
-                                 │                                 │
-                                 │  {Obiettivo giornaliero?}       │
-                                 │       │           │             │
-                                 │   Raggiunto   Non ancora        │
-                                 │       │           │             │
-                                 │       ▼           ▼             │
-                                 │  [Continua?]  [Continua]        │
-                                 │  [Torna dom.] [Torna dash.]     │
-                                 │                                 │
+                                 │  [Torna alla Dashboard]         │
                                  └─────────────────────────────────┘
 ```
 
@@ -368,50 +376,79 @@ Quando l'utente non ha configurato le API keys:
 
 | Step | Schermata | Azione Utente | Sistema | Next |
 |------|-----------|---------------|---------|------|
-| 1 | Dashboard | Click "Studia" | Carica card prioritarie | 2 |
-| 2 | Domanda | Legge domanda | - | 3 |
-| 3 | Domanda | Seleziona risposta | - | 4 |
-| 4 | Feedback | Legge feedback e approfondimento | Mostra risultato | 5 |
-| 5 | Feedback | Vota qualità domanda (-2 a +2) | Salva rating | 6 |
-| 6 | Feedback | Click "Prossima" | Aggiorna SM-2, carica prossima | 2 o 7 |
-| 7 | Completato | Vede recap | Aggiorna progresso obiettivo | 8 |
-| 8 | Completato | "Continua" o "Torna domani" | - | 1 o Dashboard |
+| 1 | Dashboard | Click "Studia" | Verifica se ha carte | 2 o errore |
+| 2 | Setup | Seleziona provider | Mostra modelli disponibili | 3 |
+| 3 | Setup | Seleziona modello, click "Inizia" | Carica carte, seleziona random, chiama AI | 4 |
+| 4 | Quiz | Legge domanda | Mostra 4 opzioni | 5 |
+| 5 | Quiz | Seleziona risposta (A/B/C/D) | Valuta risposta | 6 |
+| 6 | Feedback | Legge feedback e spiegazione | - | 7 |
+| 7 | Feedback | Click "Prossima carta" | Marca carta vista, seleziona nuova random | 4 o 8 |
+| 8 | Completato | Click "Torna alla Dashboard" | - | Dashboard |
 
-### 3.3 Logica Selezione Card
+### 3.3 Logica Selezione Carta (v1 Semplificata)
 
 ```
-1. Filtra card con tag = obiettivo attivo
-2. Ordina per:
-   a. Card mai studiate (priorità alta)
-   b. Card con SM-2 due_date <= oggi
-   c. Card con mastery < target obiettivo
-3. Limita a N card (calcolato da study-planner per raggiungere deadline)
+1. Carica tutte le carte dell'utente (da tutti i repository)
+2. Inizializza array vuoto: seenCardIds = []
+3. Per ogni carta richiesta:
+   a. Filtra carte non in seenCardIds
+   b. Se nessuna carta disponibile -> fine sessione
+   c. Seleziona carta random
+   d. Aggiungi card.id a seenCardIds
+   e. Ritorna carta selezionata
 ```
+
+**Nota**: Le carte viste sono tracciate solo in memoria (stato React). Ricaricando la pagina si resetta.
 
 ### 3.4 Generazione Domanda AI
 
-**Input al LLM:**
-```
-Card content: [contenuto markdown della card]
-Difficulty: [1-5]
-Language: [it/en]
-User history: [risposte precedenti su questa card, se esistono]
-```
-
-**Output atteso:**
+**Chiamata a llm-proxy:**
 ```json
 {
-  "question": "Qual è il principio...",
-  "options": [
-    {"id": "A", "text": "Respirazione addominale", "correct": false},
-    {"id": "B", "text": "Respirazione laterale", "correct": true},
-    {"id": "C", "text": "Respirazione toracica", "correct": false},
-    {"id": "D", "text": "Apnea controllata", "correct": false}
-  ],
-  "explanation": "La respirazione laterale permette di...",
-  "deep_dive": "Approfondimento più lungo..."
+  "action": "generate_quiz",
+  "cardContent": "# Titolo\n\nContenuto markdown della carta...",
+  "provider": "openai",
+  "model": "gpt-4o-mini"
 }
 ```
+
+**Risposta attesa:**
+```json
+{
+  "success": true,
+  "quiz": {
+    "question": "Qual e il principio fondamentale della respirazione nel Pilates?",
+    "options": [
+      { "id": "A", "text": "Respirazione addominale" },
+      { "id": "B", "text": "Respirazione laterale" },
+      { "id": "C", "text": "Respirazione toracica" },
+      { "id": "D", "text": "Apnea controllata" }
+    ],
+    "correctAnswer": "B",
+    "explanation": "La respirazione laterale (o costale) e la tecnica fondamentale nel Pilates perche permette di mantenere l'attivazione del core durante il movimento..."
+  }
+}
+```
+
+### 3.5 Modelli Disponibili
+
+| Provider | Modello | Caratteristiche |
+|----------|---------|-----------------|
+| OpenAI | gpt-4o-mini | Economico, veloce |
+| OpenAI | gpt-4o | Alta qualita |
+| Anthropic | claude-3-5-haiku | Economico, veloce |
+| Anthropic | claude-3-5-sonnet | Bilanciato |
+| Anthropic | claude-3-opus | Massima qualita |
+
+### 3.6 Gestione Errori
+
+| Errore | Comportamento |
+|--------|---------------|
+| Nessuna carta | Toast "Aggiungi un repository per iniziare" |
+| Nessuna API key configurata | Redirect a /setup/api-keys |
+| Errore chiamata AI | Mostra errore con bottone "Riprova" |
+| API key scaduta/invalida | Messaggio con link a configurazione |
+| Timeout AI | Messaggio con bottone "Riprova" |
 
 ---
 
