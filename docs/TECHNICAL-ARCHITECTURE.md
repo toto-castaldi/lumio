@@ -835,7 +835,7 @@ Il DSN Sentry viene passato come env var durante il build EAS.
 | `SUPABASE_ANON_KEY` | Build time env |
 | `SUPABASE_ACCESS_TOKEN` | Deploy Edge Functions |
 | `SUPABASE_PROJECT_REF` | Deploy Edge Functions |
-| `SUPABASE_DB_PASSWORD` | Database backup before migrations (pg_dump) |
+| `SUPABASE_DB_PASSWORD` | Database backup before migrations (pg_dump) - requires `ENABLE_DB_BACKUP=true` variable |
 | `ENCRYPTION_KEY` | API key encryption (32 bytes base64) |
 | `DO_HOST` | DigitalOcean droplet IP |
 | `DO_USERNAME` | SSH username |
@@ -844,6 +844,14 @@ Il DSN Sentry viene passato come env var durante il build EAS.
 | `EXPO_TOKEN` | EAS Build authentication |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+
+### 12.5 GitHub Actions Variables
+
+Variables are set in Settings → Secrets and variables → Actions → Variables tab.
+
+| Variable | Usage |
+|----------|-------|
+| `ENABLE_DB_BACKUP` | Set to `true` to enable database backup before migrations |
 
 ---
 
