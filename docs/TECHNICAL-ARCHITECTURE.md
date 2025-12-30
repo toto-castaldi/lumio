@@ -42,7 +42,7 @@ Lumio è una piattaforma multi-client (web + mobile) con backend serverless su S
 │   └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │   ┌─────────────────────────────────────────────────────────┐   │
-│   │              pg_cron (Scheduled Jobs)                    │   │
+│   │              External Scheduler (n8n)                    │   │
 │   │  • Repository sync check    • Study plan recalculation  │   │
 │   └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
@@ -232,7 +232,7 @@ packages:
 
 | Component | Usage |
 |-----------|-------|
-| PostgreSQL | Database principale + pg_cron |
+| PostgreSQL | Database principale |
 | Auth | Google OAuth |
 | Storage | Immagini card (sync da Git) |
 | Edge Functions | Git sync, LLM proxy, study planner |
@@ -271,7 +271,7 @@ Ogni environment ha:
 Sincronizza i repository Git con il database locale.
 
 ```
-Trigger: pg_cron (ogni 6 ore) + manuale da UI
+Trigger: n8n (ogni ora, configurabile) + manuale da UI
 Input: repository_id
 Flow:
   1. Fetch repository metadata (ultimo commit)
@@ -347,13 +347,18 @@ Flow:
   6. Salva in user_study_plan
 ```
 
-### 4.3 pg_cron Jobs
+### 4.3 Scheduled Jobs (n8n)
 
-| Job | Schedule | Function |
-|-----|----------|----------|
-| `sync_repositories` | `0 */6 * * *` (ogni 6 ore) | Triggera git-sync per tutti i repo attivi |
-| `recalculate_study_plans` | `0 3 * * *` (ogni notte alle 3) | Triggera study-planner per tutti gli utenti con obiettivo attivo |
-| `cleanup_expired_sessions` | `0 4 * * 0` (domenica alle 4) | Pulizia sessioni scadute |
+I job schedulati sono gestiti esternamente tramite **n8n** invece di pg_cron, per maggiore affidabilità e facilità di debugging.
+
+| Job | Schedule | Endpoint | Body |
+|-----|----------|----------|------|
+| `sync_repositories` | `0 * * * *` (ogni ora) | `POST /functions/v1/git-sync` | `{"action": "check_updates"}` |
+| `recalculate_study_plans` | `0 3 * * *` (ogni notte alle 3) | `POST /functions/v1/study-planner` | `{"action": "recalculate_all"}` |
+
+**Configurazione n8n:**
+- Autenticazione: `Authorization: Bearer <SERVICE_ROLE_KEY>`
+- Content-Type: `application/json`
 
 ### 4.4 Row Level Security (RLS)
 

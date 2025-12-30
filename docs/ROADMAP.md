@@ -74,7 +74,7 @@
 
 ### 1.2 DELIVERY
 
-- [ ] Richiesta di aggiornamento automatico su PWA
+- [x] Richiesta di aggiornamento automatico su PWA
 
 ---
 
@@ -93,7 +93,7 @@
 - [x] se viene aggiunto un nuovo REPO questo viene importato nel DB locale. Tutte le carte vengono prese.
 - [x] se viene cancellato, anche localmente le carte vengono cancellate
 - [x] Devops : creo artifact con il backup DB di PROD prima di migrazioni
-- [x] ogni ora (configurabile), il sistema controlla se i repo degli utenti hanno cambiato versione (tramite storia dei commit). In caso di cambiamento le carte vengono tutte reimportate da zero
+- [x] ogni ora (configurabile via n8n), il sistema controlla se i repo degli utenti hanno cambiato versione (tramite storia dei commit). In caso di cambiamento le carte vengono tutte reimportate da zero
 - [x] nella home page è possibile vedere i contatori dei repository e delle carte aggiornati
 - [x] preview delle carte: click su contatore card → lista carte → click su carta → visualizzazione markdown completo
 
@@ -105,3 +105,7 @@
 - [ ] Ogni carta deve spiegare le sue fonti
 - [ ] Web Push Notifications per PWA
 - [ ] Offline mode con Service Worker + IndexedDB
+
+## BUG
+
+- [ ] le carte dei repo non vengono ricaricate → **FIX: configurare job n8n per chiamare `POST /functions/v1/git-sync` con `{"action": "check_updates"}`**

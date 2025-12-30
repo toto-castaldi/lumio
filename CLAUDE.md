@@ -24,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Rules
 
 - **SQL migrations must never cause data loss.** Never use DROP COLUMN, DROP TABLE, or destructive operations without migrating data first. Always preserve existing data with ALTER TABLE ADD COLUMN, data migration scripts, and only then remove old columns if needed.
+- **SQL migrations must fail loudly.** Never use `RAISE NOTICE` for critical failures in migrations. If something doesn't work (missing extensions, missing settings, etc.), use `RAISE EXCEPTION` to fail the pipeline. Silent failures are unacceptable - the CI/CD must be notified of any problem.
 - **Add new Edge Functions to GitHub Action.** When creating a new Edge Function, always add it to `.github/workflows/ci-deploy.yml` in the "Deploy Edge Functions" step.
 - **Use frontend-design plugin** When you do a UX/UI task, use the installed Frontend-design plugin.
 - **Do not do any git command** Git operations are made by de developer. You can't do any of those.

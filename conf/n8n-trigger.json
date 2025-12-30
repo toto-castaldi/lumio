@@ -1,0 +1,76 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        -64
+      ],
+      "id": "243cbacd-353d-4445-8f6f-603b27b76a1a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://[SUPPABASE-ID].supabase.co/functions/v1/git-sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\": \"check_updates\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -80,
+        -64
+      ],
+      "id": "f71b5ec8-17c3-4ea5-8600-d667f5178057",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "NF3kwMFmVlFI1hYD",
+          "name": "Supabase-lumio-prod"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "7832a052-05fa-4bc9-b35a-4e830502ab99",
+  "meta": {
+    "instanceId": "6efa8fa247152d28fec990d84263863b5227db4c1fa4bd2cb8c072051925a514"
+  },
+  "id": "a2lRUAuH5HnG60nY",
+  "tags": []
+}
