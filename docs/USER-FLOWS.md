@@ -561,7 +561,9 @@ User history: [risposte precedenti su questa card, se esistono]
 
 ---
 
-## 7. Configurazione API Keys
+## 7. Configurazione API Keys (Solo Web)
+
+> ⚠️ **Disponibile solo su Web** - La configurazione delle API Keys non è disponibile su mobile per v1.0. Gli utenti devono configurare le chiavi tramite l'app web.
 
 ### 7.1 Flow Diagram
 
@@ -641,10 +643,12 @@ User history: [risposte precedenti su questa card, se esistono]
 ├── Study (Sessione studio)
 ├── Progress (Dashboard obiettivo)
 └── Settings
-    ├── API Keys
     ├── Repositories
     ├── Notifications
     └── Account
+
+Note: API Keys configuration è disponibile solo su Web.
+      L'utente deve configurare le chiavi via web prima di usare l'app mobile.
 ```
 
 ---
@@ -688,8 +692,10 @@ User history: [risposte precedenti su questa card, se esistono]
 | Navigazione | Sidebar | Bottom tabs |
 | Studio | Click per rispondere | Tap per rispondere |
 | Notifiche push | No | Sì |
-| Configurazione API | Completa | Completa |
+| Configurazione API Keys | ✅ Completa | ❌ Solo su Web |
 | Gestione repository | Completa | Completa |
+
+> **Nota:** La configurazione delle API Keys (OpenAI/Anthropic) è disponibile solo su Web per v1.0. Gli utenti mobile devono configurare le chiavi via web prima di poter usare l'app.
 
 ---
 
