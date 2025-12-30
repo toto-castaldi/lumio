@@ -122,3 +122,4 @@ Attualmente le source maps non vengono uploadate durante il build. Per abilitare
 - [ ] Cambiare `uploadSourcemaps: true` in `apps/mobile/app.json`
 - [ ] proteggere le edge functions con JWT
 - [ ] ⚠️ Minor version mismatches - package - expected  found - @sentry/react-native  ~7.2.0    7.8.0
+- [ ] autenticazione "one-tap" nativa per mobile
