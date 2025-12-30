@@ -34,7 +34,8 @@
         "@sentry/react-native/expo",
         {
           "organization": "lumio",
-          "project": "lumio-mobile"
+          "project": "lumio-mobile",
+          "uploadSourcemaps": false
         }
       ]
     ],

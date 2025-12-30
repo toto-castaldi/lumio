@@ -73,16 +73,21 @@
 
 ---
 
-## 3 - REPO PUBBLICO
+## 3 - REPO PUBBLICO (solo da WEB)
 
-- [ ] Aggiungi primo repository
-- [ ] Devops : backup db prima di migrazioni
-- [ ] Crea obiettivo
+- [ ] CRUD (solo aggiunta e cancellazione) censimento di REPO pubblici git con carte
+- [ ] se viene aggiunto un nuovo REPO questo viene importato nel DB locale. Tutte le carte vengono prese.
+- [ ] se viene cancellato, anche localmente le carte vengono cancellate
+- [ ] Devops : creo artifact con il backup DB di PROD prima di migrazioni
+- [ ] ogni minuto, configurabile, il sistema, controlla se i repo degli utenti hanno cambiato versione (tramite storia dei commit). In caso di cambiamento le carte vengono tutte reimportate da zero
+- [ ] nella home page è possibile vedere i contatori dei repository e delle carte aggiornati
+
 
 ---
 
 ## 4 - STUDIO
 
+- [ ] Crea obiettivo
 - [ ] Sessione di studio
 - [ ] Generazione domande AI
 - [ ] Algoritmo SM-2
