@@ -4,6 +4,8 @@ import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { SetupApiKeysPage } from './pages/setup/SetupApiKeysPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { RepositoriesPage } from './pages/RepositoriesPage';
+import { CardsPage } from './pages/CardsPage';
 import { useAuth } from './contexts/AuthContext';
 
 /**
@@ -136,6 +138,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'repositories',
+        element: (
+          <ProtectedRoute>
+            <RepositoriesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'repositories/:repositoryId/cards',
+        element: (
+          <ProtectedRoute>
+            <CardsPage />
           </ProtectedRoute>
         ),
       },

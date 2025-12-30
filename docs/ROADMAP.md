@@ -75,13 +75,13 @@
 
 ## 3 - REPO PUBBLICO (solo da WEB)
 
-- [ ] CRUD (solo aggiunta e cancellazione) censimento di REPO pubblici git con carte
-- [ ] se viene aggiunto un nuovo REPO questo viene importato nel DB locale. Tutte le carte vengono prese.
-- [ ] se viene cancellato, anche localmente le carte vengono cancellate
-- [ ] Devops : creo artifact con il backup DB di PROD prima di migrazioni
-- [ ] ogni minuto, configurabile, il sistema, controlla se i repo degli utenti hanno cambiato versione (tramite storia dei commit). In caso di cambiamento le carte vengono tutte reimportate da zero
-- [ ] nella home page è possibile vedere i contatori dei repository e delle carte aggiornati
-
+- [x] CRUD (solo aggiunta e cancellazione) censimento di REPO pubblici git con carte
+- [x] se viene aggiunto un nuovo REPO questo viene importato nel DB locale. Tutte le carte vengono prese.
+- [x] se viene cancellato, anche localmente le carte vengono cancellate
+- [x] Devops : creo artifact con il backup DB di PROD prima di migrazioni
+- [x] ogni ora (configurabile), il sistema controlla se i repo degli utenti hanno cambiato versione (tramite storia dei commit). In caso di cambiamento le carte vengono tutte reimportate da zero
+- [x] nella home page è possibile vedere i contatori dei repository e delle carte aggiornati
+- [x] preview delle carte: click su contatore card → lista carte → click su carta → visualizzazione markdown completo
 
 ---
 
@@ -120,3 +120,5 @@ Attualmente le source maps non vengono uploadate durante il build. Per abilitare
 - [ ] Creare auth token su sentry.io → Settings → Auth Tokens
 - [ ] Aggiungere `SENTRY_AUTH_TOKEN` come EAS Secret
 - [ ] Cambiare `uploadSourcemaps: true` in `apps/mobile/app.json`
+- [ ] riproteggere la edge llm-proxy
+- [ ] ⚠️ Minor version mismatches - package - expected  found - @sentry/react-native  ~7.2.0    7.8.0

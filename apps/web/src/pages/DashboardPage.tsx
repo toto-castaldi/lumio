@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,10 +10,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { APP_NAME, getVersionString } from '@lumio/core';
+import { APP_NAME, getVersionString, getUserStats, type UserStats } from '@lumio/core';
 
 export function DashboardPage() {
   const { user, logout } = useAuth();
+  const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  useEffect(() => {
+    getUserStats()
+      .then(setStats)
+      .catch((err) => console.error('Failed to load stats:', err))
+      .finally(() => setIsLoadingStats(false));
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -67,24 +78,30 @@ export function DashboardPage() {
             </p>
 
             <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Repository</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold">0</p>
-                  <p className="text-sm text-muted-foreground">
-                    Deck collegati
-                  </p>
-                </CardContent>
-              </Card>
+              <Link to="/repositories" className="block">
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Repository</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold">
+                      {isLoadingStats ? '...' : stats.repositoryCount}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Deck collegati
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
 
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg">Card</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">0</p>
+                  <p className="text-3xl font-bold">
+                    {isLoadingStats ? '...' : stats.cardCount}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     Card da studiare
                   </p>

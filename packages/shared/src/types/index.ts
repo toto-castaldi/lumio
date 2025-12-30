@@ -46,3 +46,58 @@ export interface AuthUser {
   displayName?: string;
   avatarUrl?: string;
 }
+
+// Repository (stored in public.repositories table)
+export interface Repository {
+  id: string;
+  userId: string;
+  url: string;
+  name: string;
+  description?: string;
+  isPrivate: boolean;
+  formatVersion: number;
+  lastCommitSha?: string;
+  lastSyncedAt?: string;
+  syncStatus: SyncStatus;
+  syncErrorMessage?: string;
+  cardCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Card (stored in public.cards table)
+export interface Card {
+  id: string;
+  repositoryId: string;
+  filePath: string;
+  contentHash: string;
+  rawContent: string;  // Original file content (complete markdown with frontmatter)
+  title: string;
+  content: string;     // Parsed markdown body (without frontmatter)
+  tags: string[];
+  difficulty: number;
+  language: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Card frontmatter from markdown parsing
+export interface CardFrontmatter {
+  title: string;
+  tags: string[];
+  difficulty?: number;
+  language?: string;
+}
+
+// README frontmatter for deck validation
+export interface DeckFrontmatter {
+  lumio_format_version: number;
+  description: string;
+}
+
+// User stats for dashboard
+export interface UserStats {
+  repositoryCount: number;
+  cardCount: number;
+}

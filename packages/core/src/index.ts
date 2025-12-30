@@ -29,3 +29,13 @@ export {
   hasValidApiKey,
   getPreferredProvider,
 } from './supabase/api-keys';
+
+// Export repository functions
+export {
+  addRepository,
+  deleteRepository,
+  syncRepository,
+  getUserRepositories,
+  getUserStats,
+  getRepositoryCards,
+} from './supabase/repositories';

@@ -208,6 +208,28 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # Backup database before migrations
+      - name: Backup database
+        if: ${{ secrets.SUPABASE_DB_PASSWORD != '' }}
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          PGPASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}" pg_dump \
+            -h db.${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co \
+            -U postgres \
+            -d postgres \
+            --no-owner \
+            --no-privileges \
+            > "db_backup_${TIMESTAMP}.sql"
+          echo "Backup created: db_backup_${TIMESTAMP}.sql"
+
+      - name: Upload backup artifact
+        if: ${{ secrets.SUPABASE_DB_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}
+          path: db_backup_*.sql
+          retention-days: 30
+
       - name: Run database migrations
         run: supabase db push
         env:
