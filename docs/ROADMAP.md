@@ -63,13 +63,13 @@
 - [x] Visualize version in mobile
 - [x] Visualize version in supabase responses
 
-### 1.11 FIX VERSIONING SYSTEM (Reset to v0.1.0) ✅
+### 1.11 FIX VERSIONING SYSTEM ✅
 
 - [x] Reset sistema di versionamento a v0.1.0
 - [x] Fix configurazione Husky v9 (hooks in `.husky/`)
-- [x] Fix CI/CD release workflow (logica semplificata)
-- [x] Fix standard-version bumpFiles (include package.json)
-- [x] Verificato: commit `fix:` → v0.1.1 creata automaticamente
+- [x] Migrato da standard-version a **release-please** (Google)
+- [x] Configurato workflow `.github/workflows/release-please.yml`
+- [x] Aggiunto marker `x-release-please-version` in `version.ts`
 - [x] Verificato: UI web/mobile mostrano versione corretta
 
 ### 1.2 DELIVERY
@@ -337,4 +337,4 @@
 ## BUG
 
 - [x] le carte dei repo non vengono ricaricate → **FIX: configurare job n8n per chiamare `POST /functions/v1/git-sync` con `{"action": "check_updates"}`**
-- [ ] NON FUNZIONA IL VERSIONING !!!!! non riesco a far salire di la minor version
+- [x] NON FUNZIONA IL VERSIONING → **FIX: migrato da standard-version a release-please (Google)**

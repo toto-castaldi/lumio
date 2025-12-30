@@ -136,7 +136,11 @@ lumio/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci-deploy.yml       # CI/CD unificato (lint, typecheck, deploy)
+│       ├── ci-deploy.yml       # CI/CD unificato (lint, typecheck, deploy)
+│       └── release-please.yml  # Versioning automatico
+│
+├── release-please-config.json  # Configurazione release-please
+├── .release-please-manifest.json # Versione corrente
 │
 ├── conf/
 │   └── nginx-lumio.conf        # Virtual host Nginx per produzione
@@ -680,6 +684,47 @@ main (production)
 | `develop` | Dev | ✅ Yes |
 | `feature/*` | - | ❌ No (solo CI) |
 
+### 6.3 Versioning con release-please
+
+Il progetto usa **release-please** (GitHub Action di Google) per il versioning automatico.
+
+**Come funziona:**
+1. Ogni push su `main` con commit `feat:` o `fix:` crea/aggiorna una **Release PR**
+2. Quando la PR viene mergiata → bump automatico di versione, tag Git, changelog
+
+**Workflow:** `.github/workflows/release-please.yml`
+```yaml
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+```
+
+**File aggiornati automaticamente:**
+- `package.json` (campo `version`)
+- `packages/shared/src/version.ts` (marker `x-release-please-version`)
+- `CHANGELOG.md`
+
+**Conventional Commits:**
+
+| Tipo | Bump |
+|------|------|
+| `feat:` | MINOR (0.x.0) |
+| `fix:` | PATCH (0.0.x) |
+| `feat!:` o `fix!:` | MAJOR (x.0.0) |
+
+> Per dettagli completi vedere [docs/VERSIONING.md](./VERSIONING.md)
+
 ---
 
 ## 7. Web App Deployment
@@ -946,7 +991,7 @@ Variables are set in Settings → Secrets and variables → Actions → Variable
 
 ### 12.1 Prerequisites
 
-- Node.js >= 20
+- Node.js >= 22
 - pnpm >= 9
 - Supabase CLI
 

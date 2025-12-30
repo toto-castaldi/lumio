@@ -14,7 +14,7 @@ import { NeedsApiKeyMessage } from '@/components/NeedsApiKeyMessage';
 import { APP_NAME, getVersionString, getUserStats, type UserStats } from '@lumio/core';
 
 export function DashboardPage() {
-  const { user, state, logout } = useAuth();
+  const { user, state, hasApiKey, logout } = useAuth();
   const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
@@ -43,7 +43,7 @@ export function DashboardPage() {
   };
 
   // Show needs API key message if user doesn't have API keys
-  if (state === 'needs_api_key') {
+  if (!hasApiKey) {
     return (
       <div className="min-h-screen p-4 flex flex-col">
         <div className="flex items-center justify-between mb-6">

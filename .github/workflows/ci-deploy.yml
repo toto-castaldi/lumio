@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -34,95 +34,6 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-  # ============================================
-  # Release - Auto version bump on main
-  # ============================================
-
-  release:
-    runs-on: ubuntu-latest
-    needs: lint-and-typecheck
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      released: ${{ steps.release.outputs.released }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Check for releasable commits
-        id: check
-        run: |
-          # Check if any tags exist
-          if ! git describe --tags --abbrev=0 2>/dev/null; then
-            echo "No tags found - will create first release"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "first_release=true" >> $GITHUB_OUTPUT
-          else
-            LAST_TAG=$(git describe --tags --abbrev=0)
-            echo "Last tag: $LAST_TAG"
-
-            # Count feat/fix commits since last tag
-            FEAT_COUNT=$(git log ${LAST_TAG}..HEAD --oneline | grep -E "^[a-f0-9]+ feat" | wc -l || echo "0")
-            FIX_COUNT=$(git log ${LAST_TAG}..HEAD --oneline | grep -E "^[a-f0-9]+ fix" | wc -l || echo "0")
-
-            echo "Commits since $LAST_TAG: feat=$FEAT_COUNT, fix=$FIX_COUNT"
-
-            if [ "$FEAT_COUNT" -gt 0 ] || [ "$FIX_COUNT" -gt 0 ]; then
-              echo "should_release=true" >> $GITHUB_OUTPUT
-              echo "first_release=false" >> $GITHUB_OUTPUT
-            else
-              echo "No releasable commits (feat/fix) since $LAST_TAG"
-              echo "should_release=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Run release
-        id: release
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          if [ "${{ steps.check.outputs.first_release }}" == "true" ]; then
-            echo "Creating first release..."
-            pnpm release -- --first-release
-          else
-            echo "Creating release..."
-            pnpm release
-          fi
-          echo "released=true" >> $GITHUB_OUTPUT
-
-      - name: Extract version
-        id: version
-        run: |
-          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
-
-      - name: Push release commit
-        if: steps.release.outputs.released == 'true'
-        run: git push origin main
-
-      - name: Push release tag
-        if: steps.release.outputs.released == 'true'
-        run: git push origin --tags
-
   build-web:
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
@@ -133,7 +44,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -163,7 +74,7 @@ jobs:
 
   deploy-web:
     runs-on: ubuntu-latest
-    needs: [build-web, release]
+    needs: build-web
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -174,7 +85,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -213,7 +124,7 @@ jobs:
 
   deploy-migrations:
     runs-on: ubuntu-latest
-    needs: release
+    needs: lint-and-typecheck
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -255,7 +166,7 @@ jobs:
 
   deploy-functions:
     runs-on: ubuntu-latest
-    needs: [release, deploy-migrations]
+    needs: deploy-migrations
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -299,7 +210,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -325,7 +236,7 @@ jobs:
 
   deploy-mobile:
     runs-on: ubuntu-latest
-    needs: [build-mobile, release]
+    needs: build-mobile
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -336,7 +247,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies

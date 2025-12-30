@@ -18,8 +18,6 @@ export function LoginPage() {
   useEffect(() => {
     if (state === 'ready') {
       navigate('/dashboard');
-    } else if (state === 'needs_api_key') {
-      navigate('/setup/api-keys');
     }
   }, [state, navigate]);
 

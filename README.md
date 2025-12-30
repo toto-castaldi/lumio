@@ -13,7 +13,7 @@ Leggi CHANGELOG.md, CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pront
 
 ### Prerequisites
 
-- Node.js >= 20
+- Node.js >= 22
 - pnpm >= 9
 - Supabase CLI (for local development)
 
@@ -80,6 +80,7 @@ lumio/
 - [Card Format Spec](./docs/CARD-FORMAT-SPEC.md) - Markdown card format
 - [User Flows](./docs/USER-FLOWS.md) - Onboarding, study, goals
 - [Roadmap](./docs/ROADMAP.md) - Development phases
+- [Versioning](./docs/VERSIONING.md) - release-please, conventional commits
 
 ## Deployment
 

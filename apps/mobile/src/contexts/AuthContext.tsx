@@ -55,9 +55,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshApiKeyStatus = async () => {
     const hasKeys = await checkApiKeys();
     setHasApiKey(hasKeys);
-    if (user) {
-      setState(hasKeys ? 'ready' : 'needs_api_key');
-    }
   };
 
   useEffect(() => {
@@ -70,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (currentUser) {
           const hasKeys = await checkApiKeys();
           setHasApiKey(hasKeys);
-          setState(hasKeys ? 'ready' : 'needs_api_key');
+          setState('ready');
         } else {
           setState('logged_out');
         }
@@ -91,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (authUser) {
         const hasKeys = await checkApiKeys();
         setHasApiKey(hasKeys);
-        setState(hasKeys ? 'ready' : 'needs_api_key');
+        setState('ready');
       } else {
         setState('logged_out');
         setHasApiKey(false);

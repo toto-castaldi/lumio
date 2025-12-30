@@ -16,7 +16,7 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (state === 'ready' || state === 'needs_api_key') {
+    if (state === 'ready') {
       navigate('/dashboard');
     }
   }, [state, navigate]);

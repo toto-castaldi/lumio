@@ -42,7 +42,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (state === 'ready' || state === 'needs_api_key') {
+  if (state === 'ready') {
     return <Navigate to="/dashboard" replace />;
   }
 
