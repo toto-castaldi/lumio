@@ -110,12 +110,36 @@
 
 ---
 
+## 4 - PRIMA VERSIONE STUDIO - SOLO WEB - CARTE RANDOM
+
+- L'utente preme su studia. 
+- Lumio inizia ad usare AI del cliente tramite le API KEY.
+- Si crea una chat con un contesto iniziale del tipo :
+```
+Voglio ripassare gli argomenti delle carte che ti invierò una alla volta.
+Una volta ricevuto la carta, la leggi e mi proponi quattro scelte multiple tra cui solo una corretta.
+Non mi devi dare subito la risposta, io la devo scegliere scelgo io e se sbaglio mi correggi.
+Le opzioni che mi proponi devono essere tutte diverse.
+Dopo che ho risposto fai un piccolo ripasso dell'argomento sia nel caso in cui ho sbagliato sia nel caso in cui ho risposto correttamente.
+Vai a capo tra una opzione e l'altra.
+Varia la risposta corretta tra una carta e e l'altra. Può essere corretta la A, B, C o D.
+```
+- Lumio sceglie una carta a caso tra quelle da studiare e la invia alla AI (tutto il file , anche immagini collegate se si riesce).
+- Lumio chiede alla AI : "dimmi le quattro opzioni per questa carta"
+- L'utente risponde
+- L'AI dice se corretta o meno e ripasso
+- Il processo si ripete riscegliendo una carta a caso
+
+
+
+
 # BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT
 - [ ] Ogni carta deve spiegare le sue fonti
 - [ ] Web Push Notifications per PWA
 - [ ] Offline mode con Service Worker + IndexedDB
+- [ ] lumio.toto-castaldi.com diventa sito ufficiale, invece web va su w-lumio.toto-castaldi.com
 
 ## BUG
 
