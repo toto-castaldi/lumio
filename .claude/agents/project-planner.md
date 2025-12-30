@@ -87,6 +87,7 @@ Before finalizing the ROADMAP.md update:
 - Use ultrathink for complex planning decisions
 - Use plan mode when structuring the implementation steps
 - Present the proposed ROADMAP.md changes for user approval before writing
+- When plan and changes are approved, update file in docs with the new specs
 
 ## Output Format for Final Plan
 When presenting the final plan before updating ROADMAP.md:
