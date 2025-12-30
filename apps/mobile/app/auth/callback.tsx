@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useRouter, useLocalSearchParams, useGlobalSearchParams, type Href } from 'expo-router';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import * as Sentry from '@sentry/react-native';
 import { getSupabaseClient } from '@lumio/core';
+
+// Try to complete any pending auth session
+WebBrowser.maybeCompleteAuthSession();
 
 /**
  * OAuth Callback Handler
@@ -15,10 +19,34 @@ import { getSupabaseClient } from '@lumio/core';
 export default function AuthCallbackScreen() {
   const router = useRouter();
   const urlFromHook = Linking.useURL();
+  const localParams = useLocalSearchParams();
+  const globalParams = useGlobalSearchParams();
   const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const processedRef = useRef(false);
+
+  // Log params from Expo Router
+  useEffect(() => {
+    console.log('Local params:', JSON.stringify(localParams));
+    console.log('Global params:', JSON.stringify(globalParams));
+    Sentry.addBreadcrumb({
+      category: 'auth',
+      message: 'Callback screen mounted',
+      data: {
+        localParams: JSON.stringify(localParams),
+        globalParams: JSON.stringify(globalParams),
+      },
+      level: 'info',
+    });
+
+    // Check if we have a code in the router params
+    const code = localParams.code || globalParams.code;
+    if (code && typeof code === 'string') {
+      console.log('Got code from router params!');
+      setCallbackUrl(`lumio://auth/callback?code=${code}`);
+    }
+  }, [localParams, globalParams]);
 
   // Get URL from multiple sources
   useEffect(() => {
@@ -41,12 +69,14 @@ export default function AuthCallbackScreen() {
     const getUrl = async () => {
       Sentry.addBreadcrumb({
         category: 'auth',
-        message: 'Auth callback mounted',
+        message: 'Getting URL',
         data: { urlFromHook: urlFromHook?.substring(0, 100) || 'null' },
         level: 'info',
       });
       console.log('Getting URL... urlFromHook:', urlFromHook);
-      setDebugInfo(`Start: urlFromHook=${urlFromHook ? 'present' : 'null'}`);
+
+      const paramsInfo = `localParams: ${JSON.stringify(localParams)}\nglobalParams: ${JSON.stringify(globalParams)}`;
+      setDebugInfo(`Start: urlFromHook=${urlFromHook ? 'present' : 'null'}\n${paramsInfo}`);
 
       // Try useURL hook first
       if (urlFromHook) {
@@ -102,6 +132,66 @@ export default function AuthCallbackScreen() {
     };
   }, [urlFromHook]);
 
+  // Check for existing session first - it might already be set by Supabase
+  useEffect(() => {
+    if (processedRef.current) return;
+
+    let attemptCount = 0;
+    const maxAttempts = 5;
+
+    const checkExistingSession = async (): Promise<boolean> => {
+      attemptCount++;
+      console.log(`Checking session attempt ${attemptCount}/${maxAttempts}...`);
+      setDebugInfo(prev => prev + `\nSession check #${attemptCount}`);
+
+      try {
+        const supabase = getSupabaseClient();
+
+        // Try to refresh the session first
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        console.log('Session check result:', { hasSession: !!session, error: error?.message });
+        setDebugInfo(prev => prev + `\n  Result: ${session ? 'FOUND' : 'null'} ${error ? `(${error.message})` : ''}`);
+
+        if (session) {
+          console.log('Found existing session! User:', session.user.email);
+          Sentry.addBreadcrumb({
+            category: 'auth',
+            message: 'Existing session found in callback',
+            data: { email: session.user.email, attempt: attemptCount },
+            level: 'info',
+          });
+          processedRef.current = true;
+          router.replace('/' as Href);
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setDebugInfo(prev => prev + `\n  Error: ${err}`);
+        return false;
+      }
+    };
+
+    const runChecks = async () => {
+      // Check immediately
+      if (await checkExistingSession()) return;
+
+      // Retry with delays
+      for (let i = 0; i < maxAttempts - 1; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (processedRef.current) return;
+        if (await checkExistingSession()) return;
+      }
+
+      // After all attempts, show what we found
+      console.log('Session not found after all attempts');
+      setDebugInfo(prev => prev + `\n\nSessione non trovata dopo ${maxAttempts} tentativi`);
+    };
+
+    runChecks();
+  }, [router]);
+
   useEffect(() => {
     // Prevent double processing
     if (processedRef.current || !callbackUrl) return;
@@ -111,11 +201,19 @@ export default function AuthCallbackScreen() {
         console.log('Processing auth callback URL:', callbackUrl);
         processedRef.current = true;
 
+        // First check if session already exists (Supabase might have set it)
+        const supabase = getSupabaseClient();
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+
+        if (existingSession) {
+          console.log('Session already exists, redirecting...');
+          router.replace('/' as Href);
+          return;
+        }
+
         // Parse the URL to extract tokens or code
         // PKCE flow: lumio://auth/callback?code=xxx (query param)
         // Implicit flow: lumio://auth/callback#access_token=xxx&refresh_token=yyy (hash)
-
-        const supabase = getSupabaseClient();
         let authSuccess = false;
 
         // Try to get code from query params (PKCE flow - preferred for Android)
