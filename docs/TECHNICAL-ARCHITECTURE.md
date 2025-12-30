@@ -280,6 +280,12 @@ Flow:
 #### llm-proxy
 Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.
 
+**Autenticazione:**
+- JWT verification disabilitata a livello gateway (`verify_jwt = false`)
+- Autenticazione gestita internamente dalla funzione per ogni azione
+- `test_key`: non richiede autenticazione (solo validazione chiave esterna)
+- Tutte le altre azioni: richiedono JWT valido via `getUserId()`
+
 **Azioni disponibili:**
 
 | Action | Descrizione |
@@ -398,6 +404,37 @@ export const signInWithGoogle = async () => {
   return { data, error };
 };
 ```
+
+### 5.2 Session Token Management
+
+Per evitare rate limiting, il refresh del token viene eseguito solo quando necessario:
+
+```typescript
+// packages/core/src/supabase/auth.ts
+export async function getAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) return null;
+
+  // Refresh solo se il token scade entro 60 secondi
+  const expiresAt = session.expires_at;
+  const now = Math.floor(Date.now() / 1000);
+  const needsRefresh = expiresAt && (expiresAt - now) < 60;
+
+  if (needsRefresh) {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) {
+      console.error('Failed to refresh session:', error);
+      return session.access_token; // Fallback al token corrente
+    }
+    return data.session?.access_token || null;
+  }
+
+  return session.access_token;
+}
+```
+
+**Importante:** Non chiamare `refreshSession()` ad ogni richiesta per evitare `AuthApiError: Request rate limit reached`.
 
 ---
 
@@ -657,15 +694,36 @@ Sentry.init({
 });
 ```
 
-**Mobile App** (`apps/mobile/src/lib/sentry.ts`):
+**Mobile App** (`apps/mobile/app/_layout.tsx`):
 ```typescript
 import * as Sentry from "@sentry/react-native";
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  environment: __DEV__ ? "development" : "production",
-  tracesSampleRate: 0.1,
-});
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    debug: __DEV__,
+    environment: __DEV__ ? "development" : "production",
+    tracesSampleRate: 1.0,
+  });
+}
+
+// Wrap root component with Sentry error boundary
+export default Sentry.wrap(RootLayout);
+```
+
+**Plugin Expo** (`app.json`):
+```json
+{
+  "plugins": [
+    "expo-router",
+    ["@sentry/react-native/expo", {
+      "organization": "lumio",
+      "project": "lumio-mobile"
+    }]
+  ]
+}
 ```
 
 **Edge Functions**:
@@ -754,7 +812,10 @@ openssl rand -base64 32
 |----------|-------------|
 | `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `EXPO_PUBLIC_SENTRY_DSN` | Sentry DSN |
+| `EXPO_PUBLIC_SENTRY_DSN` | Sentry DSN per crash reporting |
+
+**Nota:** Le variabili sono configurate in `eas.json` per profile `preview` e `production`.
+Il DSN Sentry viene passato come env var durante il build EAS.
 
 ### 12.3 Edge Functions
 
