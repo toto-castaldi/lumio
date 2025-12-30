@@ -14,7 +14,6 @@ export {
 // Export auth functions
 export {
   signInWithGoogle,
-  signInWithDevUser,
   signOut,
   getSession,
   getCurrentUser,

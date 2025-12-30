@@ -16,15 +16,15 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (state === 'ready') {
+    if (state === 'ready' || state === 'needs_api_key') {
       navigate('/dashboard');
-    } else if (state === 'needs_api_key') {
-      navigate('/setup/api-keys');
     }
   }, [state, navigate]);
 
   const handleGoogleLogin = async () => {
-    const { error } = await signInWithGoogle();
+    // Use mobile-specific redirect URL
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const { error } = await signInWithGoogle(redirectUrl);
     if (error) {
       console.error('Login error:', error);
     }

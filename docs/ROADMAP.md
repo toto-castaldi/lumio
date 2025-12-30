@@ -82,7 +82,18 @@
 
 - [x] aggiungere sicurezza RLS
 - [x] Login/logout con Google OAuth Web
-- [ ] Login/logout con Google OAuth Mobile (PWA)
+- [x] Login/logout con Google OAuth Mobile (PWA)
+  - [x] 2.1 Configurazione Supabase Production: aggiungere `https://m-lumio.toto-castaldi.com/auth/callback` alle redirect URLs
+  - [x] 2.2 Aggiornare `supabase/config.toml` con URL mobile dev (`http://localhost:5174/auth/callback`)
+  - [x] 2.3 Creare `AuthContext.tsx` per mobile (replica da web con adattamenti)
+  - [x] 2.4 Creare `LoginPage.tsx` mobile con Google OAuth
+  - [x] 2.5 Creare `AuthCallbackPage.tsx` mobile per gestione callback OAuth
+  - [x] 2.6 Creare `DashboardPage.tsx` mobile (semplificata, con logout)
+  - [x] 2.7 Creare `NeedsApiKeyMessage.tsx` componente per redirect a configurazione web
+  - [x] 2.8 Creare `RepositoriesPage.tsx` mobile (visualizzazione repository, fase 3)
+  - [x] 2.9 Creare `router.tsx` con protezione route (ProtectedRoute, GuestRoute)
+  - [x] 2.10 Implementare logout funzionale
+  - [x] 2.11 Test end-to-end del flusso OAuth su mobile (dev) - Test prod dopo deploy
 - [x] pagina di configurazione solo su Web: Setup API Keys (OpenAI/Anthropic)
 
 ---

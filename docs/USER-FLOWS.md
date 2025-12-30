@@ -134,6 +134,134 @@ Questo documento descrive i principali percorsi utente in Lumio. Ogni flow inclu
 
 ---
 
+## 2B. Onboarding Mobile (PWA)
+
+> **Nota:** Il flusso mobile è semplificato rispetto al web. La configurazione delle API keys avviene esclusivamente su Web.
+
+### 2B.1 Flow Diagram — Login Mobile
+
+```
+┌─────────────────────────────────┐
+│  [Login Page - Mobile]          │
+│  m-lumio.toto-castaldi.com      │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │     🌟 Lumio            │    │
+│  │                         │    │
+│  │  [Accedi con Google]    │    │
+│  │                         │    │
+│  └─────────────────────────┘    │
+└────────────────┬────────────────┘
+                 │
+          (Login Google)
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│  Google OAuth                   │
+│  <autorizza app>                │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│  [Auth Callback]                │
+│  /auth/callback?code=xxx        │
+│                                 │
+│  <exchange code per sessione>   │
+│  <verifica API keys>            │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+          {Ha API Keys?}
+           │         │
+          No        Sì
+           │         │
+           ▼         ▼
+┌──────────────────┐  ┌─────────────────────────────────┐
+│ [Dashboard]      │  │  [Dashboard]                    │
+│                  │  │                                 │
+│ ⚠️ Configura     │  │  Benvenuto, Mario!              │
+│ API Keys         │  │                                 │
+│                  │  │  Repository: 2                  │
+│ Per utilizzare   │  │  Card totali: 45                │
+│ Lumio, configura │  │                                 │
+│ le API keys su   │  │  [Vedi Repository →]            │
+│ Web.             │  │                                 │
+│                  │  │  ────────────────────           │
+│ [Apri Lumio Web] │  │                                 │
+│ [Logout]         │  │  [Logout]                       │
+└──────────────────┘  └─────────────────────────────────┘
+```
+
+### 2B.2 Step-by-Step Mobile
+
+| Step | Schermata | Azione Utente | Sistema | Next |
+|------|-----------|---------------|---------|------|
+| 1 | Login | Click "Accedi con Google" | Redirect OAuth a `m-lumio.toto-castaldi.com/auth/callback` | 2 |
+| 2 | Google OAuth | Autorizza | Redirect a callback | 3 |
+| 3 | Auth Callback | - | Exchange code, crea sessione, verifica API keys | 4 |
+| 4a | Dashboard | - (no API keys) | Mostra messaggio "Configura su Web" + logout | - |
+| 4b | Dashboard | - (ha API keys) | Mostra dashboard con repository e logout | 5 |
+| 5 | Dashboard | Click "Vedi Repository" | Naviga a lista repository | - |
+
+### 2B.3 Componente NeedsApiKeyMessage
+
+Quando l'utente non ha configurato le API keys:
+
+```
+┌─────────────────────────────────┐
+│  ⚠️ Configurazione richiesta    │
+│                                 │
+│  Per utilizzare Lumio, devi     │
+│  configurare le tue API keys    │
+│  (OpenAI o Anthropic).          │
+│                                 │
+│  Questa operazione è            │
+│  disponibile solo su Web.       │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │  🌐 Apri Lumio Web      │    │
+│  └─────────────────────────┘    │
+│                                 │
+│  [Logout per cambiare account]  │
+└─────────────────────────────────┘
+```
+
+**Comportamento:**
+- "Apri Lumio Web" → apre `https://lumio.toto-castaldi.com/setup/api-keys` in nuova tab
+- "Logout" → chiama `signOut()` e torna a `/login`
+
+### 2B.4 Logout Mobile
+
+```
+┌─────────────────────────────────┐
+│  [Dashboard]                    │
+│                                 │
+│  👤 Mario Rossi                 │
+│  mario@example.com              │
+│                                 │
+│  ...contenuto...                │
+│                                 │
+│  ────────────────────           │
+│                                 │
+│  [🚪 Logout]                    │
+└────────────────┬────────────────┘
+                 │
+            (Click Logout)
+                 │
+                 ▼
+          <signOut()>
+          <clear session>
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│  [Login Page]                   │
+│                                 │
+│  [Accedi con Google]            │
+└─────────────────────────────────┘
+```
+
+---
+
 ## 3. Sessione di Studio
 
 ### 3.1 Flow Diagram
@@ -642,17 +770,16 @@ User history: [risposte precedenti su questa card, se esistono]
 
 ```
 /
-├── /login                    # Login con Google
-├── /                         # Dashboard (Home)
-├── /study                    # Sessione di studio
-├── /progress                 # Dashboard obiettivo
-└── /settings                 # Impostazioni
-    ├── /settings/repositories
-    ├── /settings/notifications
-    └── /settings/account
+├── /login                    # Login con Google OAuth
+├── /auth/callback            # Callback OAuth
+├── /                         # Home (redirect basato su stato)
+├── /dashboard                # Dashboard semplificata
+├── /repositories             # Visualizzazione repository (fase 3)
+└── (future) /study           # Sessione di studio (non in scope v1)
 
 Note: API Keys configuration è disponibile solo su Web.
       L'utente deve configurare le chiavi via web prima di usare l'app mobile.
+      Se mancano API keys, viene mostrato messaggio con link a configurazione web.
 ```
 
 ---

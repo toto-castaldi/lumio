@@ -405,18 +405,29 @@ export const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-export const signInWithGoogle = async () => {
+// redirectTo è opzionale: se non specificato, usa window.location.origin
+export const signInWithGoogle = async (redirectTo?: string) => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`
+      redirectTo: redirectTo || `${window.location.origin}/auth/callback`
     }
   });
   return { data, error };
 };
 ```
 
-### 5.2 Session Token Management
+### 5.2 Redirect URLs per Ambiente
+
+| Ambiente | Web | Mobile (PWA) |
+|----------|-----|--------------|
+| **DEV** | `http://localhost:5173/auth/callback` | `http://localhost:5174/auth/callback` |
+| **PROD** | `https://lumio.toto-castaldi.com/auth/callback` | `https://m-lumio.toto-castaldi.com/auth/callback` |
+
+**Configurazione Supabase Production:**
+Aggiungere tutti i redirect URLs nelle impostazioni Authentication > URL Configuration del progetto Supabase.
+
+### 5.3 Session Token Management
 
 Per evitare rate limiting, il refresh del token viene eseguito solo quando necessario:
 
@@ -860,53 +871,6 @@ supabase functions serve --env-file supabase/.env.local
 # Stop
 supabase stop
 ```
-
-### 12.4 Dev Login (Local Development Only)
-
-Per facilitare il testing locale senza configurare OAuth, è disponibile un **Dev Login** che appare solo in modalità development:
-
-```
-┌─────────────────────────────┐
-│         Lumio               │
-│                             │
-│  [Accedi con Google]        │
-│                             │
-│  ─── Solo sviluppo ───      │
-│                             │
-│  [🛠️ Dev Login]             │
-│                             │
-└─────────────────────────────┘
-```
-
-**Come funziona:**
-- Crea automaticamente un utente `dev@lumio.local` in Supabase Auth
-- Password predefinita: `devpassword123`
-- Bypass completo di Google OAuth
-- Disponibile su Web (`import.meta.env.DEV`) e Mobile (`__DEV__`)
-
-**Quando usarlo:**
-- Testing locale senza configurare Google OAuth
-- Testing su dispositivo fisico via Expo Go (evita problemi di rete con OAuth)
-- CI/CD per test automatizzati
-
-**Implementazione:**
-```typescript
-// packages/core/src/supabase/auth.ts
-export async function signInWithDevUser() {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: 'dev@lumio.local',
-    password: 'devpassword123',
-  });
-  // Se l'utente non esiste, viene creato automaticamente
-  if (error?.message.includes('Invalid login credentials')) {
-    return supabase.auth.signUp({ email, password, ... });
-  }
-  return { data, error };
-}
-```
-
-> ⚠️ **Sicurezza**: Il bottone Dev Login è visibile SOLO in development mode. In produzione non appare e la funzione `signInWithDevUser` non dovrebbe mai essere chiamata.
 
 ---
 
