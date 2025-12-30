@@ -1,4 +1,4 @@
-import { getSupabaseUrl } from './client';
+import { getSupabaseUrl, getSupabaseAnonKey } from './client';
 import { getAccessToken } from './auth';
 import type { Repository, Card, UserStats } from '@lumio/shared';
 
@@ -27,6 +27,7 @@ async function callGitSync<T>(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      apikey: getSupabaseAnonKey(),
     },
     body: JSON.stringify({ action, ...body }),
   });

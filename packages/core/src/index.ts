@@ -6,6 +6,7 @@ export {
   createSupabaseClient,
   getSupabaseClient,
   getSupabaseUrl,
+  getSupabaseAnonKey,
 } from './supabase/client';
 
 // Export auth functions

@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let supabaseInstance: SupabaseClient | null = null;
 let supabaseUrl: string | null = null;
+let supabaseAnonKey: string | null = null;
 
 /**
  * Creates a new Supabase client instance.
@@ -13,6 +14,7 @@ export function createSupabaseClient(
 ): SupabaseClient {
   if (!supabaseInstance) {
     supabaseUrl = url;
+    supabaseAnonKey = anonKey;
     supabaseInstance = createClient(url, anonKey, {
       auth: {
         autoRefreshToken: true,
@@ -47,4 +49,17 @@ export function getSupabaseClient(): SupabaseClient {
     );
   }
   return supabaseInstance;
+}
+
+/**
+ * Returns the Supabase anon key.
+ * Throws an error if the client hasn't been initialized.
+ */
+export function getSupabaseAnonKey(): string {
+  if (!supabaseAnonKey) {
+    throw new Error(
+      'Supabase client not initialized. Call createSupabaseClient first.'
+    );
+  }
+  return supabaseAnonKey;
 }
