@@ -280,15 +280,16 @@ CREATE TABLE public.cards (
     repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
     file_path TEXT NOT NULL,  -- Path relativo nel repo
     content_hash TEXT NOT NULL,  -- Hash per detect modifiche
+    raw_content TEXT NOT NULL,  -- File originale completo (frontmatter + body)
     title TEXT NOT NULL,
-    content TEXT NOT NULL,  -- Markdown body completo
+    content TEXT NOT NULL,  -- Markdown body senza frontmatter
     tags TEXT[] NOT NULL DEFAULT '{}',
     difficulty INTEGER DEFAULT 3 CHECK (difficulty >= 1 AND difficulty <= 5),
     language TEXT DEFAULT 'en',
     is_active BOOLEAN DEFAULT TRUE,  -- False se rimossa dal repo
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     UNIQUE(repository_id, file_path)
 );
 

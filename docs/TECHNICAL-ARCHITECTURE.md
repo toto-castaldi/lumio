@@ -835,6 +835,7 @@ Il DSN Sentry viene passato come env var durante il build EAS.
 | `SUPABASE_ANON_KEY` | Build time env |
 | `SUPABASE_ACCESS_TOKEN` | Deploy Edge Functions |
 | `SUPABASE_PROJECT_REF` | Deploy Edge Functions |
+| `SUPABASE_DB_PASSWORD` | Database backup before migrations (pg_dump) |
 | `ENCRYPTION_KEY` | API key encryption (32 bytes base64) |
 | `DO_HOST` | DigitalOcean droplet IP |
 | `DO_USERNAME` | SSH username |
