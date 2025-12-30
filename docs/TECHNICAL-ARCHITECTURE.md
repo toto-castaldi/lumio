@@ -15,11 +15,11 @@ Lumio è una piattaforma multi-client (web + mobile) con backend serverless su S
 │                          CLIENTS                                 │
 │                                                                  │
 │   ┌─────────────────────┐       ┌─────────────────────┐         │
-│   │      Web App        │       │     Mobile App      │         │
-│   │  React 19 + Vite    │       │       Expo          │         │
-│   │  Tailwind + shadcn  │       │   React Native      │         │
+│   │      Web App        │       │    Mobile App (PWA) │         │
+│   │  React 19 + Vite    │       │  React 19 + Vite    │         │
+│   │  Tailwind + shadcn  │       │  Tailwind + shadcn  │         │
 │   │                     │       │                     │         │
-│   │  DigitalOcean       │       │  Expo Build Cloud   │         │
+│   │  DigitalOcean       │       │  DigitalOcean       │         │
 │   └──────────┬──────────┘       └──────────┬──────────┘         │
 └──────────────┼──────────────────────────────┼───────────────────┘
                │                              │
@@ -60,7 +60,6 @@ Lumio è una piattaforma multi-client (web + mobile) con backend serverless su S
 │    External Services     │
 │  • Sentry (monitoring)   │
 │  • Resend (email)        │
-│  • Expo Push Service     │
 └──────────────────────────┘
 ```
 
@@ -86,15 +85,19 @@ lumio/
 │   │   ├── tailwind.config.ts
 │   │   └── package.json
 │   │
-│   └── mobile/                 # Expo SDK 54 + React Native
-│       ├── app/                # Expo Router (file-based routing)
-│       │   ├── _layout.tsx     # Root layout
-│       │   └── index.tsx       # Home screen
-│       ├── components/         # UI components
-│       ├── hooks/              # React hooks
-│       ├── lib/                # Utilities
-│       ├── app.json            # Expo config
-│       ├── eas.json            # EAS Build config
+│   └── mobile/                 # PWA - React 19 + Vite + TypeScript
+│       ├── src/
+│       │   ├── components/     # UI components
+│       │   ├── pages/          # Route pages
+│       │   ├── hooks/          # React hooks
+│       │   ├── lib/            # Utilities
+│       │   ├── styles/         # CSS styles
+│       │   └── main.tsx
+│       ├── public/
+│       │   └── manifest.json   # PWA manifest
+│       ├── index.html
+│       ├── vite.config.ts
+│       ├── tailwind.config.ts
 │       └── package.json
 │
 ├── packages/
@@ -210,16 +213,20 @@ packages:
 | Routing | React Router | 6.x |
 | Forms | React Hook Form + Zod | - |
 
-### 3.2 Frontend — Mobile
+### 3.2 Frontend — Mobile (PWA)
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Framework | Expo | SDK 54 |
-| React | React | 19.x |
+| Framework | React | 19.x |
+| Build | Vite | 6.x |
 | Language | TypeScript | 5.x |
-| Navigation | Expo Router | 6.x |
+| Styling | Tailwind CSS | 3.x |
+| Components | shadcn/ui | latest |
 | State | React Query + Zustand | - |
-| Push Notifications | Expo Notifications | - |
+| Routing | React Router | 6.x |
+| PWA | vite-plugin-pwa | latest |
+
+> **Nota:** L'app mobile è una PWA (Progressive Web App) servita su `m.lumio.toto-castaldi.com`. Condivide lo stesso stack tecnologico della web app ma con UI ottimizzata per dispositivi mobili e flussi diversi (focus sullo studio).
 
 ### 3.3 Backend — Supabase
 
@@ -240,7 +247,6 @@ packages:
 | Anthropic API | Generazione domande (user API key) |
 | Resend | Email transazionali |
 | Sentry | Error tracking & monitoring |
-| Expo Push Service | Push notifications |
 
 ---
 
@@ -564,118 +570,75 @@ sudo systemctl reload nginx
 
 ---
 
-## 8. Mobile App Build & Distribution
+## 8. Mobile App Build & Distribution (PWA)
 
-> **Nota**: L'app mobile è dedicata **esclusivamente allo studio**. La configurazione delle API keys, la gestione dei deck e degli obiettivi avviene solo su web. Se l'utente non ha configurato le API keys, l'app mobile mostra un messaggio che invita a completare la configurazione su web.
+> **Nota**: L'app mobile è una **Progressive Web App (PWA)** dedicata **esclusivamente allo studio**. La configurazione delle API keys, la gestione dei deck e degli obiettivi avviene solo su web. Se l'utente non ha configurato le API keys, l'app mobile mostra un messaggio che invita a completare la configurazione su web.
 
-### 8.1 Expo Configuration
+### 8.1 PWA Configuration
 
-**app.json**:
-```json
-{
-  "expo": {
-    "name": "Lumio",
-    "slug": "lumio",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.lumio.app"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+**vite.config.ts** (con vite-plugin-pwa):
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: 'Lumio Mobile',
+        short_name: 'Lumio',
+        description: 'AI-Powered Flashcards - Study Mode',
+        theme_color: '#000000',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
       },
-      "package": "com.lumio.app"
-    },
-    "plugins": [
-      "expo-router"
-    ]
-  }
-}
-```
-
-**eas.json** (Expo Application Services):
-```json
-{
-  "cli": {
-    "version": ">= 5.0.0"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "distribution": "store"
-    }
-  }
-}
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+      }
+    })
+  ]
+});
 ```
 
 ### 8.2 Build Commands
 
 ```bash
-# Development build (internal testing)
-eas build --profile development --platform all
+# Development
+pnpm dev:mobile
+# http://localhost:5174
 
-# Preview build (internal distribution)
-eas build --profile preview --platform all
-
-# Production build (v2 - store submission)
-eas build --profile production --platform all
+# Production build
+pnpm build:mobile
+# Output: apps/mobile/dist/
 ```
 
-### 8.3 Distribution (v1)
+### 8.3 Distribution
 
-Per v1 (Android only), build distribuite internamente via:
-- **Android**: APK via EAS Build (preview profile)
-- **CI/CD**: Build APK automatico su ogni push a main
+La PWA è deployata su DigitalOcean come sito statico:
+
+| Ambiente | URL | Directory Server |
+|----------|-----|------------------|
+| **PROD** | `m.lumio.toto-castaldi.com` | `/var/www/lumio-mobile` |
+
+**Vantaggi PWA vs App Nativa:**
+- Nessun app store, installazione immediata
+- Aggiornamenti automatici (no download)
+- Stesso codebase web, manutenzione semplificata
+- Funziona su qualsiasi dispositivo con browser moderno
 
 ---
 
-## 9. Push Notifications
+## 9. Monitoring & Error Tracking
 
-### 9.1 Architecture
-
-```
-┌─────────────┐     ┌─────────────────┐     ┌────────────────┐
-│   pg_cron   │────▶│  Edge Function  │────▶│  Expo Push     │
-│  (trigger)  │     │  (send notif)   │     │  Service       │
-└─────────────┘     └─────────────────┘     └────────────────┘
-                                                    │
-                           ┌────────────────────────┼────────────────────────┐
-                           ▼                        ▼                        ▼
-                    ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
-                    │    APNs     │          │     FCM     │          │   Device    │
-                    │   (iOS)     │          │  (Android)  │          │             │
-                    └─────────────┘          └─────────────┘          └─────────────┘
-```
-
-### 9.2 Notification Types
-
-| Type | Trigger | Content |
-|------|---------|---------|
-| Daily Study Reminder | pg_cron (configurable time) | "Hai 15 card da studiare oggi!" |
-| Goal Progress | After study session | "Sei al 65% del tuo obiettivo!" |
-| Goal Deadline Warning | 3 days before deadline | "Mancano 3 giorni alla deadline!" |
-| Repository Updated | After git-sync | "Il deck X è stato aggiornato" |
-
----
-
-## 10. Monitoring & Error Tracking
-
-### 10.1 Sentry Configuration
+### 9.1 Sentry Configuration
 
 **Web App** (`apps/web/src/lib/sentry.ts`):
 ```typescript
@@ -694,37 +657,21 @@ Sentry.init({
 });
 ```
 
-**Mobile App** (`apps/mobile/app/_layout.tsx`):
+**Mobile App (PWA)** (`apps/mobile/src/lib/sentry.ts`):
 ```typescript
-import * as Sentry from "@sentry/react-native";
+import * as Sentry from "@sentry/react";
 
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-
-if (SENTRY_DSN) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    debug: __DEV__,
-    environment: __DEV__ ? "development" : "production",
-    tracesSampleRate: 1.0,
-  });
-}
-
-// Wrap root component with Sentry error boundary
-export default Sentry.wrap(RootLayout);
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+  ],
+  tracesSampleRate: 0.1,
+});
 ```
 
-**Plugin Expo** (`app.json`):
-```json
-{
-  "plugins": [
-    "expo-router",
-    ["@sentry/react-native/expo", {
-      "organization": "lumio",
-      "project": "lumio-mobile"
-    }]
-  ]
-}
-```
+> **Nota:** La PWA mobile usa `@sentry/react` (come la web app) invece di `@sentry/react-native`.
 
 **Edge Functions**:
 ```typescript
@@ -735,7 +682,7 @@ Sentry.init({
 });
 ```
 
-### 10.2 What We Track
+### 9.2 What We Track
 
 | Category | Tracked Items |
 |----------|---------------|
@@ -745,9 +692,9 @@ Sentry.init({
 
 ---
 
-## 11. Security Considerations
+## 10. Security Considerations
 
-### 11.1 API Keys Handling
+### 10.1 API Keys Handling
 
 Le API keys degli utenti (OpenAI/Anthropic) sono gestite con crittografia server-side:
 
@@ -777,18 +724,18 @@ openssl rand -base64 32
 # Esempio output: K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=
 ```
 
-### 11.2 Repository Access
+### 10.2 Repository Access
 
 - Public repos: no auth needed
 - Private repos: PAT stored encrypted, scoped to read-only
 
-### 11.3 Data Isolation
+### 10.3 Data Isolation
 
 - RLS on all user tables
 - Users can only access their own data
 - Admin access via separate service role
 
-### 11.4 HTTPS Everywhere
+### 10.4 HTTPS Everywhere
 
 - Web app: SSL via Let's Encrypt
 - Supabase: HTTPS by default
@@ -796,9 +743,9 @@ openssl rand -base64 32
 
 ---
 
-## 12. Environment Variables
+## 11. Environment Variables
 
-### 12.1 Web App
+### 11.1 Web App
 
 | Variable | Description |
 |----------|-------------|
@@ -806,18 +753,17 @@ openssl rand -base64 32
 | `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `VITE_SENTRY_DSN` | Sentry DSN for error tracking |
 
-### 12.2 Mobile App
+### 11.2 Mobile App (PWA)
 
 | Variable | Description |
 |----------|-------------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `EXPO_PUBLIC_SENTRY_DSN` | Sentry DSN per crash reporting |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `VITE_SENTRY_DSN` | Sentry DSN for error tracking |
 
-**Nota:** Le variabili sono configurate in `eas.json` per profile `preview` e `production`.
-Il DSN Sentry viene passato come env var durante il build EAS.
+> **Nota:** La PWA usa le stesse variabili della web app (prefisso `VITE_`).
 
-### 12.3 Edge Functions
+### 11.3 Edge Functions
 
 | Variable | Description |
 |----------|-------------|
@@ -827,7 +773,7 @@ Il DSN Sentry viene passato come env var durante il build EAS.
 | `RESEND_API_KEY` | Resend API key for emails |
 | `ENCRYPTION_KEY` | Key for encrypting user API keys |
 
-### 12.4 GitHub Actions Secrets
+### 11.4 GitHub Actions Secrets
 
 | Secret | Usage |
 |--------|-------|
@@ -841,11 +787,10 @@ Il DSN Sentry viene passato come env var durante il build EAS.
 | `DO_USERNAME` | SSH username |
 | `DO_SSH_KEY` | SSH private key |
 | `SENTRY_DSN` | Error tracking |
-| `EXPO_TOKEN` | EAS Build authentication |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 
-### 12.5 GitHub Actions Variables
+### 11.5 GitHub Actions Variables
 
 Variables are set in Settings → Secrets and variables → Actions → Variables tab.
 
@@ -855,16 +800,15 @@ Variables are set in Settings → Secrets and variables → Actions → Variable
 
 ---
 
-## 13. Development Setup
+## 12. Development Setup
 
-### 13.1 Prerequisites
+### 12.1 Prerequisites
 
 - Node.js >= 20
 - pnpm >= 9
 - Supabase CLI
-- Expo CLI
 
-### 13.2 Getting Started
+### 12.2 Getting Started
 
 ```bash
 # Clone repository
@@ -891,15 +835,12 @@ supabase start
 pnpm dev:web
 # http://localhost:5173
 
-# Run mobile app (in another terminal)
+# Run mobile PWA (in another terminal)
 pnpm dev:mobile
-# http://localhost:8081
-
-# Mobile with tunnel (for Expo Go on phone)
-cd apps/mobile && npx expo start --tunnel
+# http://localhost:5174
 ```
 
-### 13.3 Local Supabase
+### 12.3 Local Supabase
 
 ```bash
 # Start local Supabase (con variabili Google OAuth)
@@ -915,7 +856,7 @@ supabase functions serve --env-file supabase/.env.local
 supabase stop
 ```
 
-### 13.4 Dev Login (Local Development Only)
+### 12.4 Dev Login (Local Development Only)
 
 Per facilitare il testing locale senza configurare OAuth, è disponibile un **Dev Login** che appare solo in modalità development:
 
@@ -964,15 +905,15 @@ export async function signInWithDevUser() {
 
 ---
 
-## 14. Future Considerations (v2+)
+## 13. Future Considerations (v2+)
 
 | Feature | Technical Implication |
 |---------|----------------------|
-| Offline mode | SQLite local + sync queue |
+| Offline mode | Service Worker caching + IndexedDB |
 | Gamification | New tables, realtime leaderboard |
 | Marketplace | Payment integration (Stripe) |
 | Multi-language AI | Prompt engineering per lingua |
-| Play Store release | EAS production build + review process |
+| Push notifications | Web Push API + service worker |
 
 ---
 

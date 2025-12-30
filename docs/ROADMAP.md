@@ -7,7 +7,7 @@
 - [x] `pnpm-workspace.yaml` - definizione monorepo
 - [x] `package.json` root con scripts workspace
 - [x] `tsconfig.base.json` - configurazione TypeScript condivisa
-- [x] `.npmrc` - node-linker=hoisted per compatibilità Expo
+- [x] `.npmrc` - configurazione pnpm
 - [x] `.gitignore` aggiornato per monorepo
 
 ### 1.2 PACKAGES
@@ -18,7 +18,7 @@
 ### 1.3 APPS
 
 - [x] `apps/web` - React 19 + Vite + Tailwind + shadcn/ui
-- [x] `apps/mobile` - Expo SDK 54 + React Native + React 19
+- [x] `apps/mobile` - PWA: React 19 + Vite + Tailwind + shadcn/ui
 
 ### 1.4 AMBIENTE DI DEV
 
@@ -34,8 +34,8 @@
 
 ### 1.6 CONTINUOUS DELIVERY
 
-- [x] `.github/workflows/ci-deploy.yml` - CI/CD unificato (lint, typecheck, deploy, build APK)
-- [x] GitHub Secrets configurati (SUPABASE_*, DO_*, EXPO_TOKEN)
+- [x] `.github/workflows/ci-deploy.yml` - CI/CD unificato (lint, typecheck, deploy web, deploy mobile)
+- [x] GitHub Secrets configurati (SUPABASE_*, DO_*)
 
 ### 1.7 UPDATE BACKEND
 
@@ -48,12 +48,13 @@
 - [x] SCP a DigitalOcean `/var/www/lumio`
 - [x] Reload Nginx automatico
 
-### 1.9 UPDATE MOBILE (Android only per v1.0)
+### 1.9 UPDATE MOBILE (PWA)
 
-- [x] EAS Build configuration (`eas.json`)
-- [x] Asset icons (icon.png, splash.png, adaptive-icon.png)
-- [x] CI: Build APK automatico su push a main
-- [x] Build APK preview per testing interno
+- [x] Vite + React 19 + Tailwind configuration
+- [x] PWA manifest e service worker (vite-plugin-pwa)
+- [x] Asset icons (icon-192.png, icon-512.png)
+- [x] Deploy su `m.lumio.toto-castaldi.com`
+- [x] Nginx configuration per subdomain mobile
 
 ### 1.10 VERSION IDENTIFIER
 
@@ -68,7 +69,7 @@
 
 - [x] aggiungere sicurezza RLS
 - [x] Login/logout con Google OAuth Web
-- [x] Login/logout con Google OAuth Mobile
+- [ ] Login/logout con Google OAuth Mobile (PWA)
 - [x] pagina di configurazione solo su Web: Setup API Keys (OpenAI/Anthropic)
 
 ---
@@ -85,43 +86,10 @@
 
 ---
 
-## 4 - STUDIO
-
-- [ ] Crea obiettivo
-- [ ] Sessione di studio
-- [ ] Generazione domande AI
-- [ ] Algoritmo SM-2
-- [ ] Feedback qualità domanda
-
----
-
-## 5 - OBIETTIVI
-
-- [ ] Creazione obiettivo per tag
-- [ ] Dashboard progresso
-- [ ] Calcolo piano studio giornaliero
-
----
-
-## 6 - REPOSITORY
-
-- [ ] Sync repository Git
-- [ ] Validazione formato card
-- [ ] Gestione repository privati con PAT
-
----
-
 ## BACKLOG - Miglioramenti Futuri
 
-### Sentry Source Maps (Mobile)
-
-Attualmente le source maps non vengono uploadate durante il build. Per abilitare stack trace leggibili:
-
-- [ ] Creare auth token su sentry.io → Settings → Auth Tokens
-- [ ] Aggiungere `SENTRY_AUTH_TOKEN` come EAS Secret
-- [ ] Cambiare `uploadSourcemaps: true` in `apps/mobile/app.json`
-- [ ] proteggere le edge functions con JWT
-- [ ] ⚠️ Minor version mismatches - package - expected  found - @sentry/react-native  ~7.2.0    7.8.0
-- [ ] autenticazione "one-tap" nativa per mobile
-- [ ] sistema di versionamento !!!
-- [ ] ogni carta deve spiegare le sue fonti
+- [ ] Proteggere le edge functions con JWT
+- [ ] Sistema di versionamento automatico
+- [ ] Ogni carta deve spiegare le sue fonti
+- [ ] Web Push Notifications per PWA
+- [ ] Offline mode con Service Worker + IndexedDB

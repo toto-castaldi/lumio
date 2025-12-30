@@ -522,30 +522,31 @@ User history: [risposte precedenti su questa card, se esistono]
 
 ---
 
-## 6. Notifiche (Mobile)
+## 6. Notifiche (Email)
+
+> **Nota:** Con l'architettura PWA, le notifiche sono inviate via email tramite Resend. Le Web Push Notifications saranno considerate in v2+.
 
 ### 6.1 Tipi di Notifica
 
-| Trigger | Titolo | Body | Azione |
-|---------|--------|------|--------|
-| Mattina (configurabile) | "Buongiorno! 📚" | "Hai 12 card da studiare oggi per restare in linea con il tuo obiettivo." | Apre sessione studio |
-| Metà giornata (se non studiato) | "Non dimenticare! ⏰" | "Ti mancano ancora 8 card per oggi." | Apre sessione studio |
-| Sera (se non completato) | "Ultimo promemoria 🌙" | "Completa le ultime 5 card prima di dormire!" | Apre sessione studio |
-| Obiettivo raggiunto | "Obiettivo completato! 🎉" | "Hai raggiunto l'85% su Pilates!" | Apre dashboard obiettivo |
-| Repository aggiornato | "Nuove card disponibili" | "pilates-deck ha 3 nuove card." | Apre repository |
-| Deadline vicina (3 giorni) | "Deadline in arrivo ⚡" | "Mancano 3 giorni. Aumenta il ritmo!" | Apre dashboard obiettivo |
+| Trigger | Oggetto Email | Contenuto | Link |
+|---------|---------------|-----------|------|
+| Mattina (configurabile) | "Lumio: 12 card da studiare oggi" | Riepilogo obiettivo e card in scadenza | Link a sessione studio |
+| Deadline vicina (3 giorni) | "Lumio: Deadline in arrivo!" | Avviso deadline con progresso attuale | Link a dashboard obiettivo |
+| Obiettivo raggiunto | "Lumio: Obiettivo completato!" | Congratulazioni e statistiche | Link a storico obiettivi |
+| Repository aggiornato | "Lumio: Nuove card disponibili" | Elenco nuove card importate | Link a repository |
 
-### 6.2 Preferenze Notifiche
+### 6.2 Preferenze Notifiche Email
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  [Impostazioni Notifiche]                                   │
+│  [Impostazioni Notifiche Email]                             │
+│                                                             │
+│  Email: user@example.com                                    │
 │                                                             │
 │  Promemoria studio                                          │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │  Attivo: [●]                                        │   │
-│  │  Orario primo reminder: [08:00]                     │   │
-│  │  Reminder se non studio: [●] (max 2 al giorno)      │   │
+│  │  Frequenza: [Giornaliera ▼]                         │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                             │
 │  Altre notifiche                                            │
@@ -635,17 +636,20 @@ User history: [risposte precedenti su questa card, se esistono]
 └── /public/decks             # Pagina pubblica deck compatibili
 ```
 
-### 8.2 Mobile App
+### 8.2 Mobile App (PWA)
+
+**URL:** `m.lumio.toto-castaldi.com`
 
 ```
-(tabs)
-├── Home (Dashboard)
-├── Study (Sessione studio)
-├── Progress (Dashboard obiettivo)
-└── Settings
-    ├── Repositories
-    ├── Notifications
-    └── Account
+/
+├── /login                    # Login con Google
+├── /                         # Dashboard (Home)
+├── /study                    # Sessione di studio
+├── /progress                 # Dashboard obiettivo
+└── /settings                 # Impostazioni
+    ├── /settings/repositories
+    ├── /settings/notifications
+    └── /settings/account
 
 Note: API Keys configuration è disponibile solo su Web.
       L'utente deve configurare le chiavi via web prima di usare l'app mobile.
@@ -685,17 +689,19 @@ Note: API Keys configuration è disponibile solo su Web.
 | Tablet | 768px - 1024px | Two column where appropriate |
 | Desktop | > 1024px | Sidebar + main content |
 
-### 10.2 Differenze Web vs Mobile
+### 10.2 Differenze Web vs Mobile (PWA)
 
-| Feature | Web | Mobile |
-|---------|-----|--------|
+| Feature | Web | Mobile (PWA) |
+|---------|-----|--------------|
+| URL | `lumio.toto-castaldi.com` | `m.lumio.toto-castaldi.com` |
 | Navigazione | Sidebar | Bottom tabs |
 | Studio | Click per rispondere | Tap per rispondere |
-| Notifiche push | No | Sì |
+| Notifiche | Email | Email |
 | Configurazione API Keys | ✅ Completa | ❌ Solo su Web |
-| Gestione repository | Completa | Completa |
+| Gestione repository | Completa | Semplificata |
+| Installabile | No | Sì (Add to Home Screen) |
 
-> **Nota:** La configurazione delle API Keys (OpenAI/Anthropic) è disponibile solo su Web per v1.0. Gli utenti mobile devono configurare le chiavi via web prima di poter usare l'app.
+> **Nota:** L'app mobile è una PWA (Progressive Web App) con lo stesso stack tecnologico della web app ma con UI ottimizzata per mobile. La configurazione delle API Keys rimane disponibile solo su Web.
 
 ---
 

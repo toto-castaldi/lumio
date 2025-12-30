@@ -156,11 +156,11 @@ Lumio risolve questi problemi con un approccio innovativo:
 ┌─────────────────────────────────────────────────────────────┐
 │                         CLIENT                               │
 │  ┌─────────────────┐          ┌─────────────────┐           │
-│  │   Web App       │          │   Mobile App    │           │
-│  │   React 19      │          │   React Native  │           │
-│  │   Vite + TS     │          │                 │           │
-│  │   Tailwind      │          │                 │           │
-│  │   shadcn/ui     │          │                 │           │
+│  │   Web App       │          │   Mobile (PWA)  │           │
+│  │   React 19      │          │   React 19      │           │
+│  │   Vite + TS     │          │   Vite + TS     │           │
+│  │   Tailwind      │          │   Tailwind      │           │
+│  │   shadcn/ui     │          │   shadcn/ui     │           │
 │  └────────┬────────┘          └────────┬────────┘           │
 └───────────┼────────────────────────────┼────────────────────┘
             │                            │
@@ -195,7 +195,7 @@ Lumio risolve questi problemi con un approccio innovativo:
 | Latenza generazione domanda AI | < 5 secondi |
 | Uptime | 99% |
 | Supporto browser | Chrome, Firefox, Safari (ultime 2 versioni) |
-| Supporto mobile | iOS 15+, Android 10+ |
+| Supporto mobile | Browser moderni su iOS/Android (PWA) |
 
 ---
 

@@ -16,7 +16,6 @@ Leggi CHANGELOG.md, CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pront
 - Node.js >= 20
 - pnpm >= 9
 - Supabase CLI (for local development)
-- Expo CLI (for mobile development)
 
 ### Setup
 
@@ -41,9 +40,9 @@ supabase start
 pnpm dev:web
 # http://localhost:5173
 
-# Run mobile app (in another terminal)
+# Run mobile PWA (in another terminal)
 pnpm dev:mobile
-# http://localhost:8081
+# http://localhost:5174
 ```
 
 ## Project Structure
@@ -52,13 +51,14 @@ pnpm dev:mobile
 lumio/
 ├── apps/
 │   ├── web/          # React 19 + Vite + Tailwind + shadcn/ui
-│   └── mobile/       # Expo SDK 54 + React Native
+│   └── mobile/       # PWA - React 19 + Vite + Tailwind + shadcn/ui
 ├── packages/
 │   ├── shared/       # @lumio/shared - types, constants, VERSION
 │   └── core/         # @lumio/core - Supabase client
 ├── supabase/
 │   ├── functions/    # Edge Functions
 │   └── migrations/   # SQL migrations
+├── conf/             # Server configuration (Nginx)
 └── docs/             # Documentation
 ```
 
@@ -67,19 +67,12 @@ lumio/
 | Command | Description | URL |
 |---------|-------------|-----|
 | `pnpm dev:web` | Start web app dev server | http://localhost:5173 |
-| `pnpm dev:mobile` | Start Expo dev server | http://localhost:8081 |
+| `pnpm dev:mobile` | Start mobile PWA dev server | http://localhost:5174 |
 | `pnpm build:web` | Build web app for production | |
+| `pnpm build:mobile` | Build mobile PWA for production | |
 | `pnpm build:packages` | Build shared packages | |
 | `pnpm typecheck` | Run TypeScript type checking | |
 | `supabase start` | Start local Supabase | http://127.0.0.1:54323 (Studio) |
-
-### Mobile with Tunnel
-
-Per accedere all'app mobile da telefono (Expo Go):
-
-```bash
-cd apps/mobile && npx expo start --tunnel
-```
 
 ## Documentation
 
@@ -96,14 +89,15 @@ cd apps/mobile && npx expo start --tunnel
 
 Deployed automatically to DigitalOcean on push to `main` via GitHub Actions.
 
-### Mobile App
+- **URL**: https://lumio.toto-castaldi.com
+- **Server path**: `/var/www/lumio`
 
-Use EAS Build for iOS/Android builds:
+### Mobile App (PWA)
 
-```bash
-cd apps/mobile
-eas build --profile preview
-```
+Deployed automatically to DigitalOcean on push to `main` via GitHub Actions.
+
+- **URL**: https://m.lumio.toto-castaldi.com
+- **Server path**: `/var/www/lumio-mobile`
 
 ## Environment Variables
 
