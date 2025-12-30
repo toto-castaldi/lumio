@@ -34,11 +34,11 @@ interface QuizQuestion {
   explanation: string;
 }
 
-// Available models per provider
+// Available models per provider (Phase 5 - only latest models)
 const AVAILABLE_MODELS: Record<LLMProvider, LLMModel[]> = {
   openai: [
-    { provider: "openai", modelId: "gpt-4o-mini", displayName: "GPT-4o Mini" },
     { provider: "openai", modelId: "gpt-4o", displayName: "GPT-4o" },
+    { provider: "openai", modelId: "o1", displayName: "o1" },
   ],
   anthropic: [
     { provider: "anthropic", modelId: "claude-3-5-haiku-latest", displayName: "Claude 3.5 Haiku" },
@@ -77,9 +77,44 @@ Rispondi SOLO con il JSON, senza altro testo.`;
 interface StudyPreferences {
   userId: string;
   systemPrompt: string;
+  preferredProvider?: LLMProvider;
+  preferredModel?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+// Validation response interface
+interface ValidationResponse {
+  isCorrect: boolean;
+  explanation: string;
+  tips?: string[];
+}
+
+// Default validation prompt for Step 2
+const VALIDATION_SYSTEM_PROMPT = `Sei un tutor esperto e paziente. Il tuo compito è validare la risposta dell'utente a una domanda di studio e fornire una spiegazione dettagliata.
+
+ISTRUZIONI:
+1. Verifica se la risposta dell'utente corrisponde alla risposta corretta
+2. Inizia con "Corretto!" oppure "Non proprio..." in base all'esito
+3. Fornisci una spiegazione DETTAGLIATA e CORPOSA (almeno 3-4 frasi) del concetto
+4. Spiega PERCHÉ la risposta corretta è quella giusta, facendo riferimento al contenuto della carta
+5. Se la risposta è sbagliata, spiega anche PERCHÉ la risposta dell'utente non è corretta
+6. Aggiungi 1-3 suggerimenti pratici per memorizzare meglio il concetto (mnemonici, associazioni, esempi)
+
+FORMATO RISPOSTA (JSON):
+{
+  "isCorrect": true/false,
+  "explanation": "Spiegazione dettagliata del concetto...",
+  "tips": ["Suggerimento 1", "Suggerimento 2"]
+}
+
+TONO:
+- Incoraggiante anche se la risposta è sbagliata
+- Didattico ma non pedante
+- Usa esempi concreti quando possibile
+- Evita di essere troppo tecnico a meno che il contenuto non lo richieda
+
+Rispondi SOLO con il JSON, senza altro testo.`;
 
 // =============================================================================
 // ENCRYPTION UTILITIES (AES-256-GCM)
@@ -534,6 +569,177 @@ async function generateQuizAnthropic(
 }
 
 /**
+ * Validate answer using OpenAI API (Step 2)
+ */
+async function validateAnswerOpenAI(
+  apiKey: string,
+  modelId: string,
+  cardContent: string,
+  question: string,
+  userAnswer: string,
+  correctAnswer: string
+): Promise<ValidationResponse> {
+  const userMessage = `CONTENUTO DELLA CARTA:
+${cardContent}
+
+DOMANDA POSTA:
+${question}
+
+RISPOSTA DELL'UTENTE: ${userAnswer}
+RISPOSTA CORRETTA: ${correctAnswer}
+
+Valida la risposta e fornisci una spiegazione dettagliata.`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages: [
+        { role: "system", content: VALIDATION_SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("Empty response from OpenAI");
+  }
+
+  // Parse JSON response
+  let jsonStr = content.trim();
+  if (jsonStr.startsWith("```json")) {
+    jsonStr = jsonStr.slice(7);
+  } else if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.slice(3);
+  }
+  if (jsonStr.endsWith("```")) {
+    jsonStr = jsonStr.slice(0, -3);
+  }
+
+  try {
+    return JSON.parse(jsonStr.trim());
+  } catch {
+    throw new Error("Failed to parse validation response from OpenAI");
+  }
+}
+
+/**
+ * Validate answer using Anthropic API (Step 2)
+ */
+async function validateAnswerAnthropic(
+  apiKey: string,
+  modelId: string,
+  cardContent: string,
+  question: string,
+  userAnswer: string,
+  correctAnswer: string
+): Promise<ValidationResponse> {
+  const userMessage = `CONTENUTO DELLA CARTA:
+${cardContent}
+
+DOMANDA POSTA:
+${question}
+
+RISPOSTA DELL'UTENTE: ${userAnswer}
+RISPOSTA CORRETTA: ${correctAnswer}
+
+Valida la risposta e fornisci una spiegazione dettagliata.`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: 1500,
+      system: VALIDATION_SYSTEM_PROMPT,
+      messages: [
+        { role: "user", content: userMessage },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || `Anthropic API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.content?.[0]?.text;
+
+  if (!content) {
+    throw new Error("Empty response from Anthropic");
+  }
+
+  // Parse JSON response
+  let jsonStr = content.trim();
+  if (jsonStr.startsWith("```json")) {
+    jsonStr = jsonStr.slice(7);
+  } else if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.slice(3);
+  }
+  if (jsonStr.endsWith("```")) {
+    jsonStr = jsonStr.slice(0, -3);
+  }
+
+  try {
+    return JSON.parse(jsonStr.trim());
+  } catch {
+    throw new Error("Failed to parse validation response from Anthropic");
+  }
+}
+
+/**
+ * Handle validate_answer action (Step 2)
+ */
+async function handleValidateAnswer(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  provider: LLMProvider,
+  modelId: string,
+  cardContent: string,
+  question: string,
+  userAnswer: string,
+  correctAnswer: string
+): Promise<ValidationResponse> {
+  // Validate model exists for provider
+  const providerModels = AVAILABLE_MODELS[provider];
+  if (!providerModels?.some(m => m.modelId === modelId)) {
+    throw new Error(`Invalid model ${modelId} for provider ${provider}`);
+  }
+
+  // Get decrypted API key
+  const apiKey = await getDecryptedKey(supabase, userId, provider);
+  if (!apiKey) {
+    throw new Error(`No valid API key configured for ${provider}`);
+  }
+
+  // Validate based on provider
+  if (provider === "openai") {
+    return await validateAnswerOpenAI(apiKey, modelId, cardContent, question, userAnswer, correctAnswer);
+  } else {
+    return await validateAnswerAnthropic(apiKey, modelId, cardContent, question, userAnswer, correctAnswer);
+  }
+}
+
+/**
  * Handle generate_quiz action
  */
 async function handleGenerateQuiz(
@@ -610,15 +816,20 @@ async function handleGetAvailableModels(
 async function handleGetStudyPreferences(
   supabase: ReturnType<typeof createClient>,
   userId: string
-): Promise<{ systemPrompt: string; isCustom: boolean }> {
+): Promise<{
+  systemPrompt: string;
+  isCustom: boolean;
+  preferredProvider?: LLMProvider;
+  preferredModel?: string;
+}> {
   const { data, error } = await supabase
     .from("user_study_preferences")
-    .select("system_prompt")
+    .select("system_prompt, preferred_provider, preferred_model")
     .eq("user_id", userId)
     .single();
 
   if (error || !data) {
-    // Return default prompt
+    // Return default values
     return {
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
       isCustom: false,
@@ -626,13 +837,15 @@ async function handleGetStudyPreferences(
   }
 
   return {
-    systemPrompt: data.system_prompt,
-    isCustom: true,
+    systemPrompt: data.system_prompt || DEFAULT_SYSTEM_PROMPT,
+    isCustom: !!data.system_prompt,
+    preferredProvider: data.preferred_provider as LLMProvider | undefined,
+    preferredModel: data.preferred_model as string | undefined,
   };
 }
 
 /**
- * Save study preferences for user
+ * Save study preferences for user (prompt only)
  */
 async function handleSaveStudyPreferences(
   supabase: ReturnType<typeof createClient>,
@@ -645,6 +858,29 @@ async function handleSaveStudyPreferences(
       {
         user_id: userId,
         system_prompt: systemPrompt,
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) throw error;
+}
+
+/**
+ * Save model preferences for user (provider and model)
+ */
+async function handleSaveModelPreferences(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  provider: LLMProvider,
+  modelId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("user_study_preferences")
+    .upsert(
+      {
+        user_id: userId,
+        preferred_provider: provider,
+        preferred_model: modelId,
       },
       { onConflict: "user_id" }
     );
@@ -817,6 +1053,27 @@ serve(async (req) => {
         });
       }
 
+      case "validate_answer": {
+        const { provider, modelId, cardContent, question, userAnswer, correctAnswer } = body;
+        if (!provider || !modelId || !cardContent || !question || !userAnswer || !correctAnswer) {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields for validation" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const validation = await handleValidateAnswer(
+          supabase, userId, provider, modelId, cardContent, question, userAnswer, correctAnswer
+        );
+        return new Response(JSON.stringify({ success: true, validation }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
       case "get_study_preferences": {
         const prefs = await handleGetStudyPreferences(supabase, userId);
         return new Response(JSON.stringify({ success: true, ...prefs }), {
@@ -838,6 +1095,25 @@ serve(async (req) => {
         }
 
         await handleSaveStudyPreferences(supabase, userId, newPrompt);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "save_model_preferences": {
+        const { provider, modelId } = body;
+        if (!provider || !modelId) {
+          return new Response(
+            JSON.stringify({ error: "Missing provider or modelId" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        await handleSaveModelPreferences(supabase, userId, provider, modelId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,

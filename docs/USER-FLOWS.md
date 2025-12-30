@@ -262,11 +262,11 @@ Quando l'utente non ha configurato le API keys:
 
 ---
 
-## 3. Sessione di Studio (v1 - Semplificata)
+## 3. Sessione di Studio (Fase 5 - Studio Avanzato)
 
-> **Nota Fase 4**: Questa e la versione semplificata del flusso di studio implementata nella Fase 4.
-> Non include: tracciamento progressi, SM-2, obiettivi, storico risposte.
-> Include: selezione provider/modello, quiz AI, carte random senza ripetizioni.
+> **Nota Fase 5**: Questa versione include controlli dinamici, validazione a due step e popup card.
+> Include: cambio provider/modello durante sessione, validazione AI con spiegazione corposa, preview card.
+> Persistenza: preferenze su DB, chat solo in memoria (si perde al reload).
 
 ### 3.1 Flow Diagram
 
@@ -292,70 +292,94 @@ Quando l'utente non ha configurato le API keys:
           No      Si
            │       │
            ▼       ▼
-    [Toast error]  ┌─────────────────────────────────┐
-    "Aggiungi     │  [Studio - Setup]               │
-     repository"  │                                 │
-                  │  Seleziona provider e modello   │
-                  │                                 │
-                  │  Provider:                      │
-                  │  ○ OpenAI     ○ Anthropic       │
-                  │  (solo quelli configurati)      │
-                  │                                 │
-                  │  Modello:                       │
-                  │  [gpt-4o-mini ▼]                │
-                  │                                 │
-                  │  [Inizia a studiare]            │
-                  └────────────────┬────────────────┘
-                                   │
-                          (Click Inizia)
+    [Toast error]  <Carica preferenze da DB>
+    "Aggiungi     <Carica tutte le carte>
+     repository"  <Seleziona carta random>
+                  <Chiama AI per quiz (Step 1)>
                                    │
                                    ▼
-                          <Carica tutte le carte>
-                          <Seleziona carta random>
-                          <Chiama AI per quiz>
+┌─────────────────────────────────────────────────────────────────────┐
+│  [Studio - Sessione Attiva]                                          │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  CONTROLLI (sempre visibili, collapsabile)                      │ │
+│  │  Provider: [OpenAI ▼]  Modello: [gpt-5.1 ▼]  [Vedi carta]      │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  Carta 1 di 45                                                       │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  CHAT CONTESTUALE                                               │ │
+│  │                                                                  │ │
+│  │  ┌──────────────────────────────────────────────────────────┐  │ │
+│  │  │ AI: Qual e il principio fondamentale della               │  │ │
+│  │  │     respirazione nel Pilates?                            │  │ │
+│  │  │                                                          │  │ │
+│  │  │     [A] Respirazione addominale                          │  │ │
+│  │  │     [B] Respirazione laterale                            │  │ │
+│  │  │     [C] Respirazione toracica                            │  │ │
+│  │  │     [D] Apnea controllata                                │  │ │
+│  │  └──────────────────────────────────────────────────────────┘  │ │
+│  │                                                                  │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  [Caricamento...] (se AI lenta)                                      │
+└──────────────────────────────────┬──────────────────────────────────┘
+                                   │
+                          (Seleziona risposta A/B/C/D)
                                    │
                                    ▼
-                  ┌─────────────────────────────────┐
-                  │  [Studio - Quiz]                │
-                  │                                 │
-                  │  Carta 1 di 45                  │
-                  │                                 │
-                  │  ┌─────────────────────────┐    │
-                  │  │  Qual e il principio    │    │
-                  │  │  fondamentale della     │    │
-                  │  │  respirazione nel       │    │
-                  │  │  Pilates?               │    │
-                  │  └─────────────────────────┘    │
-                  │                                 │
-                  │  [A] Respirazione addominale    │
-                  │  [B] Respirazione laterale      │
-                  │  [C] Respirazione toracica      │
-                  │  [D] Apnea controllata          │
-                  │                                 │
-                  │  [Caricamento...] (se AI lenta) │
-                  └────────────────┬────────────────┘
-                                   │
-                          (Seleziona risposta)
+                          <Chiama AI per validazione (Step 2)>
+                          <SEMPRE eseguito dopo risposta>
                                    │
                                    ▼
-                  ┌─────────────────────────────────┐
-                  │  [Studio - Feedback]            │
-                  │                                 │
-                  │  Corretto! / Sbagliato          │
-                  │                                 │
-                  │  La risposta corretta e B.      │
-                  │                                 │
-                  │  ┌─────────────────────────┐    │
-                  │  │  Spiegazione:           │    │
-                  │  │  La respirazione        │    │
-                  │  │  laterale permette di   │    │
-                  │  │  mantenere il core...   │    │
-                  │  └─────────────────────────┘    │
-                  │                                 │
-                  │  [Prossima carta]               │
-                  └────────────────┬────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  [Studio - Sessione Attiva con Feedback]                             │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  CONTROLLI (sempre visibili)                                    │ │
+│  │  Provider: [OpenAI ▼]  Modello: [gpt-5.1 ▼]  [Vedi carta]      │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  CHAT CONTESTUALE (continua)                                    │ │
+│  │                                                                  │ │
+│  │  ┌──────────────────────────────────────────────────────────┐  │ │
+│  │  │ AI: Qual e il principio fondamentale...                  │  │ │
+│  │  └──────────────────────────────────────────────────────────┘  │ │
+│  │                                                                  │ │
+│  │  ┌──────────────────────────────────────────────────────────┐  │ │
+│  │  │ Tu: Ho risposto B - Respirazione laterale                │  │ │
+│  │  └──────────────────────────────────────────────────────────┘  │ │
+│  │                                                                  │ │
+│  │  ┌──────────────────────────────────────────────────────────┐  │ │
+│  │  │ AI: Corretto!                                            │  │ │
+│  │  │                                                          │  │ │
+│  │  │ La respirazione laterale (o costale) e la tecnica        │  │ │
+│  │  │ fondamentale nel Pilates. Questo tipo di respirazione    │  │ │
+│  │  │ permette di:                                             │  │ │
+│  │  │                                                          │  │ │
+│  │  │ 1. Mantenere l'attivazione del core durante tutto        │  │ │
+│  │  │    il movimento                                          │  │ │
+│  │  │ 2. Espandere la gabbia toracica lateralmente             │  │ │
+│  │  │ 3. Evitare la distensione addominale che                 │  │ │
+│  │  │    comprometterebbe la stabilita del tronco              │  │ │
+│  │  │                                                          │  │ │
+│  │  │ Suggerimenti per ricordare:                              │  │ │
+│  │  │ - Pensa alle costole che si aprono come un fisarmonica   │  │ │
+│  │  │ - "Respira nelle costole, non nella pancia"              │  │ │
+│  │  └──────────────────────────────────────────────────────────┘  │ │
+│  │                                                                  │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  [Prossima carta]                                                    │
+└──────────────────────────────────┬──────────────────────────────────┘
                                    │
+                          (Click Prossima carta)
+                                   │
+                                   ▼
                           <Marca carta come vista>
+                          <Salva preferenze su DB se cambiate>
                                    │
                                    ▼
                            {Altre carte?}
@@ -363,56 +387,110 @@ Quando l'utente non ha configurato le API keys:
                            Si       No
                             │        │
                             ▼        ▼
-                  [Quiz]         ┌─────────────────────────────────┐
-                  (loop)         │  [Studio - Completato]          │
-                                 │                                 │
-                                 │  Hai completato tutte le carte! │
-                                 │                                 │
-                                 │  [Torna alla Dashboard]         │
-                                 └─────────────────────────────────┘
+            <Seleziona nuova carta>  ┌─────────────────────────────────┐
+            <Chiama AI (Step 1)>     │  [Studio - Completato]          │
+            (loop)                   │                                 │
+                                     │  Hai completato tutte le carte! │
+                                     │                                 │
+                                     │  [Torna alla Dashboard]         │
+                                     └─────────────────────────────────┘
 ```
 
-### 3.2 Step-by-Step
+### 3.2 Popup Card Completa
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  [CardPreviewDialog]                                        [X]     │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  # Respirazione nel Pilates                                     │ │
+│  │                                                                  │ │
+│  │  La respirazione e uno dei principi fondamentali del Pilates.   │ │
+│  │  Joseph Pilates enfatizzava l'importanza di una respirazione    │ │
+│  │  corretta per...                                                 │ │
+│  │                                                                  │ │
+│  │  ## Tipi di respirazione                                        │ │
+│  │                                                                  │ │
+│  │  ### Respirazione laterale (costale)                            │ │
+│  │  La tecnica principale usata nel Pilates...                     │ │
+│  │                                                                  │ │
+│  │  ### Respirazione addominale                                    │ │
+│  │  Usata in altre discipline ma NON nel Pilates classico...       │ │
+│  │                                                                  │ │
+│  │  (scroll per contenuto lungo)                                   │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  [Chiudi] (ESC o click fuori)                                        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.3 Step-by-Step
 
 | Step | Schermata | Azione Utente | Sistema | Next |
 |------|-----------|---------------|---------|------|
-| 1 | Dashboard | Click "Studia" | Verifica se ha carte | 2 o errore |
-| 2 | Setup | Seleziona provider | Mostra modelli disponibili | 3 |
-| 3 | Setup | Seleziona modello, click "Inizia" | Carica carte, seleziona random, chiama AI | 4 |
-| 4 | Quiz | Legge domanda | Mostra 4 opzioni | 5 |
-| 5 | Quiz | Seleziona risposta (A/B/C/D) | Valuta risposta | 6 |
-| 6 | Feedback | Legge feedback e spiegazione | - | 7 |
-| 7 | Feedback | Click "Prossima carta" | Marca carta vista, seleziona nuova random | 4 o 8 |
-| 8 | Completato | Click "Torna alla Dashboard" | - | Dashboard |
+| 1 | Dashboard | Click "Studia" | Verifica se ha carte, carica preferenze da DB | 2 o errore |
+| 2 | Studio | - | Seleziona carta random, chiama AI Step 1 | 3 |
+| 3 | Quiz | Legge domanda | Mostra 4 opzioni con controlli visibili | 4 |
+| 4 | Quiz | (opzionale) Click "Vedi carta" | Apre CardPreviewDialog | 3 |
+| 5 | Quiz | (opzionale) Cambia provider/modello | Aggiorna selezione (effetto su prossime chiamate) | 3 |
+| 6 | Quiz | Seleziona risposta (A/B/C/D) | Chiama AI Step 2 (validate_answer) | 7 |
+| 7 | Feedback | Legge spiegazione dettagliata | Chat mostra validazione corposa | 8 |
+| 8 | Feedback | Click "Prossima carta" | Marca vista, salva preferenze se cambiate, seleziona nuova | 2 o 9 |
+| 9 | Completato | Click "Torna alla Dashboard" | - | Dashboard |
 
-### 3.3 Logica Selezione Carta (v1 Semplificata)
+### 3.4 Logica Selezione Carta
 
 ```
-1. Carica tutte le carte dell'utente (da tutti i repository)
-2. Inizializza array vuoto: seenCardIds = []
-3. Per ogni carta richiesta:
+1. Carica preferenze utente da DB (user_study_preferences)
+2. Imposta provider/modello da preferenze (o default)
+3. Carica tutte le carte dell'utente (da tutti i repository)
+4. Inizializza array vuoto: seenCardIds = []
+5. Inizializza chatHistory = [] (in memoria)
+6. Per ogni carta richiesta:
    a. Filtra carte non in seenCardIds
    b. Se nessuna carta disponibile -> fine sessione
    c. Seleziona carta random
    d. Aggiungi card.id a seenCardIds
-   e. Ritorna carta selezionata
+   e. Reset chatHistory per nuova carta
+   f. Ritorna carta selezionata
 ```
 
-**Nota**: Le carte viste sono tracciate solo in memoria (stato React). Ricaricando la pagina si resetta.
+**Nota**: Le carte viste e la chat sono tracciate solo in memoria (stato React). Ricaricando la pagina si resetta. Le preferenze provider/modello sono invece persistite su DB.
 
-### 3.4 Generazione Domanda AI
+### 3.5 Flusso Due Step per Carta
 
-**Chiamata a llm-proxy:**
+```
+STEP 1: Generazione Domanda
+─────────────────────────────────────────────────
+1. Seleziona carta random
+2. Chiama llm-proxy action: generate_quiz
+3. Ricevi domanda + 4 opzioni + risposta corretta
+4. Mostra domanda nella chat
+5. Attendi risposta utente
+
+STEP 2: Validazione Risposta (SEMPRE eseguito)
+─────────────────────────────────────────────────
+1. Utente seleziona risposta (A/B/C/D)
+2. Aggiungi risposta utente alla chat
+3. Chiama llm-proxy action: validate_answer
+4. Ricevi validazione + spiegazione dettagliata + tips
+5. Mostra feedback nella chat
+6. Abilita bottone "Prossima carta"
+```
+
+### 3.6 Chiamate API
+
+**Step 1 - Generazione Quiz:**
 ```json
 {
   "action": "generate_quiz",
   "cardContent": "# Titolo\n\nContenuto markdown della carta...",
   "provider": "openai",
-  "model": "gpt-4o-mini"
+  "model": "gpt-5.1"
 }
 ```
 
-**Risposta attesa:**
+**Risposta Step 1:**
 ```json
 {
   "success": true,
@@ -424,31 +502,75 @@ Quando l'utente non ha configurato le API keys:
       { "id": "C", "text": "Respirazione toracica" },
       { "id": "D", "text": "Apnea controllata" }
     ],
-    "correctAnswer": "B",
-    "explanation": "La respirazione laterale (o costale) e la tecnica fondamentale nel Pilates perche permette di mantenere l'attivazione del core durante il movimento..."
+    "correctAnswer": "B"
   }
 }
 ```
 
-### 3.5 Modelli Disponibili
+**Step 2 - Validazione Risposta:**
+```json
+{
+  "action": "validate_answer",
+  "cardContent": "# Titolo\n\nContenuto markdown della carta...",
+  "question": "Qual e il principio fondamentale della respirazione nel Pilates?",
+  "userAnswer": "B",
+  "correctAnswer": "B",
+  "provider": "openai",
+  "model": "gpt-5.1"
+}
+```
+
+**Risposta Step 2:**
+```json
+{
+  "success": true,
+  "validation": {
+    "isCorrect": true,
+    "explanation": "Esatto! La respirazione laterale (o costale) e la tecnica fondamentale nel Pilates...",
+    "tips": [
+      "Pensa alle costole che si aprono come un fisarmonica",
+      "Respira nelle costole, non nella pancia"
+    ]
+  }
+}
+```
+
+### 3.7 Modelli Disponibili (Fase 5+)
 
 | Provider | Modello | Caratteristiche |
 |----------|---------|-----------------|
-| OpenAI | gpt-4o-mini | Economico, veloce |
-| OpenAI | gpt-4o | Alta qualita |
-| Anthropic | claude-3-5-haiku | Economico, veloce |
-| Anthropic | claude-3-5-sonnet | Bilanciato |
-| Anthropic | claude-3-opus | Massima qualita |
+| OpenAI | gpt-5.1 | Buon rapporto qualita/costo |
+| OpenAI | gpt-5.2 | Alta qualita |
+| Anthropic | claude-haiku-4-5 | Economico, veloce |
+| Anthropic | claude-sonnet-4-5 | Bilanciato |
+| Anthropic | claude-opus-4-5 | Massima qualita |
 
-### 3.6 Gestione Errori
+### 3.8 Gestione Preferenze
+
+```
+Caricamento (all'avvio sessione):
+1. Query user_study_preferences WHERE user_id = current_user
+2. Se esiste: imposta provider e model da DB
+3. Se non esiste: usa default (primo provider configurato, primo modello)
+
+Salvataggio (quando utente cambia selezione):
+1. Upsert in user_study_preferences
+2. Set preferred_provider = selezione corrente
+3. Set preferred_model = selezione corrente
+4. Update updated_at
+```
+
+### 3.9 Gestione Errori
 
 | Errore | Comportamento |
 |--------|---------------|
 | Nessuna carta | Toast "Aggiungi un repository per iniziare" |
 | Nessuna API key configurata | Redirect a /setup/api-keys |
-| Errore chiamata AI | Mostra errore con bottone "Riprova" |
+| Errore Step 1 (generate_quiz) | Mostra errore con bottone "Riprova" |
+| Errore Step 2 (validate_answer) | Mostra errore, permette comunque "Prossima carta" |
 | API key scaduta/invalida | Messaggio con link a configurazione |
 | Timeout AI | Messaggio con bottone "Riprova" |
+| Cambio provider senza chiave | Disabilita provider, mostra avviso |
 
 ---
 

@@ -113,11 +113,11 @@ export interface LLMModel {
   displayName: string;
 }
 
-// Available models per provider
+// Available models per provider (Phase 5 - only latest models)
 export const AVAILABLE_MODELS: Record<LLMProvider, LLMModel[]> = {
   openai: [
-    { provider: 'openai', modelId: 'gpt-4o-mini', displayName: 'GPT-4o Mini' },
     { provider: 'openai', modelId: 'gpt-4o', displayName: 'GPT-4o' },
+    { provider: 'openai', modelId: 'o1', displayName: 'o1' },
   ],
   anthropic: [
     { provider: 'anthropic', modelId: 'claude-3-5-haiku-latest', displayName: 'Claude 3.5 Haiku' },
@@ -158,4 +158,13 @@ export interface AvailableModelsResponse {
 export interface StudyPreferences {
   systemPrompt: string;
   isCustom: boolean;
+  preferredProvider?: LLMProvider;
+  preferredModel?: string;
+}
+
+// Validation response from AI (Step 2)
+export interface ValidationResponse {
+  isCorrect: boolean;
+  explanation: string;
+  tips?: string[];
 }

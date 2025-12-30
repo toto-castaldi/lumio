@@ -165,6 +165,84 @@
 
 ---
 
+## 5 - STUDIO AVANZATO (Evoluzione)
+
+### Obiettivi
+
+- Permettere cambio dinamico di provider/modello/prompt durante la sessione di studio
+- Aggiornare i modelli AI (solo i piu recenti, rimuovere i vecchi)
+- Persistere le preferenze utente (ultimo modello/provider scelto) su DATABASE
+- Implementare chat contestuale con validazione a due step per ogni carta
+- Aggiungere popup per visualizzare la card completa durante lo studio
+
+### 5.1 Backend - Nuovi Modelli AI
+
+- [ ] 5.1.1 Aggiornare `AVAILABLE_MODELS` in llm-proxy con nuovi modelli:
+  - Anthropic: `claude-haiku-4-5`, `claude-sonnet-4-5`, `claude-opus-4-5`
+  - OpenAI: `gpt-5.1`, `gpt-5.2`
+- [ ] 5.1.2 Rimuovere modelli obsoleti (`gpt-4o-mini`, `gpt-4o`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `claude-3-opus`)
+
+### 5.2 Backend - Nuova Action validate_answer
+
+- [ ] 5.2.1 Aggiungere action `validate_answer` in llm-proxy
+- [ ] 5.2.2 Implementare prompt di validazione (italiano, spiegazione corposa)
+- [ ] 5.2.3 Input: cardContent, question, userAnswer, correctAnswer, provider, model
+- [ ] 5.2.4 Output: isCorrect, explanation (dettagliata), tips (suggerimenti opzionali)
+
+### 5.3 Database - Preferenze Studio Utente
+
+- [ ] 5.3.1 Creare migrazione per tabella `user_study_preferences`
+- [ ] 5.3.2 Colonne: user_id, preferred_provider, preferred_model, created_at, updated_at
+- [ ] 5.3.3 RLS policy per accesso solo ai propri dati
+- [ ] 5.3.4 Aggiornare `@lumio/core` con funzioni CRUD per preferenze
+
+### 5.4 Frontend - UI Studio Refactoring
+
+- [ ] 5.4.1 Refactoring `StudyPage.tsx` con controlli sempre visibili in alto
+- [ ] 5.4.2 Creare `StudyControls.tsx` (provider/modello/prompt collapsabile)
+- [ ] 5.4.3 Cambio dinamico provider/modello durante sessione (senza reload)
+- [ ] 5.4.4 Caricare preferenze salvate da DB all'avvio sessione
+- [ ] 5.4.5 Salvare preferenze su DB quando l'utente cambia selezione
+
+### 5.5 Frontend - Chat Contestuale con Due Step
+
+- [ ] 5.5.1 Modificare flusso quiz: Step 1 genera domanda, Step 2 valida risposta
+- [ ] 5.5.2 Chat in memoria (stato React, si perde al reload pagina)
+- [ ] 5.5.3 Mostrare spiegazione corposa dopo validazione (Step 2)
+- [ ] 5.5.4 UI chat-like per mostrare domanda/risposta/spiegazione
+
+### 5.6 Frontend - Popup Card Completa
+
+- [ ] 5.6.1 Creare `CardPreviewDialog.tsx` (dialog modale)
+- [ ] 5.6.2 Bottone "Vedi carta" sempre visibile durante lo studio
+- [ ] 5.6.3 Render markdown completo della carta nel dialog
+- [ ] 5.6.4 Scroll se contenuto lungo, chiudibile con ESC o click fuori
+
+### 5.7 Core/Shared Updates
+
+- [ ] 5.7.1 Aggiornare tipi in `@lumio/shared` (ValidateAnswerRequest, ValidateAnswerResponse)
+- [ ] 5.7.2 Aggiornare tipo `LLMModel` con nuovi modelli
+- [ ] 5.7.3 Aggiungere funzione `validateAnswer()` in `@lumio/core`
+- [ ] 5.7.4 Aggiungere funzioni per user_study_preferences in `@lumio/core`
+
+### Criteri di Successo Fase 5
+
+- L'utente puo cambiare provider/modello durante la sessione senza ricaricare
+- Le preferenze (ultimo provider/modello) sono persistite su DB
+- Ogni carta ha validazione a due step: domanda + validazione con spiegazione
+- L'utente puo sempre vedere la carta completa tramite popup
+- I controlli sono sempre visibili e accessibili durante lo studio
+- Solo i nuovi modelli AI sono disponibili (Haiku 4.5, Sonnet 4.5, Opus 4.5, GPT-5.1, GPT-5.2)
+
+### Note Fase 5
+
+- **Chat in memoria**: Il contesto chat si perde ricaricando la pagina (design intenzionale per semplicita)
+- **Validazione sempre eseguita**: Step 2 viene SEMPRE chiamato dopo la risposta utente
+- **Prompt italiano**: La validazione usa un prompt in italiano per spiegazioni piu naturali
+- **Costi API**: Due chiamate AI per carta (domanda + validazione) invece di una
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT
@@ -172,8 +250,8 @@
 - [ ] Web Push Notifications per PWA
 - [ ] Offline mode con Service Worker + IndexedDB
 - [ ] lumio.toto-castaldi.com diventa sito ufficiale, invece web va su w-lumio.toto-castaldi.com
-- [ ] modelli : Anthropic - Haiku4.5, Sonnet4.5 e Opus4.5 . OpenAI GPT4o e GPT5.1
 - [ ] le card come PDF !!!! Quando vengono importate vengono trasformate, vengono passate a AI come file e quando si aprono si vedono bene (compreso immagini)
+- [ ] le notifiche solo su PWA (no mail). Aggiorna documenti
 
 ## BUG
 

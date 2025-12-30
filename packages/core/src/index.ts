@@ -51,4 +51,6 @@ export {
   saveStudyPreferences,
   resetStudyPreferences,
   getDefaultPrompt,
+  saveModelPreferences,
+  validateAnswer,
 } from './supabase/study';

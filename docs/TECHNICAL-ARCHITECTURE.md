@@ -303,7 +303,8 @@ Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.
 | `set_preferred` | Imposta il provider preferito |
 | `has_valid_key` | Verifica se l'utente ha almeno una chiave valida |
 | `get_available_models` | Ritorna lista modelli disponibili per ogni provider |
-| `generate_quiz` | Genera domanda a scelta multipla da contenuto carta |
+| `generate_quiz` | Genera domanda a scelta multipla da contenuto carta (Step 1) |
+| `validate_answer` | Valida risposta utente e fornisce spiegazione dettagliata (Step 2) |
 
 **Flusso di salvataggio chiave:**
 ```
@@ -382,24 +383,80 @@ Client                    Edge Function                    LLM Provider
    │ ◀───────────────────────── │                              │
 ```
 
-**Modelli supportati:**
+**Modelli supportati (Fase 5+):**
 
 | Provider | Modello | Note |
 |----------|---------|------|
-| OpenAI | `gpt-4o-mini` | Economico, buona qualita |
-| OpenAI | `gpt-4o` | Migliore qualita, piu costoso |
-| Anthropic | `claude-3-5-haiku` | Economico, veloce |
-| Anthropic | `claude-3-5-sonnet` | Bilanciato qualita/costo |
-| Anthropic | `claude-3-opus` | Massima qualita |
+| OpenAI | `gpt-5.1` | Modello base, buon rapporto qualita/costo |
+| OpenAI | `gpt-5.2` | Migliore qualita, piu costoso |
+| Anthropic | `claude-haiku-4-5` | Economico, veloce |
+| Anthropic | `claude-sonnet-4-5` | Bilanciato qualita/costo |
+| Anthropic | `claude-opus-4-5` | Massima qualita |
 
-**Prompt di sistema per quiz:**
+> **Nota Fase 5:** I modelli precedenti (`gpt-4o-mini`, `gpt-4o`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `claude-3-opus`) sono stati rimossi e sostituiti con le versioni piu recenti.
+
+**Prompt di sistema per quiz (Step 1 - generate_quiz):**
 
 Il prompt istruisce l'AI a:
 1. Leggere il contenuto della carta
 2. Generare una domanda pertinente
 3. Creare 4 opzioni di cui solo una corretta
 4. Variare la posizione della risposta corretta (A, B, C o D)
-5. Fornire una spiegazione/ripasso del concetto
+5. Fornire una spiegazione breve del concetto
+
+**Validazione Risposta (action: `validate_answer`) - Step 2:**
+
+Valida la risposta dell'utente e fornisce una spiegazione dettagliata.
+
+```
+Input:
+{
+  "action": "validate_answer",
+  "cardContent": "# Titolo\n\nContenuto markdown della carta...",
+  "question": "Qual e il principio fondamentale...",
+  "userAnswer": "B",
+  "correctAnswer": "A",
+  "provider": "openai" | "anthropic",
+  "model": "gpt-5.1" | "claude-sonnet-4-5" | ...
+}
+
+Output:
+{
+  "success": true,
+  "validation": {
+    "isCorrect": false,
+    "explanation": "Spiegazione dettagliata del concetto, perche la risposta corretta e A e non B...",
+    "tips": ["Suggerimento 1 per ricordare meglio", "Suggerimento 2"]
+  }
+}
+```
+
+**Flusso validazione risposta:**
+```
+Client                    Edge Function                    LLM Provider
+   │                            │                              │
+   │  validate_answer(...)      │                              │
+   │ ─────────────────────────▶ │                              │
+   │                            │  1. getUserId() (auth)       │
+   │                            │  2. getDecryptedKey()        │
+   │                            │  3. Build validation prompt  │
+   │                            │  4. Call LLM API             │
+   │                            │ ─────────────────────────────▶│
+   │                            │ ◀─────────────────────────────│
+   │                            │  5. Parse JSON response      │
+   │                            │  6. Validate structure       │
+   │   { success, validation }  │                              │
+   │ ◀───────────────────────── │                              │
+```
+
+**Prompt di sistema per validazione (italiano):**
+
+Il prompt istruisce l'AI a:
+1. Verificare se la risposta dell'utente e corretta
+2. Fornire una spiegazione DETTAGLIATA e CORPOSA del concetto
+3. Spiegare PERCHE la risposta corretta e quella giusta
+4. Se sbagliato, spiegare PERCHE la risposta dell'utente e errata
+5. Fornire suggerimenti per memorizzare meglio il concetto
 
 #### study-planner
 Calcola il piano di studio per ogni utente.

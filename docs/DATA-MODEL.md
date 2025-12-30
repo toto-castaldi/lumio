@@ -127,6 +127,17 @@ Questo documento definisce lo schema del database PostgreSQL su Supabase per Lum
 │    └──────────────────────────────────────────┘
 │
 │    ┌──────────────────────────────────────────┐
+│    │      user_study_preferences              │
+│    ├──────────────────────────────────────────┤
+│    │ id (PK)                                  │
+│    │ user_id (FK)                             │
+│    │ preferred_provider                       │
+│    │ preferred_model                          │
+│    │ created_at                               │
+│    │ updated_at                               │
+│    └──────────────────────────────────────────┘
+│
+│    ┌──────────────────────────────────────────┐
 │    │      notification_preferences            │
 │    ├──────────────────────────────────────────┤
 │    │ id (PK)                                  │
@@ -460,7 +471,33 @@ CREATE INDEX idx_user_card_responses_is_correct ON user_card_responses(is_correc
 CREATE INDEX idx_user_card_responses_quality ON user_card_responses(quality_rating);
 ```
 
-### 4.9 notification_preferences
+### 4.9 user_study_preferences
+
+Preferenze di studio dell'utente (provider/modello preferiti).
+
+```sql
+CREATE TABLE public.user_study_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    preferred_provider llm_provider,  -- 'openai' | 'anthropic'
+    preferred_model TEXT,  -- es: 'gpt-5.1', 'claude-sonnet-4-5'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indici
+CREATE INDEX idx_user_study_preferences_user_id ON user_study_preferences(user_id);
+
+-- Trigger
+CREATE TRIGGER set_user_study_preferences_updated_at
+    BEFORE UPDATE ON user_study_preferences
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+> **Nota Fase 5:** Questa tabella memorizza le preferenze di studio dell'utente. Quando l'utente cambia provider o modello durante una sessione di studio, le nuove preferenze vengono salvate automaticamente e caricate alla sessione successiva.
+
+### 4.10 notification_preferences
 
 Preferenze notifiche utente (mobile).
 
@@ -638,6 +675,7 @@ ALTER TABLE user_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_card_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE study_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_study_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 -- public_decks non ha RLS (è pubblico)
 ```
@@ -734,6 +772,14 @@ CREATE POLICY "Users can manage own study sessions"
     USING (auth.uid() = user_id);
 ```
 
+#### user_study_preferences
+
+```sql
+CREATE POLICY "Users can manage own study preferences"
+    ON user_study_preferences FOR ALL
+    USING (auth.uid() = user_id);
+```
+
 #### notification_preferences
 
 ```sql
@@ -826,6 +872,7 @@ ORDER BY priority, uc.mastery_score NULLS FIRST;
 | user_card_responses | user_card_id | BTREE | Card history |
 | user_card_responses | session_id | BTREE | Session details |
 | user_card_responses | quality_rating | BTREE | AI quality analytics |
+| user_study_preferences | user_id | BTREE | User lookup |
 | public_decks | tags | GIN | Browse by tag |
 
 ---

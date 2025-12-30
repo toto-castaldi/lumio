@@ -6,6 +6,7 @@ import type {
   QuizQuestion,
   AvailableModelsResponse,
   StudyPreferences,
+  ValidationResponse,
 } from '@lumio/shared';
 
 /**
@@ -158,17 +159,22 @@ export async function getStudyCards(): Promise<Card[]> {
 /**
  * Get study preferences for the current user
  * Returns the custom prompt if set, or the default prompt
+ * Also returns preferred provider/model if set
  */
 export async function getStudyPreferences(): Promise<StudyPreferences> {
   const response = await callLlmProxy<{
     success: boolean;
     systemPrompt: string;
     isCustom: boolean;
+    preferredProvider?: LLMProvider;
+    preferredModel?: string;
   }>('get_study_preferences');
 
   return {
     systemPrompt: response.systemPrompt,
     isCustom: response.isCustom,
+    preferredProvider: response.preferredProvider,
+    preferredModel: response.preferredModel,
   };
 }
 
@@ -197,4 +203,48 @@ export async function getDefaultPrompt(): Promise<string> {
   }>('get_default_prompt');
 
   return response.defaultPrompt;
+}
+
+/**
+ * Save model preferences (provider and model)
+ * @param provider - The LLM provider
+ * @param modelId - The model ID
+ */
+export async function saveModelPreferences(
+  provider: LLMProvider,
+  modelId: string
+): Promise<void> {
+  await callLlmProxy('save_model_preferences', { provider, modelId });
+}
+
+/**
+ * Validate a user's answer using AI (Step 2)
+ * @param provider - LLM provider to use
+ * @param modelId - Model ID to use
+ * @param cardContent - The card content (markdown)
+ * @param question - The quiz question that was asked
+ * @param userAnswer - The user's answer (A, B, C, or D)
+ * @param correctAnswer - The correct answer (A, B, C, or D)
+ */
+export async function validateAnswer(
+  provider: LLMProvider,
+  modelId: string,
+  cardContent: string,
+  question: string,
+  userAnswer: string,
+  correctAnswer: string
+): Promise<ValidationResponse> {
+  const response = await callLlmProxy<{
+    success: boolean;
+    validation: ValidationResponse;
+  }>('validate_answer', {
+    provider,
+    modelId,
+    cardContent,
+    question,
+    userAnswer,
+    correctAnswer,
+  });
+
+  return response.validation;
 }
