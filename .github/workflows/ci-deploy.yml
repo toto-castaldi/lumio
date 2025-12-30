@@ -3,20 +3,8 @@ name: CI/CD
 on:
   push:
     branches: [main, develop]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - 'CHANGELOG.md'
-      - 'LICENSE'
-      - '.gitignore'
   pull_request:
     branches: [main, develop]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - 'CHANGELOG.md'
-      - 'LICENSE'
-      - '.gitignore'
 
 jobs:
   # ============================================
@@ -25,6 +13,8 @@ jobs:
 
   lint-and-typecheck:
     runs-on: ubuntu-latest
+    # Skip if commit message starts with "docs:" or "docs("
+    if: ${{ !startsWith(github.event.head_commit.message, 'docs:') && !startsWith(github.event.head_commit.message, 'docs(') }}
     steps:
       - uses: actions/checkout@v4
 
