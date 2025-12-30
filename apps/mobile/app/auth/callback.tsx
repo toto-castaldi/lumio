@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import * as Linking from 'expo-linking';
+import * as Sentry from '@sentry/react-native';
 import { getSupabaseClient } from '@lumio/core';
 
 /**
@@ -25,6 +26,12 @@ export default function AuthCallbackScreen() {
 
     const handleUrl = (event: { url: string }) => {
       console.log('URL event received:', event.url);
+      Sentry.addBreadcrumb({
+        category: 'auth',
+        message: 'URL event received',
+        data: { url: event.url.substring(0, 100), hasHash: event.url.includes('#') },
+        level: 'info',
+      });
       if (mounted && !processedRef.current) {
         setDebugInfo(prev => prev + `\nEvent URL: ${event.url.substring(0, 80)}...`);
         setCallbackUrl(event.url);
@@ -32,6 +39,12 @@ export default function AuthCallbackScreen() {
     };
 
     const getUrl = async () => {
+      Sentry.addBreadcrumb({
+        category: 'auth',
+        message: 'Auth callback mounted',
+        data: { urlFromHook: urlFromHook?.substring(0, 100) || 'null' },
+        level: 'info',
+      });
       console.log('Getting URL... urlFromHook:', urlFromHook);
       setDebugInfo(`Start: urlFromHook=${urlFromHook ? 'present' : 'null'}`);
 
@@ -61,8 +74,18 @@ export default function AuthCallbackScreen() {
           if (lastUrl) {
             setCallbackUrl(lastUrl);
           } else {
+            const errorMsg = 'Android ha strippato il hash fragment dal deep link';
+            Sentry.captureMessage(errorMsg, {
+              level: 'error',
+              tags: { flow: 'oauth_callback' },
+              extra: {
+                urlFromHook: urlFromHook || 'null',
+                initialUrl: initialUrl || 'null',
+                lastUrl: lastUrl || 'null',
+              },
+            });
             setError('URL non ricevuto');
-            setDebugInfo(prev => prev + `\nTimeout: nessun URL ricevuto`);
+            setDebugInfo(prev => prev + `\nTimeout: nessun URL ricevuto\n\nAndroid non passa il hash fragment (#) nei deep link. Serve PKCE flow.`);
           }
         }
       }, 3000);
@@ -88,53 +111,76 @@ export default function AuthCallbackScreen() {
         console.log('Processing auth callback URL:', callbackUrl);
         processedRef.current = true;
 
-        // Parse the URL to extract tokens
-        // Tokens can be in hash fragment (#) or query params (?)
-        // Format: lumio://auth/callback#access_token=xxx&refresh_token=yyy
-        // Or: lumio://auth/callback?access_token=xxx&refresh_token=yyy
+        // Parse the URL to extract tokens or code
+        // PKCE flow: lumio://auth/callback?code=xxx (query param)
+        // Implicit flow: lumio://auth/callback#access_token=xxx&refresh_token=yyy (hash)
 
-        let accessToken: string | null = null;
-        let refreshToken: string | null = null;
+        const supabase = getSupabaseClient();
+        let authSuccess = false;
 
-        // Try hash fragment first
-        const hashIndex = callbackUrl.indexOf('#');
-        if (hashIndex !== -1) {
-          const hashParams = new URLSearchParams(callbackUrl.substring(hashIndex + 1));
-          accessToken = hashParams.get('access_token');
-          refreshToken = hashParams.get('refresh_token');
-          console.log('Tokens from hash:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
-        }
+        // Try to get code from query params (PKCE flow - preferred for Android)
+        const queryIndex = callbackUrl.indexOf('?');
+        if (queryIndex !== -1) {
+          const queryParams = new URLSearchParams(callbackUrl.substring(queryIndex + 1));
+          const code = queryParams.get('code');
 
-        // Fallback to query params
-        if (!accessToken || !refreshToken) {
-          const queryIndex = callbackUrl.indexOf('?');
-          if (queryIndex !== -1) {
-            const queryParams = new URLSearchParams(callbackUrl.substring(queryIndex + 1));
-            accessToken = accessToken || queryParams.get('access_token');
-            refreshToken = refreshToken || queryParams.get('refresh_token');
-            console.log('Tokens from query:', { hasAccess: !!accessToken, hasRefresh: !!refreshToken });
+          if (code) {
+            console.log('Got PKCE code from query params');
+            Sentry.addBreadcrumb({
+              category: 'auth',
+              message: 'Exchanging PKCE code for session',
+              level: 'info',
+            });
+
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+            if (exchangeError) {
+              console.error('Code exchange error:', exchangeError);
+              setDebugInfo(`PKCE exchange failed: ${exchangeError.message}`);
+              setError('Errore scambio codice');
+              return;
+            }
+
+            authSuccess = true;
           }
         }
 
-        if (!accessToken || !refreshToken) {
-          const info = `URL: ${callbackUrl.substring(0, 100)}...\nHas #: ${callbackUrl.includes('#')}\nHas ?: ${callbackUrl.includes('?')}\nLength: ${callbackUrl.length}`;
-          console.error('Missing tokens in callback URL:', info);
-          setDebugInfo(info);
-          setError('Token non trovati nella risposta');
-          return;
+        // Fallback: try hash fragment (implicit flow - for other platforms)
+        if (!authSuccess) {
+          const hashIndex = callbackUrl.indexOf('#');
+          if (hashIndex !== -1) {
+            const hashParams = new URLSearchParams(callbackUrl.substring(hashIndex + 1));
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              console.log('Got tokens from hash fragment');
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (sessionError) {
+                console.error('Failed to set session:', sessionError);
+                setDebugInfo(sessionError.message);
+                setError('Errore durante il login');
+                return;
+              }
+
+              authSuccess = true;
+            }
+          }
         }
 
-        // Set the session in Supabase
-        const supabase = getSupabaseClient();
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (sessionError) {
-          console.error('Failed to set session:', sessionError);
-          setDebugInfo(sessionError.message);
-          setError('Errore durante il login');
+        if (!authSuccess) {
+          const info = `URL: ${callbackUrl.substring(0, 100)}...\nHas #: ${callbackUrl.includes('#')}\nHas ?: ${callbackUrl.includes('?')}\nLength: ${callbackUrl.length}`;
+          console.error('No auth data in callback URL:', info);
+          Sentry.captureMessage('No auth data in callback URL', {
+            level: 'error',
+            extra: { url: callbackUrl.substring(0, 200) },
+          });
+          setDebugInfo(info);
+          setError('Dati autenticazione non trovati');
           return;
         }
 

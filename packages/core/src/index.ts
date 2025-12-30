@@ -7,6 +7,8 @@ export {
   getSupabaseClient,
   getSupabaseUrl,
   getSupabaseAnonKey,
+  type StorageAdapter,
+  type CreateSupabaseClientOptions,
 } from './supabase/client';
 
 // Export auth functions

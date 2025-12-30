@@ -15,6 +15,7 @@ import {
   getUserApiKeys,
   type AuthUser,
   type AuthState,
+  type StorageAdapter,
 } from '@lumio/core';
 import Constants from 'expo-constants';
 
@@ -22,6 +23,14 @@ import Constants from 'expo-constants';
 // because on native Android builds it can consume the deep link URL
 // before Expo Router can pass it to the /auth/callback route.
 // The callback handling is done in app/auth/callback.tsx
+
+// Create AsyncStorage adapter for Supabase
+// This is required for PKCE flow to persist the code_verifier
+const asyncStorageAdapter: StorageAdapter = {
+  getItem: (key: string) => AsyncStorage.getItem(key),
+  setItem: (key: string, value: string) => AsyncStorage.setItem(key, value),
+  removeItem: (key: string) => AsyncStorage.removeItem(key),
+};
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -67,8 +76,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    // Initialize Supabase client
-    createSupabaseClient(supabaseUrl, supabaseAnonKey);
+    // Initialize Supabase client with AsyncStorage for PKCE support
+    createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      storage: asyncStorageAdapter,
+    });
 
     // Check initial auth state
     const checkAuth = async () => {
@@ -131,45 +142,73 @@ export function AuthProvider({ children }: AuthProviderProps) {
         path: 'auth/callback',
       });
 
+      console.log('Starting Google OAuth with PKCE, redirectUri:', redirectUri);
+
+      // Use PKCE flow - returns code in query params instead of tokens in hash
+      // This is required for Android native apps because Android strips hash fragments
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUri,
           skipBrowserRedirect: true,
+          queryParams: {
+            // Force PKCE flow
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
       if (error) throw error;
 
       if (data?.url) {
+        console.log('Opening browser for OAuth...');
         // Open the browser for authentication
         const result = await WebBrowser.openAuthSessionAsync(
           data.url,
           redirectUri
         );
 
-        if (result.type === 'success') {
-          // Extract the URL and handle the tokens
-          const url = new URL(result.url);
-          const hashParams = new URLSearchParams(
-            url.hash.slice(1) || url.search.slice(1)
-          );
+        console.log('Browser result type:', result.type);
 
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
+        if (result.type === 'success' && result.url) {
+          console.log('Browser returned success, URL:', result.url.substring(0, 100));
+          // Try to extract tokens from hash or code from query params
+          const url = new URL(result.url);
+
+          // Check for tokens in hash (implicit flow - works on some platforms)
+          const hashParams = new URLSearchParams(url.hash.slice(1));
+          let accessToken = hashParams.get('access_token');
+          let refreshToken = hashParams.get('refresh_token');
 
           if (accessToken && refreshToken) {
-            // Set the session in Supabase
+            console.log('Got tokens from hash');
             const { error: sessionError } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
             });
-
             if (sessionError) {
               console.error('Session error:', sessionError);
             }
+            return;
           }
+
+          // Check for code in query params (PKCE flow)
+          const code = url.searchParams.get('code');
+          if (code) {
+            console.log('Got code from query params, exchanging for session...');
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.error('Code exchange error:', exchangeError);
+            }
+            return;
+          }
+
+          console.log('No tokens or code found in result URL');
         }
+
+        // If we get here on Android, the deep link will handle it via /auth/callback route
+        console.log('Browser did not return success, deep link should handle callback');
       }
     } catch (error) {
       console.error('Google sign in error:', error);

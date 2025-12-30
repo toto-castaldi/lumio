@@ -123,3 +123,5 @@ Attualmente le source maps non vengono uploadate durante il build. Per abilitare
 - [ ] proteggere le edge functions con JWT
 - [ ] ⚠️ Minor version mismatches - package - expected  found - @sentry/react-native  ~7.2.0    7.8.0
 - [ ] autenticazione "one-tap" nativa per mobile
+- [ ] sistema di versionamento !!!
+- [ ] ogni carta deve spiegare le sue fonti
