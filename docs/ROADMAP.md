@@ -108,3 +108,15 @@
 - [ ] Sync repository Git
 - [ ] Validazione formato card
 - [ ] Gestione repository privati con PAT
+
+---
+
+## BACKLOG - Miglioramenti Futuri
+
+### Sentry Source Maps (Mobile)
+
+Attualmente le source maps non vengono uploadate durante il build. Per abilitare stack trace leggibili:
+
+- [ ] Creare auth token su sentry.io → Settings → Auth Tokens
+- [ ] Aggiungere `SENTRY_AUTH_TOKEN` come EAS Secret
+- [ ] Cambiare `uploadSourcemaps: true` in `apps/mobile/app.json`
