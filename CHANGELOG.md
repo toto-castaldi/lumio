@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.5](https://github.com/toto-castaldi/lumio/compare/v0.1.4...v0.1.5) (2025-12-30)
+
+
+### Features
+
+* **mobile:** add Google OAhth on PWA ([1877891](https://github.com/toto-castaldi/lumio/commit/1877891a98ed67f1d168801dd720fb9d4146127f))
+
 ### [0.1.4](https://github.com/toto-castaldi/lumio/compare/v0.1.3...v0.1.4) (2025-12-30)
 
 
