@@ -102,7 +102,7 @@ export function DashboardPage() {
         {/* Welcome Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Il tuo piano di studi</CardTitle>
+            <CardTitle>Il tuo piano di studio</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">

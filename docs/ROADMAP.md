@@ -177,53 +177,53 @@
 
 ### 5.1 Backend - Nuovi Modelli AI
 
-- [ ] 5.1.1 Aggiornare `AVAILABLE_MODELS` in llm-proxy con nuovi modelli:
+- [x] 5.1.1 Aggiornare `AVAILABLE_MODELS` in llm-proxy con nuovi modelli:
   - Anthropic: `claude-haiku-4-5`, `claude-sonnet-4-5`, `claude-opus-4-5`
   - OpenAI: `gpt-5.1`, `gpt-5.2`
-- [ ] 5.1.2 Rimuovere modelli obsoleti (`gpt-4o-mini`, `gpt-4o`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `claude-3-opus`)
+- [x] 5.1.2 Rimuovere modelli obsoleti (`gpt-4o-mini`, `gpt-4o`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `claude-3-opus`)
 
 ### 5.2 Backend - Nuova Action validate_answer
 
-- [ ] 5.2.1 Aggiungere action `validate_answer` in llm-proxy
-- [ ] 5.2.2 Implementare prompt di validazione (italiano, spiegazione corposa)
-- [ ] 5.2.3 Input: cardContent, question, userAnswer, correctAnswer, provider, model
-- [ ] 5.2.4 Output: isCorrect, explanation (dettagliata), tips (suggerimenti opzionali)
+- [x] 5.2.1 Aggiungere action `validate_answer` in llm-proxy
+- [x] 5.2.2 Implementare prompt di validazione (italiano, spiegazione corposa)
+- [x] 5.2.3 Input: cardContent, question, userAnswer, correctAnswer, provider, model
+- [x] 5.2.4 Output: isCorrect, explanation (dettagliata), tips (suggerimenti opzionali)
 
 ### 5.3 Database - Preferenze Studio Utente
 
-- [ ] 5.3.1 Creare migrazione per tabella `user_study_preferences`
-- [ ] 5.3.2 Colonne: user_id, preferred_provider, preferred_model, created_at, updated_at
-- [ ] 5.3.3 RLS policy per accesso solo ai propri dati
-- [ ] 5.3.4 Aggiornare `@lumio/core` con funzioni CRUD per preferenze
+- [x] 5.3.1 Creare migrazione per tabella `user_study_preferences`
+- [x] 5.3.2 Colonne: user_id, preferred_provider, preferred_model, created_at, updated_at
+- [x] 5.3.3 RLS policy per accesso solo ai propri dati
+- [x] 5.3.4 Aggiornare `@lumio/core` con funzioni CRUD per preferenze
 
 ### 5.4 Frontend - UI Studio Refactoring
 
-- [ ] 5.4.1 Refactoring `StudyPage.tsx` con controlli sempre visibili in alto
-- [ ] 5.4.2 Creare `StudyControls.tsx` (provider/modello/prompt collapsabile)
-- [ ] 5.4.3 Cambio dinamico provider/modello durante sessione (senza reload)
-- [ ] 5.4.4 Caricare preferenze salvate da DB all'avvio sessione
-- [ ] 5.4.5 Salvare preferenze su DB quando l'utente cambia selezione
+- [x] 5.4.1 Refactoring `StudyPage.tsx` con controlli sempre visibili in alto
+- [x] 5.4.2 Creare `StudyControls.tsx` (provider/modello/prompt collapsabile)
+- [x] 5.4.3 Cambio dinamico provider/modello durante sessione (senza reload)
+- [x] 5.4.4 Caricare preferenze salvate da DB all'avvio sessione
+- [x] 5.4.5 Salvare preferenze su DB quando l'utente cambia selezione
 
 ### 5.5 Frontend - Chat Contestuale con Due Step
 
-- [ ] 5.5.1 Modificare flusso quiz: Step 1 genera domanda, Step 2 valida risposta
-- [ ] 5.5.2 Chat in memoria (stato React, si perde al reload pagina)
-- [ ] 5.5.3 Mostrare spiegazione corposa dopo validazione (Step 2)
-- [ ] 5.5.4 UI chat-like per mostrare domanda/risposta/spiegazione
+- [x] 5.5.1 Modificare flusso quiz: Step 1 genera domanda, Step 2 valida risposta
+- [x] 5.5.2 Chat in memoria (stato React, si perde al reload pagina)
+- [x] 5.5.3 Mostrare spiegazione corposa dopo validazione (Step 2)
+- [x] 5.5.4 UI chat-like per mostrare domanda/risposta/spiegazione
 
 ### 5.6 Frontend - Popup Card Completa
 
-- [ ] 5.6.1 Creare `CardPreviewDialog.tsx` (dialog modale)
-- [ ] 5.6.2 Bottone "Vedi carta" sempre visibile durante lo studio
-- [ ] 5.6.3 Render markdown completo della carta nel dialog
-- [ ] 5.6.4 Scroll se contenuto lungo, chiudibile con ESC o click fuori
+- [x] 5.6.1 Creare `CardPreviewDialog.tsx` (dialog modale)
+- [x] 5.6.2 Bottone "Vedi carta" sempre visibile durante lo studio
+- [x] 5.6.3 Render markdown completo della carta nel dialog
+- [x] 5.6.4 Scroll se contenuto lungo, chiudibile con ESC o click fuori
 
 ### 5.7 Core/Shared Updates
 
-- [ ] 5.7.1 Aggiornare tipi in `@lumio/shared` (ValidateAnswerRequest, ValidateAnswerResponse)
-- [ ] 5.7.2 Aggiornare tipo `LLMModel` con nuovi modelli
-- [ ] 5.7.3 Aggiungere funzione `validateAnswer()` in `@lumio/core`
-- [ ] 5.7.4 Aggiungere funzioni per user_study_preferences in `@lumio/core`
+- [x] 5.7.1 Aggiornare tipi in `@lumio/shared` (ValidateAnswerRequest, ValidateAnswerResponse)
+- [x] 5.7.2 Aggiornare tipo `LLMModel` con nuovi modelli
+- [x] 5.7.3 Aggiungere funzione `validateAnswer()` in `@lumio/core`
+- [x] 5.7.4 Aggiungere funzioni per user_study_preferences in `@lumio/core`
 
 ### Criteri di Successo Fase 5
 

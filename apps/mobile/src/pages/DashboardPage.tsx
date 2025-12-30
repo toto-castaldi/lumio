@@ -86,10 +86,7 @@ export function DashboardPage() {
         {/* Welcome Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Ciao, {user?.displayName?.split(' ')[0] || 'Utente'}!</CardTitle>
-            <CardDescription>
-              Benvenuto nella tua app di studio
-            </CardDescription>
+            <CardTitle>Il tuo piano di studio</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 grid-cols-2">
