@@ -4,7 +4,7 @@
  * Questa versione viene aggiornata automaticamente da release-please.
  * NON modificare manualmente.
  */
-export const VERSION = "lumio-v0.1.8";
+export const VERSION = "0.2.0";
 
 /**
  * Build info popolate a build time dalla CI.
