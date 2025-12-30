@@ -33,11 +33,11 @@ export interface UserApiKey {
 }
 
 // Authentication state for the application
+// Note: 'needs_api_key' removed in Phase 6 - user goes directly to dashboard
 export type AuthState =
   | 'loading'      // Initial load, checking session
   | 'logged_out'   // No session, need to login
-  | 'needs_api_key' // Logged in but no API key configured
-  | 'ready';       // Logged in with API key, ready to use
+  | 'ready';       // Logged in, ready to use (API key check is informational only)
 
 // Authenticated user (from Supabase auth)
 export interface AuthUser {

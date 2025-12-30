@@ -128,7 +128,7 @@ Lumio risolve questi problemi con un approccio innovativo:
 ## 6. User Stories
 
 ### Onboarding
-> Come nuovo utente, voglio registrarmi con Google e configurare la mia API key (OpenAI o Anthropic) per iniziare a studiare in meno di 5 minuti.
+> Come nuovo utente, voglio registrarmi con Google e accedere subito alla mia dashboard. Da lì posso configurare le API keys (OpenAI o Anthropic) e aggiungere repository per iniziare a studiare.
 
 ### Collegamento Repository  
 > Come studente, voglio aggiungere l'URL di un repository Git di anatomia e lasciare che Lumio sincronizzi automaticamente le card.

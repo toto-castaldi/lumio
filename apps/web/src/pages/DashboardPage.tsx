@@ -10,10 +10,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Settings } from 'lucide-react';
 import { APP_NAME, getVersionString, getUserStats, type UserStats } from '@lumio/core';
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user, hasApiKey } = useAuth();
   const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
@@ -24,10 +25,6 @@ export function DashboardPage() {
       .finally(() => setIsLoadingStats(false));
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-  };
-
   // Get initials for avatar fallback
   const getInitials = (name?: string) => {
     if (!name) return '?';
@@ -37,6 +34,15 @@ export function DashboardPage() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  // Determine study button state and message
+  const canStudy = hasApiKey && stats.cardCount > 0;
+  const getStudyMessage = () => {
+    if (isLoadingStats) return 'Caricamento...';
+    if (!hasApiKey) return 'Configura le API Keys per studiare';
+    if (stats.cardCount === 0) return 'Aggiungi un repository per iniziare';
+    return '';
   };
 
   return (
@@ -57,8 +63,10 @@ export function DashboardPage() {
                 {user?.displayName || user?.email}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              Logout
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/settings">
+                <Settings className="h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -70,14 +78,15 @@ export function DashboardPage() {
               <div>
                 <h2 className="text-lg font-semibold">Pronto a studiare?</h2>
                 <p className="text-sm text-muted-foreground">
-                  {isLoadingStats
-                    ? 'Caricamento...'
-                    : stats.cardCount == 0
-                      ? 'Aggiungi un repository per iniziare'
-                      : ''}
+                  {getStudyMessage()}
+                  {!hasApiKey && !isLoadingStats && (
+                    <Link to="/settings" className="ml-1 underline">
+                      Vai alle Impostazioni
+                    </Link>
+                  )}
                 </p>
               </div>
-              {isLoadingStats || stats.cardCount === 0 ? (
+              {isLoadingStats || !canStudy ? (
                 <Button size="lg" disabled>
                   Studia
                 </Button>

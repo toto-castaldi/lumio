@@ -243,6 +243,86 @@
 
 ---
 
+## 6 - NUOVO FLUSSO ONBOARDING WEB
+
+### Obiettivi Fase 6
+
+- Permettere accesso immediato alla dashboard dopo login (senza blocco API keys)
+- Creare sezione Impostazioni dedicata per API keys e logout
+- Migliorare UX del bottone "Studia" con messaggi esplicativi sui requisiti mancanti
+
+### 6.1 Modificare AuthState e AuthContext
+
+- [x] 6.1.1 Aggiornare tipo `AuthState` in `packages/shared/src/types/index.ts`
+  - Rimuovere stato `needs_api_key` come stato bloccante
+  - Dopo login, stato passa direttamente a `ready`
+- [x] 6.1.2 Aggiornare `apps/web/src/contexts/AuthContext.tsx`
+  - Rimuovere logica che imposta `needs_api_key`
+  - Mantenere `hasApiKey` come flag informativo (non bloccante)
+
+### 6.2 Creare pagina Impostazioni
+
+- [x] 6.2.1 Creare `apps/web/src/pages/SettingsPage.tsx`
+  - Header con titolo "Impostazioni"
+  - Sezione "API Keys" con configurazione provider (OpenAI/Anthropic)
+  - Sezione "Account" con bottone logout
+  - Link per tornare alla dashboard
+
+### 6.3 Refactor configurazione API Keys
+
+- [x] 6.3.1 Estrarre logica form da `SetupApiKeysPage.tsx` in componente riutilizzabile
+- [x] 6.3.2 Creare componente `ApiKeySettings.tsx` per visualizzare/gestire chiavi esistenti
+- [x] 6.3.3 Integrare componente in SettingsPage
+- [x] 6.3.4 Rimuovere `apps/web/src/pages/setup/SetupApiKeysPage.tsx`
+
+### 6.4 Modificare DashboardPage
+
+- [x] 6.4.1 Rimuovere bottone logout dall'header
+- [x] 6.4.2 Aggiungere icona "Impostazioni" (ingranaggio) nell'header con link a `/settings`
+- [x] 6.4.3 Migliorare messaggi bottone "Studia" in base ai requisiti mancanti:
+  - Nessuna API key configurata: "Configura le API Keys per studiare" (con link a /settings)
+  - Nessuna carta: "Aggiungi un repository per iniziare"
+  - Entrambi mancanti: mostrare prima il messaggio API keys (priorita)
+  - Bottone sempre disabled se manca almeno uno dei requisiti
+
+### 6.5 Aggiornare routing
+
+- [x] 6.5.1 Aggiungere route `/settings` con ProtectedRoute (richiede solo login)
+- [x] 6.5.2 Rimuovere route `/setup/api-keys` completamente
+- [x] 6.5.3 Modificare `ProtectedRoute`: rimuovere redirect a `/setup/api-keys`
+- [x] 6.5.4 Modificare `HomeRoute`: dopo login vai direttamente a dashboard
+- [x] 6.5.5 Modificare `GuestRoute`: non considerare piu `needs_api_key`
+
+### Criteri di Successo Fase 6
+
+- L'utente accede alla dashboard subito dopo il login (nessun blocco)
+- La sezione Impostazioni e accessibile dalla dashboard tramite icona nell'header
+- La configurazione API keys funziona dalla pagina Impostazioni
+- Il logout funziona dalla sezione Impostazioni
+- Il bottone "Studia" e disabilitato con messaggio chiaro se mancano requisiti
+- Il messaggio indica prima API keys (priorita), poi repository
+- Il flusso mobile (PWA) rimane completamente invariato
+
+### Note Fase 6
+
+- **Solo Web**: Questo cambio riguarda esclusivamente l'app web, la PWA mobile mantiene il flusso attuale
+- **Backward compatibility**: Gli utenti gia configurati non noteranno differenze nel funzionamento
+- **StudyPage**: Ha gia fallback per gestire assenza API keys (mostra messaggio configurazione)
+
+### File coinvolti
+
+| File | Azione |
+| ------ | -------- |
+| `packages/shared/src/types/index.ts` | MODIFICA - Rimuovere `needs_api_key` da AuthState |
+| `apps/web/src/contexts/AuthContext.tsx` | MODIFICA - Semplificare logica stato |
+| `apps/web/src/router.tsx` | MODIFICA - Aggiungere /settings, rimuovere /setup/api-keys |
+| `apps/web/src/pages/DashboardPage.tsx` | MODIFICA - Header e messaggi bottone Studia |
+| `apps/web/src/pages/SettingsPage.tsx` | NUOVO - Pagina impostazioni |
+| `apps/web/src/components/ApiKeySettings.tsx` | NUOVO - Componente gestione API keys |
+| `apps/web/src/pages/setup/SetupApiKeysPage.tsx` | RIMUOVERE |
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT
@@ -252,6 +332,7 @@
 - [ ] lumio.toto-castaldi.com diventa sito ufficiale, invece web va su w-lumio.toto-castaldi.com
 - [ ] le card come PDF !!!! Quando vengono importate vengono trasformate, vengono passate a AI come file e quando si aprono si vedono bene (compreso immagini)
 - [ ] le notifiche solo su PWA (no mail). Aggiorna documenti
+- [ ] termini di servizio
 
 ## BUG
 

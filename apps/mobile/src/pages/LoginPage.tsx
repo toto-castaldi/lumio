@@ -42,10 +42,7 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
-          <CardDescription>
-            Piattaforma di studio con flashcard AI-powered
-          </CardDescription>
+          <CardTitle className="text-2xl">{APP_NAME}</CardTitle>          
         </CardHeader>
         <CardContent className="space-y-4">
           <Button

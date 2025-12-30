@@ -21,14 +21,16 @@ Questo documento descrive i principali percorsi utente in Lumio. Ogni flow inclu
 
 ---
 
-## 2. Onboarding (Primo Accesso)
+## 2. Onboarding (Primo Accesso) - Web
+
+> **Nota Fase 6:** L'utente accede direttamente alla Dashboard dopo il login. La configurazione delle API keys avviene dalla sezione Impostazioni, accessibile dalla Dashboard.
 
 ### 2.1 Flow Diagram
 
 ```
 ┌─────────────────┐
 │  Landing Page   │
-│  [Web/Mobile]   │
+│  [Web]          │
 └────────┬────────┘
          │
          ▼
@@ -41,72 +43,65 @@ Questo documento descrive i principali percorsi utente in Lumio. Ogni flow inclu
 └────────┬────────┘
          │
          ▼
-┌─────────────────────────────────┐
-│  [Setup API Keys]               │
-│                                 │
-│  "Per generare le domande,      │
-│   Lumio usa AI. Configura       │
-│   le tue API keys."             │
-│                                 │
-│  ┌─────────────────────────┐    │
-│  │ Provider: [OpenAI ▼]    │    │
-│  │ API Key:  [••••••••••]  │    │
-│  │ [Test Connessione]      │    │
-│  └─────────────────────────┘    │
-│                                 │
-│  [Continua →]                   │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-        {API Key valida?}
-           │       │
-          No      Sì
-           │       │
-           ▼       ▼
-    [Errore]    ┌─────────────────────────────────┐
-    "Chiave     │  [Aggiungi Repository]          │
-     invalida"  │                                 │
-                │  "Aggiungi il tuo primo deck    │
-                │   di flashcard"                 │
-                │                                 │
-                │  ┌─────────────────────────┐    │
-                │  │ URL: [github.com/...]   │    │
-                │  │ Tipo: [Pubblico ▼]      │    │
-                │  │ [+ Aggiungi]            │    │
-                │  └─────────────────────────┘    │
-                │                                 │
-                │  [Continua →]                   │
-                └────────────────┬────────────────┘
-                                 │
-                                 ▼
-                        {Repo valido?}
-                           │       │
-                          No      Sì
-                           │       │
-                           ▼       ▼
-                    [Errore]    <Sync repository>
-                    "Formato         │
-                     non valido"     ▼
-                             ┌─────────────────────────────────┐
-                             │  [Crea Obiettivo]               │
-                             │                                 │
-                             │  "Cosa vuoi studiare?"          │
-                             │                                 │
-                             │  Tag disponibili:               │
-                             │  [pilates] [respirazione]       │
-                             │  [postura] [core] ...           │
-                             │                                 │
-                             │  Target: [85%] mastery          │
-                             │  Entro:  [📅 15 Mar 2025]       │
-                             │                                 │
-                             │  [Inizia a studiare →]          │
-                             └────────────────┬────────────────┘
-                                              │
-                                              ▼
-                                      ┌───────────────┐
-                                      │  [Dashboard]  │
-                                      │  Home App     │
-                                      └───────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  [Dashboard]                                                 │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  Header: [Logo]  [⚙️ Impostazioni]                   │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Benvenuto in Lumio!                                         │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  [Studia] (DISABLED)                                 │    │
+│  │                                                      │    │
+│  │  ⚠️ Configura le API Keys per studiare              │    │
+│  │     [Vai alle Impostazioni →]                        │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Repository: 0  •  Card: 0                                   │
+│                                                              │
+│  [+ Aggiungi Repository]                                     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+         │
+         │ (Click ⚙️ Impostazioni)
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  [Impostazioni]                                              │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  API Keys                                            │    │
+│  │                                                      │    │
+│  │  "Per generare le domande, Lumio usa AI.             │    │
+│  │   Configura le tue API keys."                        │    │
+│  │                                                      │    │
+│  │  Provider: [OpenAI ▼]                                │    │
+│  │  API Key:  [••••••••••]                              │    │
+│  │  [Test Connessione]  [Salva]                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  Account                                             │    │
+│  │  [🚪 Logout]                                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  [← Torna alla Dashboard]                                    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+         │
+         │ (Dopo aver configurato API keys e aggiunto repository)
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  [Dashboard] (configurata)                                   │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  [Studia] (ENABLED)                                  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Repository: 2  •  Card: 45                                  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Step-by-Step
@@ -115,22 +110,30 @@ Questo documento descrive i principali percorsi utente in Lumio. Ogni flow inclu
 |------|-----------|---------------|---------|------|
 | 1 | Landing | Click "Accedi con Google" | Redirect OAuth | 2 |
 | 2 | Google OAuth | Autorizza | Crea utente in DB | 3 |
-| 3 | Setup API Keys | Inserisce API key, click "Test" | Valida key con LLM provider | 4 |
-| 4 | Setup API Keys | Click "Continua" | Salva key (encrypted) | 5 |
-| 5 | Aggiungi Repository | Inserisce URL, click "Aggiungi" | Valida formato, avvia sync | 6 |
-| 6 | Aggiungi Repository | Click "Continua" | - | 7 |
-| 7 | Crea Obiettivo | Seleziona tag, imposta target e deadline | Crea obiettivo, calcola piano | 8 |
-| 8 | Dashboard | - | Mostra home con prima sessione pronta | - |
+| 3 | Dashboard | - | Mostra dashboard con bottone Studia disabilitato e messaggio | 4 |
+| 4 | Dashboard | Click "Impostazioni" | Naviga a /settings | 5 |
+| 5 | Impostazioni | Inserisce API key, click "Test" | Valida key con LLM provider | 6 |
+| 6 | Impostazioni | Click "Salva" | Salva key (encrypted) | 7 |
+| 7 | Dashboard | Click "Aggiungi Repository" | Naviga a form repository | 8 |
+| 8 | Aggiungi Repository | Inserisce URL, click "Aggiungi" | Valida formato, avvia sync | 9 |
+| 9 | Dashboard | - | Bottone Studia ora abilitato | - |
 
-### 2.3 Validazioni
+### 2.3 Messaggi bottone "Studia"
+
+| Condizione | Stato Bottone | Messaggio |
+|------------|---------------|-----------|
+| Nessuna API key configurata | DISABLED | "Configura le API Keys per studiare" + link a /settings |
+| API key OK, nessuna carta | DISABLED | "Aggiungi un repository per iniziare" |
+| Entrambi mancanti | DISABLED | "Configura le API Keys per studiare" (priorita API) |
+| Tutto configurato | ENABLED | - |
+
+### 2.4 Validazioni
 
 | Campo | Regola | Messaggio Errore |
 |-------|--------|------------------|
 | API Key OpenAI | Inizia con `sk-`, test call funziona | "Chiave non valida o scaduta" |
 | API Key Anthropic | Inizia con `sk-ant-`, test call funziona | "Chiave non valida o scaduta" |
 | URL Repository | URL Git valido, README con lumio_format_version | "Repository non compatibile con Lumio" |
-| Obiettivo Tag | Almeno 1 tag selezionato | "Seleziona almeno un tag" |
-| Obiettivo Deadline | Data futura | "La deadline deve essere nel futuro" |
 
 ---
 
@@ -227,7 +230,7 @@ Quando l'utente non ha configurato le API keys:
 ```
 
 **Comportamento:**
-- "Apri Lumio Web" → apre `https://lumio.toto-castaldi.com/setup/api-keys` in nuova tab
+- "Apri Lumio Web" → apre `https://lumio.toto-castaldi.com/settings` in nuova tab
 - "Logout" → chiama `signOut()` e torna a `/login`
 
 ### 2B.4 Logout Mobile
@@ -564,11 +567,11 @@ Salvataggio (quando utente cambia selezione):
 
 | Errore | Comportamento |
 |--------|---------------|
-| Nessuna carta | Toast "Aggiungi un repository per iniziare" |
-| Nessuna API key configurata | Redirect a /setup/api-keys |
+| Nessuna carta | Bottone "Studia" disabilitato con messaggio "Aggiungi un repository per iniziare" |
+| Nessuna API key configurata | Bottone "Studia" disabilitato con messaggio "Configura le API Keys per studiare" + link a /settings |
 | Errore Step 1 (generate_quiz) | Mostra errore con bottone "Riprova" |
 | Errore Step 2 (validate_answer) | Mostra errore, permette comunque "Prossima carta" |
-| API key scaduta/invalida | Messaggio con link a configurazione |
+| API key scaduta/invalida | Messaggio con link a /settings |
 | Timeout AI | Messaggio con bottone "Riprova" |
 | Cambio provider senza chiave | Disabilita provider, mostra avviso |
 
@@ -904,11 +907,7 @@ Salvataggio (quando utente cambia selezione):
 ```
 /
 ├── /login                    # Login con Google
-├── /setup                    # Onboarding (se nuovo utente)
-│   ├── /setup/api-keys
-│   ├── /setup/repository
-│   └── /setup/goal
-├── /dashboard                # Home principale
+├── /dashboard                # Home principale (sempre accessibile dopo login)
 ├── /study                    # Sessione di studio
 ├── /goals                    # Gestione obiettivi
 │   ├── /goals/new
@@ -916,10 +915,7 @@ Salvataggio (quando utente cambia selezione):
 ├── /repositories             # Gestione repository
 │   ├── /repositories/new
 │   └── /repositories/:id
-├── /settings                 # Impostazioni
-│   ├── /settings/api-keys
-│   ├── /settings/notifications
-│   └── /settings/account
+├── /settings                 # Impostazioni (API Keys + Logout)
 └── /public/decks             # Pagina pubblica deck compatibili
 ```
 
@@ -950,10 +946,9 @@ Note: API Keys configuration è disponibile solo su Web.
 | Condizione | Stato App | Redirect |
 |------------|-----------|----------|
 | Non autenticato | `logged_out` | → /login |
-| Autenticato, no API key | `needs_setup` | → /setup/api-keys |
-| Autenticato, no repository | `needs_setup` | → /setup/repository |
-| Autenticato, no obiettivo | `no_goal` | → Dashboard (con CTA "Crea obiettivo") |
-| Autenticato, tutto configurato | `ready` | → Dashboard |
+| Autenticato | `ready` | → Dashboard |
+
+> **Nota Fase 6:** Non c'è più blocco per API keys o repository mancanti. L'utente accede sempre alla Dashboard dopo il login. Il bottone "Studia" è disabilitato con messaggio appropriato se mancano API keys o carte.
 
 ### 9.2 Empty States
 

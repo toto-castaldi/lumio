@@ -51,13 +51,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Refresh API key status
+  // Refresh API key status (informational only, does not block access)
   const refreshApiKeyStatus = async () => {
     const hasKeys = await checkApiKeys();
     setHasApiKey(hasKeys);
-    if (user) {
-      setState(hasKeys ? 'ready' : 'needs_api_key');
-    }
+    // Phase 6: state is always 'ready' when logged in, hasApiKey is just informational
   };
 
   useEffect(() => {
@@ -68,9 +66,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(currentUser);
 
         if (currentUser) {
+          // Phase 6: always set 'ready', hasApiKey is informational only
           const hasKeys = await checkApiKeys();
           setHasApiKey(hasKeys);
-          setState(hasKeys ? 'ready' : 'needs_api_key');
+          setState('ready');
         } else {
           setState('logged_out');
         }
@@ -89,9 +88,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(authUser);
 
       if (authUser) {
+        // Phase 6: always set 'ready', hasApiKey is informational only
         const hasKeys = await checkApiKeys();
         setHasApiKey(hasKeys);
-        setState(hasKeys ? 'ready' : 'needs_api_key');
+        setState('ready');
       } else {
         setState('logged_out');
         setHasApiKey(false);
