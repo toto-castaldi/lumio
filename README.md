@@ -1,6 +1,6 @@
 # Lumio
 
-AI-powered flashcard study platform.
+AI-powered flashcard study platform. 
 
 ```
 Leggi CHANGELOG.md, CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pronto.
