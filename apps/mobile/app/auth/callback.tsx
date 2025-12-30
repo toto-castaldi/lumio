@@ -21,23 +21,62 @@ export default function AuthCallbackScreen() {
 
   // Get URL from multiple sources
   useEffect(() => {
+    let mounted = true;
+
+    const handleUrl = (event: { url: string }) => {
+      console.log('URL event received:', event.url);
+      if (mounted && !processedRef.current) {
+        setDebugInfo(prev => prev + `\nEvent URL: ${event.url.substring(0, 80)}...`);
+        setCallbackUrl(event.url);
+      }
+    };
+
     const getUrl = async () => {
+      console.log('Getting URL... urlFromHook:', urlFromHook);
+      setDebugInfo(`Start: urlFromHook=${urlFromHook ? 'present' : 'null'}`);
+
       // Try useURL hook first
       if (urlFromHook) {
         console.log('Got URL from hook:', urlFromHook);
         setCallbackUrl(urlFromHook);
+        setDebugInfo(prev => prev + `\nHook URL: ${urlFromHook.substring(0, 80)}...`);
         return;
       }
 
-      // Fallback to getInitialURL
+      // Try getInitialURL
       const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        console.log('Got URL from getInitialURL:', initialUrl);
+      console.log('getInitialURL result:', initialUrl);
+      setDebugInfo(prev => prev + `\nInitial URL: ${initialUrl?.substring(0, 80) || 'null'}`);
+
+      if (initialUrl && mounted) {
         setCallbackUrl(initialUrl);
+        return;
       }
+
+      // If still no URL after a delay, show error
+      setTimeout(async () => {
+        if (!processedRef.current && mounted) {
+          const lastUrl = await Linking.getInitialURL();
+          console.log('Delayed getInitialURL:', lastUrl);
+          if (lastUrl) {
+            setCallbackUrl(lastUrl);
+          } else {
+            setError('URL non ricevuto');
+            setDebugInfo(prev => prev + `\nTimeout: nessun URL ricevuto`);
+          }
+        }
+      }, 3000);
     };
 
+    // Add listener for incoming URLs
+    const subscription = Linking.addEventListener('url', handleUrl);
+
     getUrl();
+
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
   }, [urlFromHook]);
 
   useEffect(() => {
@@ -133,9 +172,13 @@ export default function AuthCallbackScreen() {
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#6366f1" />
       <Text style={styles.text}>Completamento accesso...</Text>
-      {callbackUrl && (
-        <Text style={styles.debugSmall}>URL ricevuto: {callbackUrl.substring(0, 50)}...</Text>
-      )}
+      <Text style={styles.debugSmall}>
+        {callbackUrl
+          ? `URL: ${callbackUrl.substring(0, 50)}...`
+          : `Attendo URL...\nurlFromHook: ${urlFromHook ? 'presente' : 'null'}`
+        }
+      </Text>
+      {debugInfo ? <Text style={styles.debugSmall}>{debugInfo}</Text> : null}
     </View>
   );
 }

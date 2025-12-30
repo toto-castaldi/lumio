@@ -18,8 +18,10 @@ import {
 } from '@lumio/core';
 import Constants from 'expo-constants';
 
-// Complete any pending auth sessions
-WebBrowser.maybeCompleteAuthSession();
+// NOTE: We don't call WebBrowser.maybeCompleteAuthSession() here
+// because on native Android builds it can consume the deep link URL
+// before Expo Router can pass it to the /auth/callback route.
+// The callback handling is done in app/auth/callback.tsx
 
 interface AuthContextType {
   user: AuthUser | null;
