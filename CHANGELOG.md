@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.6](https://github.com/toto-castaldi/lumio/compare/v0.1.5...v0.1.6) (2025-12-30)
+
+
+### Features
+
+* first study flow. Random card ([035c842](https://github.com/toto-castaldi/lumio/commit/035c84224f835a04aa357767378c91d42e519bb4))
+
 ### [0.1.5](https://github.com/toto-castaldi/lumio/compare/v0.1.4...v0.1.5) (2025-12-30)
 
 
