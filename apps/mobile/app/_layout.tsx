@@ -26,9 +26,10 @@ function RootLayoutNav() {
     const firstSegment = segments[0] as string | undefined;
     const inLoginScreen = firstSegment === 'login';
     const inSetupScreen = firstSegment === 'setup';
+    const inAuthCallback = firstSegment === 'auth';
 
-    // Don't redirect while loading
-    if (state === 'loading') return;
+    // Don't redirect while loading or during auth callback
+    if (state === 'loading' || inAuthCallback) return;
 
     // Redirect based on auth state
     if (state === 'logged_out' && !inLoginScreen) {
@@ -70,6 +71,12 @@ function RootLayoutNav() {
           },
           headerTintColor: '#fff',
           headerBackVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="auth/callback"
+        options={{
+          headerShown: false,
         }}
       />
     </Stack>
