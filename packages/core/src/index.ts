@@ -41,3 +41,14 @@ export {
   getUserStats,
   getRepositoryCards,
 } from './supabase/repositories';
+
+// Export study functions
+export {
+  getAvailableModels,
+  generateQuiz,
+  getStudyCards,
+  getStudyPreferences,
+  saveStudyPreferences,
+  resetStudyPreferences,
+  getDefaultPrompt,
+} from './supabase/study';

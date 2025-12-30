@@ -6,6 +6,7 @@ import { SetupApiKeysPage } from './pages/setup/SetupApiKeysPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { RepositoriesPage } from './pages/RepositoriesPage';
 import { CardsPage } from './pages/CardsPage';
+import { StudyPage } from './pages/StudyPage';
 import { useAuth } from './contexts/AuthContext';
 
 /**
@@ -154,6 +155,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <CardsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'study',
+        element: (
+          <ProtectedRoute>
+            <StudyPage />
           </ProtectedRoute>
         ),
       },

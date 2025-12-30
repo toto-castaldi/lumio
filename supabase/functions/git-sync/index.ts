@@ -831,6 +831,37 @@ async function getCards(
   return data || [];
 }
 
+/**
+ * Get ALL cards for a user across all their repositories
+ * Used for study sessions
+ */
+async function getAllCards(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<Card[]> {
+  // Get all user's repositories
+  const { data: repos, error: repoError } = await supabase
+    .from("repositories")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (repoError) throw repoError;
+  if (!repos || repos.length === 0) return [];
+
+  const repoIds = repos.map(r => r.id);
+
+  // Get all active cards from user's repositories
+  const { data, error } = await supabase
+    .from("cards")
+    .select("*")
+    .in("repository_id", repoIds)
+    .eq("is_active", true)
+    .order("title", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
 // =============================================================================
 // REQUEST HANDLER
 // =============================================================================
@@ -967,6 +998,17 @@ serve(async (req) => {
         const cards = await getCards(supabase, userId, repositoryId);
         return new Response(
           JSON.stringify({ success: true, cards }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      case "get_all_cards": {
+        const allCards = await getAllCards(supabase, userId);
+        return new Response(
+          JSON.stringify({ success: true, cards: allCards }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,

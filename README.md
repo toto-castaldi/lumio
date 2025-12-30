@@ -24,7 +24,6 @@ Leggi CHANGELOG.md, CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pront
 pnpm install
 
 # Setup environment variables
-cp .env.example .env.local
 cp apps/web/.env.example apps/web/.env.local
 cp apps/mobile/.env.example apps/mobile/.env.local
 
@@ -32,15 +31,14 @@ cp apps/mobile/.env.example apps/mobile/.env.local
 pnpm build:packages
 
 # Start Supabase local (optional)
-supabase start
-# Studio: http://127.0.0.1:54323
-# API: http://127.0.0.1:54321
+GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase start
+supabase db push
 
 # Run web app
 pnpm dev:web
 # http://localhost:5173
 
-# Run mobile PWA (in another terminal)
+# Run mobile PWA
 pnpm dev:mobile
 # http://localhost:5174
 ```

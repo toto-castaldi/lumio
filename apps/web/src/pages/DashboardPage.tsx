@@ -63,6 +63,33 @@ export function DashboardPage() {
           </div>
         </div>
 
+        {/* Study Button */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Pronto a studiare?</h2>
+                <p className="text-sm text-muted-foreground">
+                  {isLoadingStats
+                    ? 'Caricamento...'
+                    : stats.cardCount > 0
+                      ? `Hai ${stats.cardCount} carte da studiare`
+                      : 'Aggiungi un repository per iniziare'}
+                </p>
+              </div>
+              {isLoadingStats || stats.cardCount === 0 ? (
+                <Button size="lg" disabled>
+                  Studia
+                </Button>
+              ) : (
+                <Button asChild size="lg">
+                  <Link to="/study">Studia</Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Welcome Card */}
         <Card>
           <CardHeader>
@@ -72,11 +99,6 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              Questa e la dashboard principale. Le funzionalita di studio
-              saranno disponibili nelle prossime versioni.
-            </p>
-
             <div className="grid gap-4 md:grid-cols-3">
               <Link to="/repositories" className="block">
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer">

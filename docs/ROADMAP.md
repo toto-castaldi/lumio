@@ -114,37 +114,37 @@
 
 ### 4.1 Backend - Edge Function llm-proxy
 
-- [ ] 4.1.1 Aggiungere action `generate_quiz` per generare domande a scelta multipla
-- [ ] 4.1.2 Implementare chiamata a OpenAI API (gpt-4o-mini, gpt-4o)
-- [ ] 4.1.3 Implementare chiamata a Anthropic API (claude-3-5-haiku, claude-3-5-sonnet, claude-3-opus)
-- [ ] 4.1.4 Costruire prompt di sistema per quiz (4 opzioni, risposta variabile, spiegazione)
-- [ ] 4.1.5 Aggiungere action `get_available_models` per lista modelli per provider
+- [x] 4.1.1 Aggiungere action `generate_quiz` per generare domande a scelta multipla
+- [x] 4.1.2 Implementare chiamata a OpenAI API (gpt-4o-mini, gpt-4o)
+- [x] 4.1.3 Implementare chiamata a Anthropic API (claude-3-5-haiku, claude-sonnet-4, claude-opus-4)
+- [x] 4.1.4 Costruire prompt di sistema per quiz (4 opzioni, risposta variabile, spiegazione)
+- [x] 4.1.5 Aggiungere action `get_available_models` per lista modelli per provider
 
 ### 4.2 Core Package
 
-- [ ] 4.2.1 Creare `packages/core/src/supabase/study.ts` con funzioni per studio
-- [ ] 4.2.2 Aggiungere tipi TypeScript in `@lumio/shared` (QuizQuestion, LLMModel)
-- [ ] 4.2.3 Implementare `getStudyCards()` per ottenere carte utente
+- [x] 4.2.1 Creare `packages/core/src/supabase/study.ts` con funzioni per studio
+- [x] 4.2.2 Aggiungere tipi TypeScript in `@lumio/shared` (QuizQuestion, LLMModel)
+- [x] 4.2.3 Implementare `getStudyCards()` per ottenere carte utente
 
 ### 4.3 Frontend - Pagina Studio
 
-- [ ] 4.3.1 Creare `/study` route in router.tsx
-- [ ] 4.3.2 Creare `StudyPage.tsx` con gestione stati (setup/quiz/completed)
-- [ ] 4.3.3 Creare `ProviderModelSelector.tsx` per selezione provider e modello
-- [ ] 4.3.4 Creare `QuizCard.tsx` per visualizzazione domanda e opzioni
-- [ ] 4.3.5 Creare `StudyCompleted.tsx` per fine sessione
-- [ ] 4.3.6 Implementare logica selezione carta random senza ripetizioni
+- [x] 4.3.1 Creare `/study` route in router.tsx
+- [x] 4.3.2 Creare `StudyPage.tsx` con gestione stati (setup/quiz/completed)
+- [x] 4.3.3 Creare `ProviderModelSelector.tsx` per selezione provider e modello
+- [x] 4.3.4 Creare `QuizCard.tsx` per visualizzazione domanda e opzioni
+- [x] 4.3.5 Creare `StudyCompleted.tsx` per fine sessione
+- [x] 4.3.6 Implementare logica selezione carta random senza ripetizioni
 
 ### 4.4 Frontend - Dashboard
 
-- [ ] 4.4.1 Aggiungere bottone "Studia" prominente sopra la griglia
-- [ ] 4.4.2 Disabilitare bottone se nessuna carta disponibile
+- [x] 4.4.1 Aggiungere bottone "Studia" prominente sopra la griglia
+- [x] 4.4.2 Disabilitare bottone se nessuna carta disponibile
 
 ### 4.5 Error Handling
 
-- [ ] 4.5.1 Gestire errori chiamata AI con possibilita di riprovare
-- [ ] 4.5.2 Gestire caso nessuna carta disponibile
-- [ ] 4.5.3 Gestire API key non valida/scaduta
+- [x] 4.5.1 Gestire errori chiamata AI con possibilita di riprovare
+- [x] 4.5.2 Gestire caso nessuna carta disponibile
+- [x] 4.5.3 Gestire API key non valida/scaduta
 
 ### Criteri di Successo Fase 4
 
@@ -172,6 +172,7 @@
 - [ ] Web Push Notifications per PWA
 - [ ] Offline mode con Service Worker + IndexedDB
 - [ ] lumio.toto-castaldi.com diventa sito ufficiale, invece web va su w-lumio.toto-castaldi.com
+- [ ] modelli : Anthropic - Haiku4.5, Sonnet4.5 e Opus4.5 . OpenAI GPT4o e GPT5.1
 
 ## BUG
 

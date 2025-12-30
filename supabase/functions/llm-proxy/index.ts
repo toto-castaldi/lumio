@@ -21,6 +21,66 @@ interface UserApiKey {
   updatedAt: string;
 }
 
+interface LLMModel {
+  provider: LLMProvider;
+  modelId: string;
+  displayName: string;
+}
+
+interface QuizQuestion {
+  question: string;
+  options: { label: string; text: string }[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+// Available models per provider
+const AVAILABLE_MODELS: Record<LLMProvider, LLMModel[]> = {
+  openai: [
+    { provider: "openai", modelId: "gpt-4o-mini", displayName: "GPT-4o Mini" },
+    { provider: "openai", modelId: "gpt-4o", displayName: "GPT-4o" },
+  ],
+  anthropic: [
+    { provider: "anthropic", modelId: "claude-3-5-haiku-latest", displayName: "Claude 3.5 Haiku" },
+    { provider: "anthropic", modelId: "claude-sonnet-4-20250514", displayName: "Claude Sonnet 4" },
+    { provider: "anthropic", modelId: "claude-opus-4-20250514", displayName: "Claude Opus 4" },
+  ],
+};
+
+// Default system prompt for quiz generation
+const DEFAULT_SYSTEM_PROMPT = `Sei un assistente educativo. Il tuo compito è creare una domanda a scelta multipla basata sul contenuto della flashcard fornita.
+
+REGOLE:
+1. Crea UNA domanda che testi la comprensione del concetto principale della carta
+2. Fornisci esattamente 4 opzioni (A, B, C, D)
+3. Solo UNA opzione deve essere corretta
+4. Le opzioni sbagliate devono essere plausibili ma chiaramente errate
+5. Varia la posizione della risposta corretta (non sempre A o D)
+6. Dopo la risposta, fornisci una breve spiegazione del concetto
+
+FORMATO RISPOSTA (JSON rigoroso):
+{
+  "question": "La domanda qui",
+  "options": [
+    {"label": "A", "text": "Prima opzione"},
+    {"label": "B", "text": "Seconda opzione"},
+    {"label": "C", "text": "Terza opzione"},
+    {"label": "D", "text": "Quarta opzione"}
+  ],
+  "correctAnswer": "B",
+  "explanation": "Breve spiegazione del concetto e perché B è corretta"
+}
+
+Rispondi SOLO con il JSON, senza altro testo.`;
+
+// Study preferences interface
+interface StudyPreferences {
+  userId: string;
+  systemPrompt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // =============================================================================
 // ENCRYPTION UTILITIES (AES-256-GCM)
 // =============================================================================
@@ -358,6 +418,256 @@ async function handleHasValidKey(
 }
 
 // =============================================================================
+// QUIZ GENERATION
+// =============================================================================
+
+/**
+ * Generate quiz using OpenAI API
+ */
+async function generateQuizOpenAI(
+  apiKey: string,
+  modelId: string,
+  cardContent: string,
+  systemPrompt: string
+): Promise<QuizQuestion> {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Ecco il contenuto della flashcard:\n\n${cardContent}` },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("Empty response from OpenAI");
+  }
+
+  // Parse JSON response (handle potential markdown code blocks)
+  let jsonStr = content.trim();
+  if (jsonStr.startsWith("```json")) {
+    jsonStr = jsonStr.slice(7);
+  } else if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.slice(3);
+  }
+  if (jsonStr.endsWith("```")) {
+    jsonStr = jsonStr.slice(0, -3);
+  }
+
+  try {
+    return JSON.parse(jsonStr.trim());
+  } catch {
+    throw new Error("Failed to parse quiz response from OpenAI");
+  }
+}
+
+/**
+ * Generate quiz using Anthropic API
+ */
+async function generateQuizAnthropic(
+  apiKey: string,
+  modelId: string,
+  cardContent: string,
+  systemPrompt: string
+): Promise<QuizQuestion> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [
+        { role: "user", content: `Ecco il contenuto della flashcard:\n\n${cardContent}` },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || `Anthropic API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.content?.[0]?.text;
+
+  if (!content) {
+    throw new Error("Empty response from Anthropic");
+  }
+
+  // Parse JSON response (handle potential markdown code blocks)
+  let jsonStr = content.trim();
+  if (jsonStr.startsWith("```json")) {
+    jsonStr = jsonStr.slice(7);
+  } else if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.slice(3);
+  }
+  if (jsonStr.endsWith("```")) {
+    jsonStr = jsonStr.slice(0, -3);
+  }
+
+  try {
+    return JSON.parse(jsonStr.trim());
+  } catch {
+    throw new Error("Failed to parse quiz response from Anthropic");
+  }
+}
+
+/**
+ * Handle generate_quiz action
+ */
+async function handleGenerateQuiz(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  provider: LLMProvider,
+  modelId: string,
+  cardContent: string,
+  customSystemPrompt?: string
+): Promise<QuizQuestion> {
+  // Validate model exists for provider
+  const providerModels = AVAILABLE_MODELS[provider];
+  if (!providerModels?.some(m => m.modelId === modelId)) {
+    throw new Error(`Invalid model ${modelId} for provider ${provider}`);
+  }
+
+  // Get decrypted API key
+  const apiKey = await getDecryptedKey(supabase, userId, provider);
+  if (!apiKey) {
+    throw new Error(`No valid API key configured for ${provider}`);
+  }
+
+  // Use custom prompt or default
+  const systemPrompt = customSystemPrompt || DEFAULT_SYSTEM_PROMPT;
+
+  // Generate quiz based on provider
+  if (provider === "openai") {
+    return await generateQuizOpenAI(apiKey, modelId, cardContent, systemPrompt);
+  } else {
+    return await generateQuizAnthropic(apiKey, modelId, cardContent, systemPrompt);
+  }
+}
+
+/**
+ * Handle get_available_models action
+ * Returns available models for each provider the user has configured
+ */
+async function handleGetAvailableModels(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<{
+  providers: {
+    provider: LLMProvider;
+    models: LLMModel[];
+    isConfigured: boolean;
+  }[];
+}> {
+  // Get user's configured providers
+  const keys = await handleGetKeys(supabase, userId);
+  const configuredProviders = new Set(
+    keys.filter(k => k.isValid).map(k => k.provider)
+  );
+
+  // Build response with all providers
+  const providers: LLMProvider[] = ["openai", "anthropic"];
+
+  return {
+    providers: providers.map(provider => ({
+      provider,
+      models: AVAILABLE_MODELS[provider],
+      isConfigured: configuredProviders.has(provider),
+    })),
+  };
+}
+
+// =============================================================================
+// STUDY PREFERENCES
+// =============================================================================
+
+/**
+ * Get study preferences for user
+ * Returns default prompt if no custom preferences exist
+ */
+async function handleGetStudyPreferences(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<{ systemPrompt: string; isCustom: boolean }> {
+  const { data, error } = await supabase
+    .from("user_study_preferences")
+    .select("system_prompt")
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data) {
+    // Return default prompt
+    return {
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      isCustom: false,
+    };
+  }
+
+  return {
+    systemPrompt: data.system_prompt,
+    isCustom: true,
+  };
+}
+
+/**
+ * Save study preferences for user
+ */
+async function handleSaveStudyPreferences(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  systemPrompt: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("user_study_preferences")
+    .upsert(
+      {
+        user_id: userId,
+        system_prompt: systemPrompt,
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) throw error;
+}
+
+/**
+ * Reset study preferences to default
+ */
+async function handleResetStudyPreferences(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("user_study_preferences")
+    .delete()
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
+
+// =============================================================================
 // REQUEST HANDLER
 // =============================================================================
 
@@ -478,6 +788,78 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
         });
+      }
+
+      case "get_available_models": {
+        const result = await handleGetAvailableModels(supabase, userId);
+        return new Response(JSON.stringify({ success: true, ...result }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "generate_quiz": {
+        const { provider, modelId, cardContent, systemPrompt } = body;
+        if (!provider || !modelId || !cardContent) {
+          return new Response(
+            JSON.stringify({ error: "Missing provider, modelId, or cardContent" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const quiz = await handleGenerateQuiz(supabase, userId, provider, modelId, cardContent, systemPrompt);
+        return new Response(JSON.stringify({ success: true, quiz }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "get_study_preferences": {
+        const prefs = await handleGetStudyPreferences(supabase, userId);
+        return new Response(JSON.stringify({ success: true, ...prefs }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "save_study_preferences": {
+        const { systemPrompt: newPrompt } = body;
+        if (!newPrompt || typeof newPrompt !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing or invalid systemPrompt" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        await handleSaveStudyPreferences(supabase, userId, newPrompt);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "reset_study_preferences": {
+        await handleResetStudyPreferences(supabase, userId);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "get_default_prompt": {
+        return new Response(
+          JSON.stringify({ success: true, defaultPrompt: DEFAULT_SYSTEM_PROMPT }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
       }
 
       default:
