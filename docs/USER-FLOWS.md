@@ -638,7 +638,7 @@ User history: [risposte precedenti su questa card, se esistono]
 
 ### 8.2 Mobile App (PWA)
 
-**URL:** `m.lumio.toto-castaldi.com`
+**URL:** `m-lumio.toto-castaldi.com`
 
 ```
 /
@@ -693,7 +693,7 @@ Note: API Keys configuration è disponibile solo su Web.
 
 | Feature | Web | Mobile (PWA) |
 |---------|-----|--------------|
-| URL | `lumio.toto-castaldi.com` | `m.lumio.toto-castaldi.com` |
+| URL | `lumio.toto-castaldi.com` | `m-lumio.toto-castaldi.com` |
 | Navigazione | Sidebar | Bottom tabs |
 | Studio | Click per rispondere | Tap per rispondere |
 | Notifiche | Email | Email |

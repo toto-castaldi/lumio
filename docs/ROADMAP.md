@@ -53,7 +53,7 @@
 - [x] Vite + React 19 + Tailwind configuration
 - [x] PWA manifest e service worker (vite-plugin-pwa)
 - [x] Asset icons (icon-192.png, icon-512.png)
-- [x] Deploy su `m.lumio.toto-castaldi.com`
+- [x] Deploy su `m-lumio.toto-castaldi.com`
 - [x] Nginx configuration per subdomain mobile
 
 ### 1.10 VERSION IDENTIFIER

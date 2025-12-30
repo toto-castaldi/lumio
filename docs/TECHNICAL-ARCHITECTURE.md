@@ -226,7 +226,7 @@ packages:
 | Routing | React Router | 6.x |
 | PWA | vite-plugin-pwa | latest |
 
-> **Nota:** L'app mobile è una PWA (Progressive Web App) servita su `m.lumio.toto-castaldi.com`. Condivide lo stesso stack tecnologico della web app ma con UI ottimizzata per dispositivi mobili e flussi diversi (focus sullo studio).
+> **Nota:** L'app mobile è una PWA (Progressive Web App) servita su `m-lumio.toto-castaldi.com`. Condivide lo stesso stack tecnologico della web app ma con UI ottimizzata per dispositivi mobili e flussi diversi (focus sullo studio).
 
 ### 3.3 Backend — Supabase
 
@@ -626,7 +626,7 @@ La PWA è deployata su DigitalOcean come sito statico:
 
 | Ambiente | URL | Directory Server |
 |----------|-----|------------------|
-| **PROD** | `m.lumio.toto-castaldi.com` | `/var/www/lumio-mobile` |
+| **PROD** | `m-lumio.toto-castaldi.com` | `/var/www/lumio-mobile` |
 
 **Vantaggi PWA vs App Nativa:**
 - Nessun app store, installazione immediata

@@ -96,7 +96,7 @@ Deployed automatically to DigitalOcean on push to `main` via GitHub Actions.
 
 Deployed automatically to DigitalOcean on push to `main` via GitHub Actions.
 
-- **URL**: https://m.lumio.toto-castaldi.com
+- **URL**: https://m-lumio.toto-castaldi.com
 - **Server path**: `/var/www/lumio-mobile`
 
 ## Environment Variables
