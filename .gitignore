@@ -50,6 +50,4 @@ coverage/
 *.aab
 *.ipa
 
-# Claude
-.claude/
 conf/client_secret_*.json

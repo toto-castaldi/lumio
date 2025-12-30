@@ -63,6 +63,36 @@
 - [x] Visualize version in mobile
 - [x] Visualize version in supabase responses
 
+### 1.11 FIX VERSIONING SYSTEM (Reset to v0.1.0)
+
+**Problema**: Il sistema di versionamento (Commitizen + standard-version + Husky) non funziona correttamente. Le versioni sono disallineate e i tag non vengono creati.
+
+**Fase 1: Pulizia**
+- [ ] Eliminare tag `v0.1.1` e `v0.1.2` (locali e remoti) [Developer]
+- [ ] Reset CHANGELOG.md
+- [ ] Allineare `package.json` e `version.ts` a `0.1.0`
+
+**Fase 2: Riconfigurazione Husky v9**
+- [ ] Aggiornare hook `commit-msg` alla sintassi v9
+- [ ] Creare hook `prepare-commit-msg` per Commitizen interattivo
+- [ ] Eliminare directory deprecata `.husky/_` [Developer]
+- [ ] Reinstallare Husky (`pnpm prepare`) [Developer]
+
+**Fase 3: Fix CI/CD Release**
+- [ ] Semplificare logica release in `ci-deploy.yml`
+- [ ] Separare push commit e push tag
+
+**Fase 4: Prima Release Pulita**
+- [ ] Commit delle modifiche [Developer]
+- [ ] Creare tag `v0.1.0` manualmente [Developer]
+- [ ] Push con tag [Developer]
+- [ ] Generare CHANGELOG iniziale [Developer]
+
+**Fase 5: Test**
+- [ ] Verificare versioni allineate
+- [ ] Test commit `fix:` → deve creare v0.1.1
+- [ ] Verificare UI web/mobile mostra versione corretta
+
 ---
 
 ## 2 - ONBOARDING
@@ -89,7 +119,6 @@
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT
-- [ ] Sistema di versionamento automatico
 - [ ] Ogni carta deve spiegare le sue fonti
 - [ ] Web Push Notifications per PWA
 - [ ] Offline mode con Service Worker + IndexedDB

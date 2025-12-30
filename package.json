@@ -1,7 +1,7 @@
 {
   "name": "lumio",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "AI-powered flashcard study platform",
   "scripts": {
     "dev:web": "pnpm --filter @lumio/web dev",
@@ -38,6 +38,10 @@
   "standard-version": {
     "releaseCommitMessageFormat": "chore(release): {{currentTag}} [skip ci]",
     "bumpFiles": [
+      {
+        "filename": "package.json",
+        "type": "json"
+      },
       {
         "filename": "packages/shared/src/version.ts",
         "updater": "scripts/version-updater.js"
