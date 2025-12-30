@@ -72,9 +72,9 @@ export function DashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   {isLoadingStats
                     ? 'Caricamento...'
-                    : stats.cardCount > 0
-                      ? `Hai ${stats.cardCount} carte da studiare`
-                      : 'Aggiungi un repository per iniziare'}
+                    : stats.cardCount == 0
+                      ? 'Aggiungi un repository per iniziare'
+                      : ''}
                 </p>
               </div>
               {isLoadingStats || stats.cardCount === 0 ? (
@@ -93,13 +93,10 @@ export function DashboardPage() {
         {/* Welcome Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Benvenuto in Lumio!</CardTitle>
-            <CardDescription>
-              La tua piattaforma di studio con flashcard AI-powered
-            </CardDescription>
+            <CardTitle>Il tuo piano di studi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Link to="/repositories" className="block">
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardHeader className="pb-2">
@@ -130,17 +127,7 @@ export function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Obiettivo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold">-</p>
-                  <p className="text-sm text-muted-foreground">
-                    Nessun obiettivo attivo
-                  </p>
-                </CardContent>
-              </Card>
+              
             </div>
           </CardContent>
         </Card>

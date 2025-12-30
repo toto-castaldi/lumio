@@ -173,7 +173,9 @@
 - [ ] Offline mode con Service Worker + IndexedDB
 - [ ] lumio.toto-castaldi.com diventa sito ufficiale, invece web va su w-lumio.toto-castaldi.com
 - [ ] modelli : Anthropic - Haiku4.5, Sonnet4.5 e Opus4.5 . OpenAI GPT4o e GPT5.1
+- [ ] le card come PDF !!!! Quando vengono importate vengono trasformate, vengono passate a AI come file e quando si aprono si vedono bene (compreso immagini)
 
 ## BUG
 
 - [x] le carte dei repo non vengono ricaricate → **FIX: configurare job n8n per chiamare `POST /functions/v1/git-sync` con `{"action": "check_updates"}`**
+- [ ] NON FUNZIONA IL VERSIONING !!!!! non riesco a far salire di la minor version
