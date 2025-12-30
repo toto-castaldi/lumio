@@ -6,17 +6,105 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: write
+
 jobs:
+  # ============================================
+  # Auto Release - Version bump on main
+  # ============================================
+
+  auto-release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore(release)')
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      released: ${{ steps.bump.outputs.released }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        id: bump
+        run: |
+          # Get last tag or default to v0.0.0
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Last tag: $LAST_TAG"
+
+          # Count feat/fix commits since last tag
+          FEAT_COUNT=$(git log ${LAST_TAG}..HEAD --oneline | grep -cE "^[a-f0-9]+ feat" || echo "0")
+          FIX_COUNT=$(git log ${LAST_TAG}..HEAD --oneline | grep -cE "^[a-f0-9]+ fix" || echo "0")
+          BREAKING=$(git log ${LAST_TAG}..HEAD --oneline | grep -cE "^[a-f0-9]+ (feat|fix)!:" || echo "0")
+
+          echo "Commits since $LAST_TAG: feat=$FEAT_COUNT, fix=$FIX_COUNT, breaking=$BREAKING"
+
+          # No releasable commits
+          if [ "$FEAT_COUNT" -eq 0 ] && [ "$FIX_COUNT" -eq 0 ]; then
+            echo "No releasable commits (feat/fix) since $LAST_TAG"
+            echo "released=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Parse current version
+          CURRENT_VERSION=${LAST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Calculate new version
+          if [ "$BREAKING" -gt 0 ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$FEAT_COUNT" -gt 0 ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+
+          # Update package.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"${NEW_VERSION}\"/" package.json
+
+          # Update version.ts
+          sed -i "s/VERSION = \".*\"/VERSION = \"${NEW_VERSION}\"/" packages/shared/src/version.ts
+
+          # Update manifest
+          echo "{" > .release-please-manifest.json
+          echo "  \".\": \"${NEW_VERSION}\"" >> .release-please-manifest.json
+          echo "}" >> .release-please-manifest.json
+
+          # Commit, tag and push
+          git add package.json packages/shared/src/version.ts .release-please-manifest.json
+          git commit -m "chore(release): v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin main
+          git push origin "v${NEW_VERSION}"
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "released=true" >> $GITHUB_OUTPUT
+          echo "Released v${NEW_VERSION}"
+
   # ============================================
   # CI Jobs - Run on all pushes and PRs
   # ============================================
 
   lint-and-typecheck:
     runs-on: ubuntu-latest
-    # Skip if commit message starts with "docs:" or "docs("
-    if: ${{ !startsWith(github.event.head_commit.message, 'docs:') && !startsWith(github.event.head_commit.message, 'docs(') }}
+    needs: auto-release
+    if: always() && !startsWith(github.event.head_commit.message, 'docs:') && !startsWith(github.event.head_commit.message, 'docs(')
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: pnpm/action-setup@v4
 
@@ -68,138 +156,6 @@ jobs:
           name: web-dist
           path: apps/web/dist
 
-  # ============================================
-  # Deploy Jobs - Only on push to main
-  # ============================================
-
-  deploy-web:
-    runs-on: ubuntu-latest
-    needs: build-web
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main  # Get latest including release commit
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Build web app
-        run: pnpm build:web
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          BUILD_NUMBER: ${{ github.run_number }}
-          COMMIT_SHA: ${{ github.sha }}
-          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
-
-      - name: Deploy to DigitalOcean
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: 'apps/web/dist/*'
-          target: '/var/www/lumio'
-          strip_components: 3
-
-      - name: Reload Nginx
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: sudo systemctl reload nginx
-
-  deploy-migrations:
-    runs-on: ubuntu-latest
-    needs: lint-and-typecheck
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      # Backup database before migrations (optional, requires SUPABASE_DB_PASSWORD secret)
-      - name: Backup database
-        if: ${{ vars.ENABLE_DB_BACKUP == 'true' }}
-        run: |
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          supabase db dump --data-only -f "db_backup_${TIMESTAMP}.sql"
-          echo "Backup created: db_backup_${TIMESTAMP}.sql"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      - name: Upload backup artifact
-        if: ${{ vars.ENABLE_DB_BACKUP == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: db-backup-${{ github.run_number }}
-          path: db_backup_*.sql
-          retention-days: 30
-
-      - name: Run database migrations
-        run: supabase db push
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-  deploy-functions:
-    runs-on: ubuntu-latest
-    needs: deploy-migrations
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main  # Get latest including release commit
-
-      - name: Extract version info
-        id: version
-        run: |
-          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
-          echo "git_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION, Build: ${{ github.run_number }}, SHA: ${GITHUB_SHA::7}"
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Deploy Edge Functions
-        run: |
-          supabase functions deploy git-sync --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy llm-proxy --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy study-planner --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy version --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          LUMIO_VERSION: ${{ steps.version.outputs.version }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
-          GIT_SHA: ${{ steps.version.outputs.git_sha }}
-          BUILD_DATE: ${{ steps.version.outputs.build_date }}
-
   build-mobile:
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
@@ -234,14 +190,22 @@ jobs:
           name: mobile-dist
           path: apps/mobile/dist
 
-  deploy-mobile:
+  # ============================================
+  # Deploy Jobs - Only on push to main
+  # ============================================
+
+  deploy-web:
     runs-on: ubuntu-latest
-    needs: build-mobile
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [build-web, auto-release]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-web.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
+
+      - name: Pull latest changes
+        run: git pull origin main
 
       - uses: pnpm/action-setup@v4
 
@@ -255,6 +219,70 @@ jobs:
 
       - name: Build packages
         run: pnpm build:packages
+
+      - name: Show version being deployed
+        run: |
+          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
+          echo "Deploying version: $VERSION"
+
+      - name: Build web app
+        run: pnpm build:web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          COMMIT_SHA: ${{ github.sha }}
+          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: 'apps/web/dist/*'
+          target: '/var/www/lumio'
+          strip_components: 3
+
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: sudo systemctl reload nginx
+
+  deploy-mobile:
+    runs-on: ubuntu-latest
+    needs: [build-mobile, auto-release]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-mobile.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest changes
+        run: git pull origin main
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build:packages
+
+      - name: Show version being deployed
+        run: |
+          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
+          echo "Deploying version: $VERSION"
 
       - name: Build mobile PWA
         run: pnpm build:mobile
@@ -283,3 +311,84 @@ jobs:
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: sudo systemctl reload nginx
+
+  deploy-migrations:
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, auto-release]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Backup database
+        if: ${{ vars.ENABLE_DB_BACKUP == 'true' }}
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          supabase db dump --data-only -f "db_backup_${TIMESTAMP}.sql"
+          echo "Backup created: db_backup_${TIMESTAMP}.sql"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Upload backup artifact
+        if: ${{ vars.ENABLE_DB_BACKUP == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}
+          path: db_backup_*.sql
+          retention-days: 30
+
+      - name: Run database migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  deploy-functions:
+    runs-on: ubuntu-latest
+    needs: [deploy-migrations, auto-release]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.deploy-migrations.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest changes
+        run: git pull origin main
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "git_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "Deploying Edge Functions - Version: $VERSION, Build: ${{ github.run_number }}, SHA: ${GITHUB_SHA::7}"
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Functions
+        run: |
+          supabase functions deploy git-sync --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase functions deploy llm-proxy --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase functions deploy study-planner --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase functions deploy version --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          LUMIO_VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          GIT_SHA: ${{ steps.version.outputs.git_sha }}
+          BUILD_DATE: ${{ steps.version.outputs.build_date }}

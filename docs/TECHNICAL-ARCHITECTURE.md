@@ -136,11 +136,9 @@ lumio/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci-deploy.yml       # CI/CD unificato (lint, typecheck, deploy)
-│       └── release-please.yml  # Versioning automatico
+│       └── ci-deploy.yml       # CI/CD unificato (auto-release, lint, typecheck, deploy)
 │
-├── release-please-config.json  # Configurazione release-please
-├── .release-please-manifest.json # Versione corrente
+├── .release-please-manifest.json # Versione corrente (tracking)
 │
 ├── conf/
 │   └── nginx-lumio.conf        # Virtual host Nginx per produzione
@@ -684,36 +682,47 @@ main (production)
 | `develop` | Dev | ✅ Yes |
 | `feature/*` | - | ❌ No (solo CI) |
 
-### 6.3 Versioning con release-please
+### 6.3 Versioning con Auto-Release
 
-Il progetto usa **release-please** (GitHub Action di Google) per il versioning automatico.
+Il progetto usa un **job custom `auto-release`** per il versioning completamente automatico, integrato nel workflow `ci-deploy.yml`.
 
 **Come funziona:**
-1. Ogni push su `main` con commit `feat:` o `fix:` crea/aggiorna una **Release PR**
-2. Quando la PR viene mergiata → bump automatico di versione, tag Git, changelog
+1. Ogni push su `main` → `auto-release` analizza i commit dall'ultimo tag
+2. Se ci sono commit `feat:` o `fix:` → bump automatico, tag Git, push
+3. I job di deploy fanno `git pull` per avere la versione aggiornata
+4. **Nessuna PR richiesta** - release completamente automatiche
 
-**Workflow:** `.github/workflows/release-please.yml`
-```yaml
-name: Release Please
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  release-please:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: googleapis/release-please-action@v4
-        with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+**Flusso nel workflow:**
 ```
+push main
+    │
+    ▼
+auto-release (analizza feat/fix commits)
+    │
+    ├── Se ci sono commit releasabili:
+    │   ├── Calcola nuova versione
+    │   ├── Aggiorna package.json, version.ts
+    │   ├── Commit "chore(release): vX.Y.Z"
+    │   └── Crea e pusha tag
+    │
+    ▼
+lint-and-typecheck
+    │
+    ├──────────────┬──────────────┐
+    ▼              ▼              ▼
+build-web    build-mobile   deploy-migrations
+    │              │              │
+    ▼              ▼              ▼
+deploy-web   deploy-mobile  deploy-functions
+(git pull)   (git pull)     (git pull)
+```
+
+I deploy fanno `git pull origin main` per catturare la versione aggiornata.
 
 **File aggiornati automaticamente:**
 - `package.json` (campo `version`)
-- `packages/shared/src/version.ts` (marker `x-release-please-version`)
-- `CHANGELOG.md`
+- `packages/shared/src/version.ts`
+- `.release-please-manifest.json` (tracking)
 
 **Conventional Commits:**
 

@@ -1,6 +1,6 @@
 # Versioning Strategy
 
-> Specifica per il sistema di versioning di Lumio con release-please e Conventional Commits.
+> Specifica per il sistema di versioning di Lumio con Auto-Release e Conventional Commits.
 
 ## Overview
 
@@ -10,10 +10,10 @@ Lumio usa **Semantic Versioning** (SemVer) con una **singola versione** che gove
 - Mobile app (PWA)
 - Supabase Edge Functions
 
-La versione è gestita tramite **release-please** (GitHub Action di Google) per:
-- Bump automatico basato sui commit
-- Generazione automatica del CHANGELOG
-- Creazione di Release PR revisionate
+La versione è gestita tramite **Auto-Release** (job custom in GitHub Actions) per:
+- Bump automatico basato sui commit (feat/fix)
+- Release completamente automatiche senza PR
+- Tag Git e deploy immediato
 
 ## Single Source of Truth
 
@@ -33,21 +33,21 @@ git commit -m "fix: correct login redirect"
 git push origin main
 ```
 
-### 2. release-please crea una Release PR
+### 2. Auto-Release analizza e rilascia
 
-Dopo ogni push su `main`, release-please:
-- Analizza i commit
-- Calcola la nuova versione (minor per `feat:`, patch per `fix:`)
-- Crea/aggiorna una PR "Release vX.Y.Z"
+Dopo ogni push su `main`, il job `auto-release`:
+- Conta i commit `feat:` e `fix:` dall'ultimo tag
+- Calcola la nuova versione (minor per `feat:`, patch per `fix:`, major per breaking `!`)
+- Aggiorna automaticamente i file di versione
+- Crea commit `chore(release): vX.Y.Z`
+- Crea e pusha il tag Git
 
-### 3. Merge della PR = Release
+### 3. Deploy automatico
 
-Quando mergi la Release PR:
-- `package.json` viene aggiornato
-- `packages/shared/src/version.ts` viene aggiornato
-- `CHANGELOG.md` viene aggiornato
-- Viene creato un tag Git `vX.Y.Z`
-- Viene creata una GitHub Release
+Dopo il bump di versione:
+- I job di deploy fanno `git pull` per ottenere la versione aggiornata
+- Web, Mobile e Edge Functions vengono deployati con la nuova versione
+- Nessun intervento manuale richiesto
 
 ## Conventional Commits Reference
 
@@ -79,15 +79,16 @@ feat!: redesign API response format            # → 1.0.0 (breaking)
 
 | File | Scopo |
 |------|-------|
-| `release-please-config.json` | Configurazione release-please |
-| `.release-please-manifest.json` | Versione corrente |
-| `.github/workflows/release-please.yml` | GitHub Action |
+| `.release-please-manifest.json` | Versione corrente (usato per tracking) |
+| `.github/workflows/ci-deploy.yml` | Workflow unificato (auto-release + CI/CD) |
+| `packages/shared/src/version.ts` | Single source of truth per la versione |
 
-### Extra Files
+### File Aggiornati Automaticamente
 
-release-please aggiorna automaticamente:
+Il job `auto-release` aggiorna automaticamente:
 - `package.json` (campo `version`)
-- `packages/shared/src/version.ts` (cerca il marker `x-release-please-version`)
+- `packages/shared/src/version.ts` (cerca il pattern `VERSION = "..."`)
+- `.release-please-manifest.json` (per tracking)
 
 ## Workflow Quotidiano
 
@@ -113,19 +114,21 @@ git push origin main
 Push su main
      │
      ▼
-release-please analizza i commit
+auto-release analizza i commit (feat/fix)
      │
      ▼
-Crea/aggiorna PR "Release vX.Y.Z"
+Se ci sono commit releasabili:
+     │
+     ├─► Calcola nuova versione
+     │
+     ├─► Aggiorna package.json, version.ts, manifest
+     │
+     ├─► Commit "chore(release): vX.Y.Z"
+     │
+     └─► Crea e pusha tag vX.Y.Z
      │
      ▼
-[Tu fai review della PR]
-     │
-     ▼
-Merge della PR
-     │
-     ▼
-Tag creato + GitHub Release + Deploy automatico
+Deploy automatico (web, mobile, functions)
 ```
 
 ### Verifica versione in produzione
@@ -161,7 +164,7 @@ Il progetto usa **husky** + **commitlint** per validare i commit:
 
 ```bash
 # Hook attivo in .husky/commit-msg
-npx --no -- commitlint --edit $1
+pnpm exec commitlint --edit $1
 ```
 
 Commit non conformi vengono rifiutati:
@@ -176,23 +179,30 @@ git commit -m "feat: add new feature"
 
 ## Troubleshooting
 
-### La Release PR non viene creata
+### La versione non viene aggiornata
 
 1. Verifica che i commit usino il formato corretto (`feat:`, `fix:`, ecc.)
-2. Controlla i log del workflow `release-please.yml`
-3. Assicurati che `GITHUB_TOKEN` abbia permessi `contents: write` e `pull-requests: write`
+2. Controlla i log del job `auto-release` nel workflow `ci-deploy.yml`
+3. Assicurati che ci siano commit `feat:` o `fix:` dall'ultimo tag
 
 ### La versione non si aggiorna in version.ts
 
-Verifica che il file contenga il marker:
+Verifica che il file contenga il pattern corretto:
 ```typescript
-export const VERSION = "0.1.6"; // x-release-please-version
+export const VERSION = "X.Y.Z"; // x-release-please-version
 ```
 
 ### Voglio forzare una release
 
-Mergia la Release PR esistente. Se non c'è, crea un commit `feat:` o `fix:` vuoto:
+Crea un commit `feat:` o `fix:` vuoto:
 ```bash
 git commit --allow-empty -m "feat: trigger release"
 git push origin main
 ```
+
+### Il deploy non ha la versione aggiornata
+
+I job di deploy fanno `git pull origin main` prima di buildare. Se la versione non è corretta:
+1. Verifica che il job `auto-release` sia completato con successo
+2. Controlla che il commit `chore(release)` sia presente su main
+3. Riesegui il workflow manualmente se necessario
