@@ -115,9 +115,11 @@ Contenuto libero che spiega il concetto.
 Può includere:
 - Paragrafi di testo
 - Liste
-- Codice
+- Codice con syntax highlighting
 - Immagini
 - Link
+- Tabelle
+- Formule matematiche LaTeX
 - Qualsiasi Markdown valido
 ```
 
@@ -152,8 +154,55 @@ card_id = hash(repository_url + "/" + relative_file_path)
 - Nessun limite massimo, ma consigliati ≤ 10
 - I tag servono per gli obiettivi utente ("voglio studiare `pilates`")
 
-**Esempi validi**: `pilates`, `respirazione-base`, `livello_1`, `anatomia`  
+**Esempi validi**: `pilates`, `respirazione-base`, `livello_1`, `anatomia`
 **Esempi non validi**: `Pilates`, `respirazione base`, `Livello 1`
+
+### 4.5 Blocchi di Codice (Fase 8)
+
+I blocchi di codice vengono renderizzati con syntax highlighting automatico. Specificare il linguaggio dopo i backtick:
+
+````markdown
+```python
+def calculate_mastery(correct: int, total: int) -> float:
+    return (correct / total) * 100
+```
+````
+
+**Linguaggi supportati**: Python, JavaScript, TypeScript, Java, C++, SQL, Bash, JSON, YAML, HTML, CSS, e molti altri (highlight.js).
+
+### 4.6 Formule Matematiche LaTeX (Fase 8)
+
+Lumio supporta formule matematiche LaTeX tramite KaTeX.
+
+**Formula inline** (nel testo): usa singoli dollari `$...$`
+
+```markdown
+La formula di Eulero $e^{i\pi} + 1 = 0$ è considerata la più bella.
+```
+
+**Formula block** (centrata): usa doppi dollari `$$...$$`
+
+```markdown
+L'equazione della respirazione:
+
+$$
+f = \frac{60}{t_{in} + t_{out}}
+$$
+
+dove $f$ è la frequenza respiratoria in atti/minuto.
+```
+
+**Esempi comuni:**
+
+| Tipo | Sintassi | Risultato |
+|------|----------|-----------|
+| Frazioni | `$\frac{a}{b}$` | a/b |
+| Esponenti | `$x^2$` | x² |
+| Indici | `$x_i$` | xᵢ |
+| Radici | `$\sqrt{x}$` | √x |
+| Sommatorie | `$\sum_{i=1}^{n} x_i$` | Σ |
+| Integrali | `$\int_0^1 f(x)dx$` | ∫ |
+| Lettere greche | `$\alpha, \beta, \gamma$` | α, β, γ |
 
 ---
 
@@ -347,6 +396,76 @@ In posizione supina, il bacino è neutro quando:
 - Il triangolo formato da ASIS e pube è parallelo al pavimento
 ```
 
+### 8.4 Card con Codice e Formule (Fase 8)
+
+```markdown
+---
+title: "Algoritmo SM-2 per Spaced Repetition"
+tags:
+  - algoritmi
+  - spaced-repetition
+  - memoria
+difficulty: 4
+language: it
+---
+
+L'algoritmo SM-2 (SuperMemo 2) calcola l'intervallo ottimale tra le ripetizioni.
+
+## Formula Base
+
+Il nuovo intervallo $I$ dopo la ripetizione $n$ è calcolato come:
+
+$$
+I(n) = I(n-1) \times EF
+$$
+
+dove $EF$ è il fattore di facilità (Ease Factor), inizialmente $EF = 2.5$.
+
+## Aggiornamento del Fattore di Facilità
+
+Dopo ogni risposta con qualità $q$ (0-5):
+
+$$
+EF' = EF + (0.1 - (5 - q) \times (0.08 + (5 - q) \times 0.02))
+$$
+
+Il fattore minimo è $EF_{min} = 1.3$.
+
+## Implementazione
+
+```typescript
+function calculateNextInterval(
+  previousInterval: number,
+  easeFactor: number,
+  quality: number
+): { interval: number; easeFactor: number } {
+  // Aggiorna ease factor
+  const newEF = Math.max(
+    1.3,
+    easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+  );
+
+  // Calcola nuovo intervallo
+  const interval = quality >= 3
+    ? Math.round(previousInterval * newEF)
+    : 1; // Reset se risposta scarsa
+
+  return { interval, easeFactor: newEF };
+}
+```
+
+## Tabella Qualità Risposta
+
+| Qualità | Significato | Azione |
+|---------|-------------|--------|
+| 5 | Risposta perfetta | Aumenta intervallo |
+| 4 | Corretta con esitazione | Aumenta intervallo |
+| 3 | Corretta con difficoltà | Mantieni intervallo |
+| 2 | Sbagliata ma ricordata | Reset a 1 giorno |
+| 1 | Sbagliata completamente | Reset a 1 giorno |
+| 0 | Blackout totale | Reset a 1 giorno |
+```
+
 ---
 
 ## 9. Checklist per Maintainer
@@ -365,6 +484,13 @@ Prima di pubblicare un deck compatibile con Lumio:
 ---
 
 ## 10. Changelog
+
+### Versione 1.1 (Fase 8)
+- Aggiunto supporto syntax highlighting per blocchi di codice
+- Aggiunto supporto formule matematiche LaTeX (KaTeX)
+- Migliorato rendering tabelle con styling "Notion-like"
+- Aggiunto lazy loading per immagini
+- Nuovi esempi: card con codice e formule
 
 ### Versione 1.0 (2025-12-28)
 - Release iniziale
