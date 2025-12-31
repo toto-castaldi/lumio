@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSupabaseClient } from '@lumio/core';
+import { Sparkles, AlertCircle } from 'lucide-react';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -55,16 +56,22 @@ export function AuthCallbackPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2">
-        <p className="text-destructive">{error}</p>
-        <p className="text-sm text-muted-foreground">Reindirizzamento al login...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white px-6">
+        <div className="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center mb-4">
+          <AlertCircle className="w-8 h-8 text-rose-500" />
+        </div>
+        <p className="text-rose-600 font-medium text-center mb-2">{error}</p>
+        <p className="text-sm text-slate-400">Reindirizzamento al login...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">Autenticazione in corso...</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+        <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+      </div>
+      <p className="text-slate-600 font-medium">Autenticazione in corso...</p>
     </div>
   );
 }

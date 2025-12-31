@@ -770,6 +770,64 @@ sudo systemctl reload nginx
 
 > **Nota**: L'app mobile è una **Progressive Web App (PWA)** dedicata **esclusivamente allo studio**. La configurazione delle API keys, la gestione dei deck e degli obiettivi avviene solo su web. Se l'utente non ha configurato le API keys, l'app mobile mostra un messaggio che invita a completare la configurazione su web.
 
+### 8.0 Funzionalità Mobile (Fase 7)
+
+L'app mobile offre funzionalità di studio complete, equivalenti alla versione web:
+
+**Pagine disponibili:**
+| Route | Componente | Descrizione |
+|-------|------------|-------------|
+| `/login` | LoginPage | Login con Google OAuth |
+| `/auth/callback` | AuthCallbackPage | Gestione callback OAuth |
+| `/dashboard` | DashboardPage | Statistiche e bottone "Studia" |
+| `/repositories` | RepositoriesPage | Lista repository sincronizzati |
+| `/study` | StudyPage | Sessione di studio completa |
+
+**Design System Mobile:**
+- Touch targets minimo 44px per accessibilità
+- Layout full-width ottimizzato per mobile
+- Gradienti soft (from-slate-50 to-white)
+- Rounded corners consistenti (rounded-2xl, rounded-xl)
+- Palette colori slate per testi e sfondi
+
+**Nessuna pagina Settings su mobile:**
+- Tutti i link settings aprono la versione web (`https://lumio.toto-castaldi.com/settings`)
+- Configurazione API keys, preferenze e gestione account solo su web
+
+**Componenti principali:**
+```
+apps/mobile/src/
+├── components/
+│   ├── ui/                    # shadcn/ui components
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── collapsible.tsx    # Prompt settings collapsible
+│   │   ├── dialog.tsx         # Card preview dialog
+│   │   ├── scroll-area.tsx    # Scrollable content
+│   │   ├── select.tsx         # Provider/model selection
+│   │   ├── sonner.tsx         # Toast notifications
+│   │   └── textarea.tsx       # Prompt customization
+│   ├── CardPreviewDialog.tsx  # Full-screen card preview
+│   └── NeedsApiKeyMessage.tsx # Message when no API keys
+├── pages/
+│   ├── LoginPage.tsx
+│   ├── AuthCallbackPage.tsx
+│   ├── DashboardPage.tsx
+│   ├── RepositoriesPage.tsx
+│   └── StudyPage.tsx          # Mobile study session
+└── contexts/
+    └── AuthContext.tsx
+```
+
+**StudyPage Mobile Features:**
+- Selezione provider (OpenAI, Anthropic)
+- Selezione modello
+- Customizzazione prompt (sezione collapsible)
+- Flusso two-step: `generateQuiz()` → `validateAnswer()`
+- Preview carta completa in dialog full-screen
+- Progress tracking (carte rimanenti)
+- Animazioni fluide per transizioni stati
+
 ### 8.1 PWA Configuration
 
 **vite.config.ts** (con vite-plugin-pwa):

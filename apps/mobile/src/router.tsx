@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { RepositoriesPage } from './pages/RepositoriesPage';
+import { StudyPage } from './pages/StudyPage';
 import { useAuth } from './contexts/AuthContext';
 
 /**
@@ -111,6 +112,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <RepositoriesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'study',
+        element: (
+          <ProtectedRoute>
+            <StudyPage />
           </ProtectedRoute>
         ),
       },

@@ -323,6 +323,90 @@
 
 ---
 
+## 7 - STUDIARE DA MOBILE
+
+### Obiettivi Fase 7
+
+- Permettere agli utenti di studiare dalla PWA mobile con interfaccia semplificata
+- Login → Dashboard diretta (nessun blocco per API keys)
+- Dashboard mostra repository count e card count
+- Bottone "Studia" abilitato se hasApiKey && cardCount > 0
+- Se requisiti mancanti: messaggio che invita ad andare su web
+- Pagina studio con stesse funzioni della versione web
+- UX/UI armonizzata con design distintivo mobile
+
+### 7.1 Dipendenze Mobile
+
+- [x] Aggiungere dipendenze Radix UI (collapsible, dialog, scroll-area, select)
+- [x] Aggiungere react-markdown e sonner
+
+### 7.2 Componenti UI Mobile
+
+- [x] Creare `apps/mobile/src/components/ui/collapsible.tsx`
+- [x] Creare `apps/mobile/src/components/ui/select.tsx` (touch-optimized)
+- [x] Creare `apps/mobile/src/components/ui/dialog.tsx` (full-screen mobile)
+- [x] Creare `apps/mobile/src/components/ui/scroll-area.tsx`
+- [x] Creare `apps/mobile/src/components/ui/sonner.tsx`
+- [x] Creare `apps/mobile/src/components/ui/textarea.tsx`
+
+### 7.3 CardPreviewDialog Mobile
+
+- [x] Creare `apps/mobile/src/components/CardPreviewDialog.tsx`
+- [x] Dialog full-screen (stile sheet)
+- [x] ScrollArea per contenuto lungo
+- [x] Render markdown con react-markdown
+
+### 7.4 StudyPage Mobile
+
+- [x] Creare `apps/mobile/src/pages/StudyPage.tsx` con design distintivo (frontend-design)
+- [x] Layout verticale ottimizzato per mobile
+- [x] Touch targets grandi (min 44px)
+- [x] Animazioni fluide per feedback
+- [x] Selezione provider/model
+- [x] Customizzazione prompt (sezione collapsible)
+- [x] Flusso a due step (generateQuiz → validateAnswer)
+
+### 7.5 Dashboard Mobile
+
+- [x] Rimuovere blocco NeedsApiKeyMessage che impedisce l'accesso
+- [x] Aggiungere bottone "Studia" prominente
+- [x] ENABLED se hasApiKey && cardCount > 0 → naviga a /study
+- [x] DISABLED se no API key → messaggio "Apri Lumio Web" + link esterno
+- [x] DISABLED se no cards → messaggio "Aggiungi un repository"
+
+### 7.6 Router e App
+
+- [x] Aggiungere route `/study` con ProtectedRoute
+- [x] Aggiungere Toaster (sonner) in App.tsx
+
+### 7.7 Fix e Armonizzazione
+
+- [x] Fix link NeedsApiKeyMessage (da /setup/api-keys a /settings web)
+- [x] Armonizzare UX/UI LoginPage
+- [x] Armonizzare UX/UI RepositoriesPage
+- [x] Armonizzare UX/UI AuthCallbackPage
+- [x] Armonizzare NeedsApiKeyMessage
+
+### Criteri di Successo Fase 7
+
+- L'utente accede alla dashboard senza blocchi
+- Il bottone "Studia" è abilitato solo se ha API key + carte
+- La pagina studio funziona con flusso a due step (generate + validate)
+- L'utente può vedere la carta completa durante lo studio
+- L'utente può customizzare il prompt anche da mobile
+- Le preferenze provider/model/prompt sono salvate
+- L'interfaccia usa design distintivo mobile con touch targets ≥ 44px
+- Tutti i documenti sono aggiornati (ROADMAP, USER-FLOWS, TECHNICAL-ARCHITECTURE)
+
+### Note Fase 7
+
+- **No Settings su mobile**: La configurazione API keys rimane solo su Web
+- **Link esterni**: I link alle impostazioni aprono la versione Web in nuova tab
+- **Chat in memoria**: Come su web, il contesto chat si perde ricaricando la pagina
+
+
+
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT
@@ -333,8 +417,11 @@
 - [ ] le card come PDF !!!! Quando vengono importate vengono trasformate, vengono passate a AI come file e quando si aprono si vedono bene (compreso immagini)
 - [ ] le notifiche solo su PWA (no mail). Aggiorna documenti
 - [ ] termini di servizio
+- [ ] logo :)
+- [ ] Il warning sulla dimensione del chunk (785 KB) è normale per un'app React con tutte le dipendenze - può essere ottimizzato in futuro con code-splitting ma non è bloccante.
 
 ## BUG
 
+- [ ] errore durante la navigazione PWA da Chrome (solo su dev ????): Code exchange error: AuthPKCECodeVerifierMissingError: PKCE code verifier 
 - [x] le carte dei repo non vengono ricaricate → **FIX: configurare job n8n per chiamare `POST /functions/v1/git-sync` con `{"action": "check_updates"}`**
 - [x] NON FUNZIONA IL VERSIONING → **FIX: migrato da standard-version a release-please (Google)**
