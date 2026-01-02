@@ -6,46 +6,28 @@ import {
   Card as CardUI,
   CardContent,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { CardPreviewDialog } from '@/components/CardPreviewDialog';
 import { toast } from 'sonner';
 
 function getDifficultyLabel(difficulty: number): string {
   switch (difficulty) {
-    case 1:
-      return 'Molto Facile';
-    case 2:
-      return 'Facile';
-    case 3:
-      return 'Media';
-    case 4:
-      return 'Difficile';
-    case 5:
-      return 'Molto Difficile';
-    default:
-      return 'Media';
+    case 1: return 'Molto Facile';
+    case 2: return 'Facile';
+    case 3: return 'Media';
+    case 4: return 'Difficile';
+    case 5: return 'Molto Difficile';
+    default: return 'Media';
   }
 }
 
 function getDifficultyColor(difficulty: number): string {
   switch (difficulty) {
-    case 1:
-      return 'bg-green-100 text-green-800';
-    case 2:
-      return 'bg-green-50 text-green-700';
-    case 3:
-      return 'bg-yellow-50 text-yellow-700';
-    case 4:
-      return 'bg-orange-50 text-orange-700';
-    case 5:
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-700';
+    case 1: return 'bg-green-100 text-green-800';
+    case 2: return 'bg-green-50 text-green-700';
+    case 3: return 'bg-yellow-50 text-yellow-700';
+    case 4: return 'bg-orange-50 text-orange-700';
+    case 5: return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-700';
   }
 }
 
@@ -174,38 +156,12 @@ export function CardsPage() {
       </div>
 
       {/* Card Preview Dialog */}
-      <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{selectedCard?.title}</DialogTitle>
-            <DialogDescription>
-              {selectedCard?.filePath}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto">
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selectedCard?.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-              <span
-                className={`px-2 py-0.5 text-xs rounded-full ${getDifficultyColor(selectedCard?.difficulty || 3)}`}
-              >
-                {getDifficultyLabel(selectedCard?.difficulty || 3)}
-              </span>
-            </div>
-            <div className="bg-muted rounded-lg p-4 overflow-auto">
-              <pre className="text-sm whitespace-pre-wrap font-mono">
-                {selectedCard?.rawContent}
-              </pre>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CardPreviewDialog
+        card={selectedCard}
+        isOpen={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        repoUrl={repository?.url}
+      />
     </div>
   );
 }

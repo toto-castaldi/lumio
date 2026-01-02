@@ -1,6 +1,18 @@
+/* External CSS imports must come first */
+@import 'katex/dist/katex.min.css';
+@import 'highlight.js/styles/github.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Dark mode override for syntax highlighting */
+.dark {
+  code.hljs,
+  pre code.hljs {
+    background: transparent;
+  }
+}
 
 @layer base {
   :root {

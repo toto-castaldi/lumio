@@ -250,6 +250,49 @@ packages:
 | Resend | Email transazionali |
 | Sentry | Error tracking & monitoring |
 
+### 3.5 Markdown Rendering (Fase 8)
+
+Il sistema di rendering markdown è centralizzato in `@lumio/core` per garantire consistenza tra web e mobile.
+
+**Architettura:**
+```
+packages/core/src/markdown/
+├── index.ts           # Entry point, esporta configurazione
+├── config.ts          # Plugin remark/rehype configurati
+├── components.ts      # Custom renderers (CodeBlock, Table, Image)
+└── styles.css         # Styling condiviso "Notion-like"
+
+apps/web/src/components/
+└── MarkdownRenderer.tsx    # Wrapper che importa config da @lumio/core
+
+apps/mobile/src/components/
+└── MarkdownRenderer.tsx    # Stesso wrapper per mobile
+```
+
+**Plugin Stack:**
+
+| Plugin | Funzione | Note |
+|--------|----------|------|
+| `remark-gfm` | GitHub Flavored Markdown | Tabelle, task lists, strikethrough |
+| `remark-math` | Parsing formule LaTeX | Supporto `$...$` e `$$...$$` |
+| `rehype-katex` | Rendering formule | Richiede CSS KaTeX |
+| `rehype-highlight` | Syntax highlighting | Tema configurabile (light/dark) |
+
+**Custom Components:**
+
+| Componente | Features |
+|------------|----------|
+| `CodeBlock` | Header linguaggio, bottone copia, line numbers, scroll orizzontale |
+| `Table` | Bordi, header evidenziato, righe alternate, responsive |
+| `Image` | Lazy loading, placeholder, fallback errori, GitHub raw URLs |
+
+**Styling "Notion-like":**
+- Typography pulita con font system
+- Code blocks con sfondo scuro e bordi arrotondati
+- Tabelle con bordi sottili e righe alternate
+- Formule centrate con spacing appropriato
+- Supporto dark mode completo
+
 ---
 
 ## 4. Supabase Architecture

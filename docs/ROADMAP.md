@@ -404,8 +404,124 @@
 - **Link esterni**: I link alle impostazioni aprono la versione Web in nuova tab
 - **Chat in memoria**: Come su web, il contesto chat si perde ricaricando la pagina
 
+---
 
+## 8 - VISUALIZZAZIONE CARD MIGLIORATA
 
+### Obiettivi Fase 8
+
+- Migliorare la visualizzazione delle card durante lo studio (web e mobile)
+- Supportare syntax highlighting per blocchi di codice
+- Supportare formule matematiche LaTeX con KaTeX
+- Migliorare rendering tabelle con styling appropriato
+- Supportare immagini dai repository Git
+- Styling "Notion-like" pulito e professionale
+
+### 8.1 Core Package - Configurazione Markdown Condivisa
+
+- [x] 8.1.1 Creare `packages/core/src/markdown/index.ts`
+- [x] 8.1.2 Creare `packages/core/src/markdown/config.ts` con configurazione plugin:
+  - `remark-gfm` per GitHub Flavored Markdown (tabelle, task lists, strikethrough)
+  - `remark-math` per parsing formule LaTeX
+  - `rehype-katex` per rendering formule
+  - `rehype-highlight` per syntax highlighting codice
+- [x] 8.1.3 Creare `packages/core/src/markdown/utils.ts` con helper per URL immagini GitHub
+- [x] 8.1.4 Esportare configurazione da `@lumio/core`
+- [x] 8.1.5 Aggiungere dipendenze a `packages/core/package.json`:
+  - `remark-gfm`
+  - `remark-math`
+  - `rehype-katex`
+  - `rehype-highlight`
+
+> **Nota**: I componenti React (CodeBlock, MarkdownImage, MarkdownRenderer) sono in web/mobile, non in core (per evitare React come dipendenza di core)
+
+### 8.2 Web App - MarkdownRenderer Component
+
+- [x] 8.2.1 Creare `apps/web/src/components/markdown/MarkdownRenderer.tsx`
+- [x] 8.2.2 Usare configurazione condivisa da `@lumio/core`
+- [x] 8.2.3 Importare CSS KaTeX e highlight.js theme in globals.css
+- [x] 8.2.4 Aggiornare `CardPreviewDialog.tsx` per usare nuovo MarkdownRenderer
+- [x] 8.2.5 Aggiungere @tailwindcss/typography plugin
+
+### 8.3 Mobile App - MarkdownRenderer Component
+
+- [x] 8.3.1 Creare `apps/mobile/src/components/markdown/MarkdownRenderer.tsx`
+- [x] 8.3.2 Usare stessa configurazione condivisa da `@lumio/core`
+- [x] 8.3.3 Importare CSS KaTeX e highlight.js theme in globals.css
+- [x] 8.3.4 Aggiornare `CardPreviewDialog.tsx` mobile per usare nuovo MarkdownRenderer
+- [x] 8.3.5 Aggiungere @tailwindcss/typography plugin e darkMode config
+
+### 8.4 Styling "Notion-like"
+
+- [x] 8.4.1 Styling Tailwind inline nei componenti React:
+  - Code blocks con sfondo, bordi arrotondati, header linguaggio
+  - Tabelle con bordi, header evidenziato, righe alternate, hover
+  - Immagini con bordi arrotondati, lazy loading, placeholder
+- [x] 8.4.2 Configurare Tailwind prose con @tailwindcss/typography
+- [x] 8.4.3 Supporto dark mode per tutti gli elementi (web completo, mobile predisposto)
+
+### 8.5 CodeBlock Component
+
+- [x] 8.5.1 Header con nome linguaggio (es. "typescript", "python")
+- [x] 8.5.2 Bottone "Copia" con feedback visivo (icona + testo)
+- [x] 8.5.3 Syntax highlighting con tema GitHub (light/dark)
+- [x] 8.5.4 Scroll orizzontale per codice lungo
+
+### 8.6 Supporto Immagini
+
+- [x] 8.6.1 Implementare lazy loading per immagini
+- [x] 8.6.2 Placeholder animato durante caricamento
+- [x] 8.6.3 Fallback per immagini non trovate (icona + messaggio)
+- [x] 8.6.4 Gestione URL relativi (conversione a GitHub raw URLs per repo pubblici)
+- [ ] 8.6.5 Click per zoom/lightbox (opzionale - non implementato)
+
+### 8.7 Testing e Documentazione
+
+- [ ] 8.7.1 Creare card di test con tutti gli elementi (codice, tabelle, formule, immagini)
+- [ ] 8.7.2 Testare su web e mobile
+- [ ] 8.7.3 Verificare performance rendering
+- [x] 8.7.4 CARD-FORMAT-SPEC.md già contiene esempi formule (aggiornato in precedenza)
+
+### Criteri di Successo Fase 8
+
+- Le card mostrano syntax highlighting per tutti i linguaggi comuni
+- Le formule LaTeX sono renderizzate correttamente (inline e block)
+- Le tabelle hanno styling pulito con bordi e righe alternate
+- I blocchi di codice hanno header con linguaggio e bottone copia funzionante
+- Le immagini dai repository vengono caricate e mostrate
+- Lo styling è consistente tra web e mobile
+- La configurazione markdown è centralizzata in `@lumio/core` (DRY)
+- Il rendering è performante anche con card lunghe
+
+### Note Fase 8
+
+- **Architettura DRY**: La configurazione markdown è in `@lumio/core`, web e mobile la importano
+- **Bundle size**: KaTeX e highlight.js aumentano il bundle, considerare lazy loading
+- **Immagini repo privati**: Non supportate in questa fase (richiederebbe auth GitHub)
+- **Formule**: Supporto LaTeX standard, non estensioni custom
+- **Performance**: Per card molto lunghe, considerare virtualizzazione futura
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `packages/core/package.json` | MODIFICA - Aggiunte dipendenze markdown |
+| `packages/core/src/markdown/index.ts` | NUOVO - Entry point |
+| `packages/core/src/markdown/config.ts` | NUOVO - Configurazione plugin |
+| `packages/core/src/markdown/utils.ts` | NUOVO - Helper URL immagini |
+| `packages/core/src/index.ts` | MODIFICA - Esporta markdown |
+| `apps/web/package.json` | MODIFICA - katex, highlight.js, typography |
+| `apps/web/tailwind.config.ts` | MODIFICA - Plugin typography |
+| `apps/web/src/styles/globals.css` | MODIFICA - Import CSS |
+| `apps/web/src/components/markdown/` | NUOVO - CodeBlock, MarkdownImage, MarkdownRenderer |
+| `apps/web/src/components/CardPreviewDialog.tsx` | MODIFICA - Usa MarkdownRenderer |
+| `apps/mobile/package.json` | MODIFICA - katex, highlight.js, typography |
+| `apps/mobile/tailwind.config.ts` | MODIFICA - Plugin typography, darkMode |
+| `apps/mobile/src/styles/globals.css` | MODIFICA - Import CSS |
+| `apps/mobile/src/components/markdown/` | NUOVO - CodeBlock, MarkdownImage, MarkdownRenderer |
+| `apps/mobile/src/components/CardPreviewDialog.tsx` | MODIFICA - Usa MarkdownRenderer |
+
+---
 
 ## BACKLOG - Miglioramenti Futuri
 
@@ -419,9 +535,12 @@
 - [ ] termini di servizio
 - [ ] logo :)
 - [ ] Il warning sulla dimensione del chunk (785 KB) è normale per un'app React con tutte le dipendenze - può essere ottimizzato in futuro con code-splitting ma non è bloccante.
+- [ ] multilinga ?
+- [ ] monitoraggio utente aggiornamento DECK
+- [ ] monitoraggio di sistema aggiornamento DECK
 
 ## BUG
 
-- [ ] errore durante la navigazione PWA da Chrome (solo su dev ????): Code exchange error: AuthPKCECodeVerifierMissingError: PKCE code verifier 
+- [ ] errore durante la navigazione PWA da Chrome (solo su dev ????): Code exchange error: AuthPKCECodeVerifierMissingError: PKCE code verifier
 - [x] le carte dei repo non vengono ricaricate → **FIX: configurare job n8n per chiamare `POST /functions/v1/git-sync` con `{"action": "check_updates"}`**
 - [x] NON FUNZIONA IL VERSIONING → **FIX: migrato da standard-version a release-please (Google)**

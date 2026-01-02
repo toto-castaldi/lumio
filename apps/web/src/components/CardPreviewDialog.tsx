@@ -7,16 +7,33 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Card } from '@lumio/core';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/markdown';
 
 interface CardPreviewDialogProps {
   card: Card | null;
   isOpen: boolean;
   onClose: () => void;
+  /** Optional repository URL for transforming relative image paths */
+  repoUrl?: string;
 }
 
-export function CardPreviewDialog({ card, isOpen, onClose }: CardPreviewDialogProps) {
+export function CardPreviewDialog({ card, isOpen, onClose, repoUrl }: CardPreviewDialogProps) {
   if (!card) return null;
+
+  // Create image URL transformer if repoUrl is provided
+  const transformImageUrl = repoUrl
+    ? (src: string) => {
+        // If already absolute URL, return as-is
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+          return src;
+        }
+        // Parse GitHub URL and construct raw URL
+        const match = repoUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
+        if (!match) return src;
+        const cleanPath = src.replace(/^\/+/, '').replace(/^\.\.\/+/, '');
+        return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/main/${cleanPath}`;
+      }
+    : undefined;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -25,9 +42,10 @@ export function CardPreviewDialog({ card, isOpen, onClose }: CardPreviewDialogPr
           <DialogTitle>{card.title}</DialogTitle>
         </DialogHeader>
         <ScrollArea className="h-[60vh] pr-4">
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{card.content}</ReactMarkdown>
-          </div>
+          <MarkdownRenderer
+            content={card.content}
+            transformImageUrl={transformImageUrl}
+          />
         </ScrollArea>
         <div className="flex justify-end pt-4">
           <Button variant="outline" onClick={onClose}>
