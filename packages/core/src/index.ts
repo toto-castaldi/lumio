@@ -54,3 +54,15 @@ export {
   saveModelPreferences,
   validateAnswer,
 } from './supabase/study';
+
+// Export markdown configuration and utilities
+export {
+  remarkPlugins,
+  rehypePlugins,
+  markdownConfig,
+  parseGitHubUrl,
+  toGitHubRawUrl,
+  createImageUrlTransformer,
+  isImageUrl,
+  SUPPORTED_IMAGE_EXTENSIONS,
+} from './markdown';

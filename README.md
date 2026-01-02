@@ -30,9 +30,10 @@ cp apps/mobile/.env.example apps/mobile/.env.local
 # Build shared packages (required before running apps)
 pnpm build:packages
 
-# Start Supabase local (optional)
+# Start Supabase local
 GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase start
 supabase db push
+GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase functions serve
 
 # Run web app
 pnpm dev:web

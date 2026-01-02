@@ -419,73 +419,68 @@
 
 ### 8.1 Core Package - Configurazione Markdown Condivisa
 
-- [ ] 8.1.1 Creare `packages/core/src/markdown/index.ts`
-- [ ] 8.1.2 Creare `packages/core/src/markdown/config.ts` con configurazione plugin:
+- [x] 8.1.1 Creare `packages/core/src/markdown/index.ts`
+- [x] 8.1.2 Creare `packages/core/src/markdown/config.ts` con configurazione plugin:
   - `remark-gfm` per GitHub Flavored Markdown (tabelle, task lists, strikethrough)
   - `remark-math` per parsing formule LaTeX
   - `rehype-katex` per rendering formule
   - `rehype-highlight` per syntax highlighting codice
-- [ ] 8.1.3 Creare `packages/core/src/markdown/components.ts` con custom renderers:
-  - `CodeBlock` con header linguaggio e bottone copia
-  - `Table` con styling bordi e righe alternate
-  - `Image` con lazy loading e placeholder
-- [ ] 8.1.4 Esportare configurazione da `@lumio/core`
-- [ ] 8.1.5 Aggiungere dipendenze a `packages/core/package.json`:
+- [x] 8.1.3 Creare `packages/core/src/markdown/utils.ts` con helper per URL immagini GitHub
+- [x] 8.1.4 Esportare configurazione da `@lumio/core`
+- [x] 8.1.5 Aggiungere dipendenze a `packages/core/package.json`:
   - `remark-gfm`
   - `remark-math`
   - `rehype-katex`
   - `rehype-highlight`
-  - `katex` (CSS)
+
+> **Nota**: I componenti React (CodeBlock, MarkdownImage, MarkdownRenderer) sono in web/mobile, non in core (per evitare React come dipendenza di core)
 
 ### 8.2 Web App - MarkdownRenderer Component
 
-- [ ] 8.2.1 Creare `apps/web/src/components/MarkdownRenderer.tsx`
-- [ ] 8.2.2 Usare configurazione condivisa da `@lumio/core`
-- [ ] 8.2.3 Importare CSS KaTeX e highlight.js theme
-- [ ] 8.2.4 Aggiornare `CardPreviewDialog.tsx` per usare nuovo MarkdownRenderer
-- [ ] 8.2.5 Rimuovere import diretto react-markdown dal componente
+- [x] 8.2.1 Creare `apps/web/src/components/markdown/MarkdownRenderer.tsx`
+- [x] 8.2.2 Usare configurazione condivisa da `@lumio/core`
+- [x] 8.2.3 Importare CSS KaTeX e highlight.js theme in globals.css
+- [x] 8.2.4 Aggiornare `CardPreviewDialog.tsx` per usare nuovo MarkdownRenderer
+- [x] 8.2.5 Aggiungere @tailwindcss/typography plugin
 
 ### 8.3 Mobile App - MarkdownRenderer Component
 
-- [ ] 8.3.1 Creare `apps/mobile/src/components/MarkdownRenderer.tsx`
-- [ ] 8.3.2 Usare stessa configurazione condivisa da `@lumio/core`
-- [ ] 8.3.3 Importare CSS KaTeX e highlight.js theme (mobile-optimized)
-- [ ] 8.3.4 Aggiornare `CardPreviewDialog.tsx` mobile per usare nuovo MarkdownRenderer
-- [ ] 8.3.5 Rimuovere import diretto react-markdown dal componente
+- [x] 8.3.1 Creare `apps/mobile/src/components/markdown/MarkdownRenderer.tsx`
+- [x] 8.3.2 Usare stessa configurazione condivisa da `@lumio/core`
+- [x] 8.3.3 Importare CSS KaTeX e highlight.js theme in globals.css
+- [x] 8.3.4 Aggiornare `CardPreviewDialog.tsx` mobile per usare nuovo MarkdownRenderer
+- [x] 8.3.5 Aggiungere @tailwindcss/typography plugin e darkMode config
 
 ### 8.4 Styling "Notion-like"
 
-- [ ] 8.4.1 Creare CSS custom per prose in `packages/core/src/markdown/styles.css`:
-  - Typography pulita con font system
-  - Code blocks con sfondo scuro, bordi arrotondati, header linguaggio
-  - Tabelle con bordi sottili, header evidenziato, righe alternate
-  - Formule centrate con spacing appropriato
-  - Immagini con bordi arrotondati e ombra leggera
-- [ ] 8.4.2 Configurare Tailwind prose custom classes
-- [ ] 8.4.3 Supporto dark mode per tutti gli elementi
+- [x] 8.4.1 Styling Tailwind inline nei componenti React:
+  - Code blocks con sfondo, bordi arrotondati, header linguaggio
+  - Tabelle con bordi, header evidenziato, righe alternate, hover
+  - Immagini con bordi arrotondati, lazy loading, placeholder
+- [x] 8.4.2 Configurare Tailwind prose con @tailwindcss/typography
+- [x] 8.4.3 Supporto dark mode per tutti gli elementi (web completo, mobile predisposto)
 
 ### 8.5 CodeBlock Component
 
-- [ ] 8.5.1 Header con nome linguaggio (es. "typescript", "python")
-- [ ] 8.5.2 Bottone "Copia" con feedback visivo
-- [ ] 8.5.3 Syntax highlighting con tema appropriato (light/dark)
-- [ ] 8.5.4 Line numbers opzionali
-- [ ] 8.5.5 Scroll orizzontale per codice lungo
+- [x] 8.5.1 Header con nome linguaggio (es. "typescript", "python")
+- [x] 8.5.2 Bottone "Copia" con feedback visivo (icona + testo)
+- [x] 8.5.3 Syntax highlighting con tema GitHub (light/dark)
+- [x] 8.5.4 Scroll orizzontale per codice lungo
 
 ### 8.6 Supporto Immagini
 
-- [ ] 8.6.1 Implementare lazy loading per immagini
-- [ ] 8.6.2 Placeholder durante caricamento
-- [ ] 8.6.3 Fallback per immagini non trovate
-- [ ] 8.6.4 Gestione URL relativi (conversione a GitHub raw URLs per repo pubblici)
-- [ ] 8.6.5 Click per zoom/lightbox (opzionale)
+- [x] 8.6.1 Implementare lazy loading per immagini
+- [x] 8.6.2 Placeholder animato durante caricamento
+- [x] 8.6.3 Fallback per immagini non trovate (icona + messaggio)
+- [x] 8.6.4 Gestione URL relativi (conversione a GitHub raw URLs per repo pubblici)
+- [ ] 8.6.5 Click per zoom/lightbox (opzionale - non implementato)
 
 ### 8.7 Testing e Documentazione
 
 - [ ] 8.7.1 Creare card di test con tutti gli elementi (codice, tabelle, formule, immagini)
 - [ ] 8.7.2 Testare su web e mobile
 - [ ] 8.7.3 Verificare performance rendering
-- [ ] 8.7.4 Aggiornare documentazione (CARD-FORMAT-SPEC.md con esempi formule)
+- [x] 8.7.4 CARD-FORMAT-SPEC.md già contiene esempi formule (aggiornato in precedenza)
 
 ### Criteri di Successo Fase 8
 
@@ -510,17 +505,21 @@
 
 | File | Azione |
 |------|--------|
-| `packages/core/package.json` | MODIFICA - Aggiungere dipendenze markdown |
+| `packages/core/package.json` | MODIFICA - Aggiunte dipendenze markdown |
 | `packages/core/src/markdown/index.ts` | NUOVO - Entry point |
 | `packages/core/src/markdown/config.ts` | NUOVO - Configurazione plugin |
-| `packages/core/src/markdown/components.ts` | NUOVO - Custom renderers |
-| `packages/core/src/markdown/styles.css` | NUOVO - Styling condiviso |
-| `packages/core/src/index.ts` | MODIFICA - Esportare markdown |
-| `apps/web/src/components/MarkdownRenderer.tsx` | NUOVO - Renderer web |
-| `apps/web/src/components/CardPreviewDialog.tsx` | MODIFICA - Usare MarkdownRenderer |
-| `apps/mobile/src/components/MarkdownRenderer.tsx` | NUOVO - Renderer mobile |
-| `apps/mobile/src/components/CardPreviewDialog.tsx` | MODIFICA - Usare MarkdownRenderer |
-| `docs/CARD-FORMAT-SPEC.md` | MODIFICA - Aggiungere esempi formule |
+| `packages/core/src/markdown/utils.ts` | NUOVO - Helper URL immagini |
+| `packages/core/src/index.ts` | MODIFICA - Esporta markdown |
+| `apps/web/package.json` | MODIFICA - katex, highlight.js, typography |
+| `apps/web/tailwind.config.ts` | MODIFICA - Plugin typography |
+| `apps/web/src/styles/globals.css` | MODIFICA - Import CSS |
+| `apps/web/src/components/markdown/` | NUOVO - CodeBlock, MarkdownImage, MarkdownRenderer |
+| `apps/web/src/components/CardPreviewDialog.tsx` | MODIFICA - Usa MarkdownRenderer |
+| `apps/mobile/package.json` | MODIFICA - katex, highlight.js, typography |
+| `apps/mobile/tailwind.config.ts` | MODIFICA - Plugin typography, darkMode |
+| `apps/mobile/src/styles/globals.css` | MODIFICA - Import CSS |
+| `apps/mobile/src/components/markdown/` | NUOVO - CodeBlock, MarkdownImage, MarkdownRenderer |
+| `apps/mobile/src/components/CardPreviewDialog.tsx` | MODIFICA - Usa MarkdownRenderer |
 
 ---
 

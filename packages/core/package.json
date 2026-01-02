@@ -21,7 +21,11 @@
   },
   "dependencies": {
     "@lumio/shared": "workspace:*",
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "rehype-katex": "^7.0.0",
+    "rehype-highlight": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
