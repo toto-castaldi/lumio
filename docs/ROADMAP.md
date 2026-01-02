@@ -477,9 +477,9 @@
 
 ### 8.7 Testing e Documentazione
 
-- [ ] 8.7.1 Creare card di test con tutti gli elementi (codice, tabelle, formule, immagini)
-- [ ] 8.7.2 Testare su web e mobile
-- [ ] 8.7.3 Verificare performance rendering
+- [x] 8.7.1 Creare card di test con tutti gli elementi (codice, tabelle, formule, immagini)
+- [x] 8.7.2 Testare su web e mobile
+- [x] 8.7.3 Verificare performance rendering
 - [x] 8.7.4 CARD-FORMAT-SPEC.md già contiene esempi formule (aggiornato in precedenza)
 
 ### Criteri di Successo Fase 8
