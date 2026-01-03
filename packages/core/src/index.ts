@@ -40,6 +40,8 @@ export {
   getUserRepositories,
   getUserStats,
   getRepositoryCards,
+  validateGitHubToken,
+  updateRepositoryToken,
 } from './supabase/repositories';
 
 // Export study functions

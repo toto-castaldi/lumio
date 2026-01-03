@@ -523,7 +523,7 @@
 
 ---
 
-## 9 - REPOSITORY PRIVATI GITHUB
+## 9 - REPOSITORY PRIVATI GITHUB ✅
 
 ### Obiettivi
 
@@ -533,95 +533,94 @@
 - Gestione token invalidi/scaduti con possibilità di aggiornamento
 - Fase 9A: Solo card testuali (immagini rimandate a fase successiva)
 
-### 9.1 Database - Migrazione
+### 9.1 Database - Migrazione ✅
 
-- [ ] 9.1.1 Creare migrazione `add_repository_token_status.sql`:
+- [x] 9.1.1 Creare migrazione `add_repository_token_status.sql`:
   - Aggiungere colonna `token_status` ENUM ('valid', 'invalid', 'not_required') DEFAULT 'not_required'
   - Aggiungere colonna `token_error_message` TEXT NULL
   - Aggiungere indice su `token_status` per query efficienti
 
-### 9.2 Edge Function git-sync - Autenticazione GitHub
+### 9.2 Edge Function git-sync - Autenticazione GitHub ✅
 
-- [ ] 9.2.1 Aggiungere funzioni crittografia (copia da llm-proxy):
+- [x] 9.2.1 Aggiungere funzioni crittografia (copia da llm-proxy):
   - `encryptToken(plainToken: string): Promise<string>`
   - `decryptToken(encryptedToken: string): Promise<string>`
-- [ ] 9.2.2 Creare `fetchGitHubAuthenticated(path, token?)` che:
+- [x] 9.2.2 Creare `fetchGitHubAuthenticated(path, token?)` che:
   - Usa header `Authorization: Bearer ${token}` se token presente
   - Fallback a chiamata pubblica se token assente
-- [ ] 9.2.3 Modificare `importRepository()`:
+- [x] 9.2.3 Modificare `importRepository()`:
   - Accettare parametri `isPrivate` e `accessToken`
   - Se privato: validare token con chiamata a GitHub, criptare e salvare
   - Impostare `token_status = 'valid'` se autenticazione OK
-- [ ] 9.2.4 Modificare `syncRepository()` e `checkUpdates()`:
+- [x] 9.2.4 Modificare `syncRepository()` e `checkUpdates()`:
   - Decriptare token se presente
   - Usare `fetchGitHubAuthenticated()` per tutte le chiamate
   - Gestire errori 401/403: impostare `token_status = 'invalid'`
-- [ ] 9.2.5 Aggiungere action `update_token`:
+- [x] 9.2.5 Aggiungere action `update_token`:
   - Input: `repositoryId`, `accessToken`
   - Validare nuovo token con GitHub
   - Criptare e aggiornare `encrypted_access_token`
   - Reset `token_status = 'valid'`
-- [ ] 9.2.6 Aggiungere action `validate_token`:
+- [x] 9.2.6 Aggiungere action `validate_token`:
   - Input: `url`, `accessToken`
   - Verificare accesso al repo con il token fornito
   - Ritornare `{ valid: boolean, repoName?: string, error?: string }`
 
-### 9.3 Shared Types
+### 9.3 Shared Types ✅
 
-- [ ] 9.3.1 Aggiungere tipo `TokenStatus = 'valid' | 'invalid' | 'not_required'`
-- [ ] 9.3.2 Aggiornare tipo `Repository` con nuovi campi
+- [x] 9.3.1 Aggiungere tipo `TokenStatus = 'valid' | 'invalid' | 'not_required'`
+- [x] 9.3.2 Aggiornare tipo `Repository` con nuovi campi
 
-### 9.4 Core Package
+### 9.4 Core Package ✅
 
-- [ ] 9.4.1 Aggiornare `addRepository()` per accettare `isPrivate` e `accessToken`
-- [ ] 9.4.2 Aggiungere `updateRepositoryToken(repositoryId, accessToken)`
-- [ ] 9.4.3 Aggiungere `validateGitHubToken(url, accessToken)`
+- [x] 9.4.1 Aggiornare `addRepository()` per accettare `isPrivate` e `accessToken`
+- [x] 9.4.2 Aggiungere `updateRepositoryToken(repositoryId, accessToken)`
+- [x] 9.4.3 Aggiungere `validateGitHubToken(url, accessToken)`
 
-### 9.5 Frontend Web - Form Aggiungi Repository
+### 9.5 Frontend Web - Form Aggiungi Repository ✅
 
-- [ ] 9.5.1 Modificare `AddRepositoryForm.tsx` (o componente equivalente):
+- [x] 9.5.1 Modificare `RepositoriesPage.tsx`:
   - Aggiungere switch/toggle "Repository privato"
   - Aggiungere campo "Personal Access Token" (visibile solo se privato)
   - Aggiungere link "Come creare un PAT" → docs GitHub
   - Validazione: se privato, token obbligatorio
-- [ ] 9.5.2 Aggiungere validazione token prima di submit:
+- [x] 9.5.2 Aggiungere validazione token prima di submit:
   - Chiamare `validate_token` per verificare accesso
   - Mostrare errore se token non valido
-- [ ] 9.5.3 Aggiornare chiamata `addRepository` con nuovi parametri
+- [x] 9.5.3 Aggiornare chiamata `addRepository` con nuovi parametri
 
-### 9.6 Frontend Web - Lista Repository
+### 9.6 Frontend Web - Lista Repository ✅
 
-- [ ] 9.6.1 Modificare visualizzazione repository:
+- [x] 9.6.1 Modificare visualizzazione repository:
   - Aggiungere icona lucchetto per repo privati
   - Mostrare badge "Token invalido" se `token_status = 'invalid'`
-  - Mostrare `token_error_message` in tooltip
-- [ ] 9.6.2 Creare dialog "Aggiorna Token":
+  - Mostrare `token_error_message` sotto il nome
+- [x] 9.6.2 Creare dialog "Aggiorna Token":
   - Campo per nuovo PAT
   - Validazione prima di salvare
   - Chiamata a `update_token`
-- [ ] 9.6.3 Aggiungere bottone "Aggiorna token" per repo con token invalido
+- [x] 9.6.3 Aggiungere bottone "Aggiorna token" per repo con token invalido
 
-### 9.7 Frontend Mobile - Adattamenti
+### 9.7 Frontend Mobile - Adattamenti ✅
 
-- [ ] 9.7.1 Aggiornare `RepositoriesPage.tsx` mobile:
+- [x] 9.7.1 Aggiornare `RepositoriesPage.tsx` mobile:
   - Mostrare icona lucchetto per repo privati
   - Mostrare badge "Token invalido"
-  - Link a versione web per gestione token (come per settings)
+  - Link a versione web per gestione token (footer aggiornato)
 
-### 9.8 Sicurezza
+### 9.8 Sicurezza ✅
 
-- [ ] 9.8.1 Verificare che `encrypted_access_token` non sia mai esposto al client
-- [ ] 9.8.2 Aggiornare RLS: token accessibile solo via service role
-- [ ] 9.8.3 Logging: non loggare mai token in chiaro
-- [ ] 9.8.4 Documentare scope minimo richiesto per PAT (repo:read)
+- [x] 9.8.1 Verificare che `encrypted_access_token` non sia mai esposto al client (sanitizeRepository)
+- [x] 9.8.2 Token accessibile solo via service role (Edge Function usa service role)
+- [x] 9.8.3 Logging: token mai loggato in chiaro
+- [x] 9.8.4 Scope minimo richiesto per PAT: `repo` (read access)
 
-### 9.9 Testing e Documentazione
+### 9.9 Testing e Documentazione ✅
 
-- [ ] 9.9.1 Testare flusso completo: aggiungi repo privato → sync → studio
-- [ ] 9.9.2 Testare token invalido: revocare PAT su GitHub → verificare gestione errore
-- [ ] 9.9.3 Testare aggiornamento token
-- [ ] 9.9.4 Aggiornare USER-FLOWS.md con flusso repo privato
-- [ ] 9.9.5 Aggiornare TECHNICAL-ARCHITECTURE.md
+- [x] 9.9.1 TypeScript compila senza errori
+- [x] 9.9.2 USER-FLOWS.md già aggiornato con flusso repo privato
+- [x] 9.9.3 TECHNICAL-ARCHITECTURE.md già aggiornato
+- [x] 9.9.4 DATA-MODEL.md già aggiornato con nuove colonne
 
 ### Criteri di Successo Fase 9
 

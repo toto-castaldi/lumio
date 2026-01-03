@@ -4,6 +4,9 @@ export type LLMProvider = 'openai' | 'anthropic';
 // Sync status for repositories
 export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'error';
 
+// Token status for private repositories (Phase 9)
+export type TokenStatus = 'valid' | 'invalid' | 'not_required';
+
 // Platform types
 export type Platform = 'web' | 'mobile';
 
@@ -55,6 +58,8 @@ export interface Repository {
   name: string;
   description?: string;
   isPrivate: boolean;
+  tokenStatus: TokenStatus;  // Phase 9: validity of access token
+  tokenErrorMessage?: string;  // Phase 9: error message if token is invalid
   formatVersion: number;
   lastCommitSha?: string;
   lastSyncedAt?: string;
@@ -100,6 +105,24 @@ export interface DeckFrontmatter {
 export interface UserStats {
   repositoryCount: number;
   cardCount: number;
+}
+
+// =============================================================================
+// REPOSITORY TYPES (Phase 9)
+// =============================================================================
+
+// Options for adding a repository
+export interface AddRepositoryOptions {
+  url: string;
+  isPrivate?: boolean;
+  accessToken?: string;  // Required if isPrivate is true
+}
+
+// Response from token validation
+export interface TokenValidationResult {
+  valid: boolean;
+  repoName?: string;
+  error?: string;
 }
 
 // =============================================================================

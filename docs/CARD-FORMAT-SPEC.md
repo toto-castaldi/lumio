@@ -26,6 +26,7 @@ Questo documento definisce il formato standard per i deck di flashcard compatibi
 ```
 repository-root/
 ├── README.md              # Metadati del deck (OBBLIGATORIO)
+├── .lumioignore           # File da ignorare (opzionale)
 ├── assets/                # Immagini e risorse (opzionale)
 │   └── img/
 │       └── diagram.png
@@ -35,7 +36,9 @@ repository-root/
 
 ### 2.2 Scansione Ricorsiva
 
-Lumio scansiona **ricorsivamente** l'intera alberatura del repository cercando file `.md` validi (escluso `README.md`). La struttura delle cartelle è a beneficio del maintainer per organizzare i contenuti — Lumio la ignora ai fini della categorizzazione.
+Lumio scansiona **ricorsivamente** l'intera alberatura del repository cercando **tutti** i file `.md`. La struttura delle cartelle è a beneficio del maintainer per organizzare i contenuti — Lumio la ignora ai fini della categorizzazione.
+
+> ⚠️ **Importante**: Se vuoi escludere il `README.md` (o altri file) dalla sincronizzazione, devi aggiungerlo al file `.lumioignore`.
 
 **Esempio**: Queste due strutture sono equivalenti per Lumio:
 
@@ -49,6 +52,44 @@ Lumio scansiona **ricorsivamente** l'intera alberatura del repository cercando f
 /fondamentali/postura.md
 /avanzato/inversioni.md
 ```
+
+### 2.3 File .lumioignore
+
+Puoi creare un file `.lumioignore` nella root del repository per escludere file o cartelle dalla sincronizzazione. Funziona in modo simile a `.gitignore`.
+
+**Esempio `.lumioignore`:**
+
+```
+# Commenti iniziano con #
+
+# Escludi il README (non è una card)
+README.md
+
+# Ignora file specifici
+drafts/work-in-progress.md
+old/deprecated-card.md
+
+# Ignora intere cartelle (termina con /)
+wip/
+drafts/
+_archive/
+
+# Pattern con wildcard
+*.draft.md
+*.wip.md
+temp-*
+```
+
+**Pattern supportati:**
+
+| Pattern | Descrizione | Esempio |
+|---------|-------------|---------|
+| `file.md` | File esatto | `drafts/bozza.md` |
+| `folder/` | Intera cartella | `wip/` ignora tutto in `wip/` |
+| `*.ext` | Tutti i file con estensione | `*.draft.md` |
+| `prefix-*` | Tutti i file che iniziano con | `temp-*` |
+
+> 💡 **Tip**: Usa `.lumioignore` per mantenere bozze o contenuti non pronti nel repository senza importarli in Lumio.
 
 ---
 
@@ -479,6 +520,7 @@ Prima di pubblicare un deck compatibile con Lumio:
 - [ ] Tag in lowercase senza spazi
 - [ ] Immagini con percorsi relativi
 - [ ] Immagini effettivamente presenti nel repository
+- [ ] `.lumioignore` configurato per escludere bozze e file non pronti (opzionale)
 - [ ] Testato con il validatore Lumio (quando disponibile)
 
 ---

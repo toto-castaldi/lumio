@@ -11,7 +11,6 @@ export default defineConfig({
       manifest: {
         name: 'Lumio Mobile',
         short_name: 'Lumio',
-        description: 'AI-Powered Flashcards - Study Mode',
         theme_color: '#6366f1',
         background_color: '#ffffff',
         display: 'standalone',

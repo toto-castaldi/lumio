@@ -5,12 +5,15 @@ import {
   deleteRepository,
   syncRepository,
   getUserRepositories,
+  validateGitHubToken,
+  updateRepositoryToken,
   type Repository,
   type SyncStatus,
 } from '@lumio/core';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Card,
   CardContent,
@@ -29,7 +32,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Lock, AlertTriangle, Key } from 'lucide-react';
 
 function getSyncStatusIcon(status: SyncStatus): string {
   switch (status) {
@@ -76,11 +88,20 @@ export function RepositoriesPage() {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [url, setUrl] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [accessToken, setAccessToken] = useState('');
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+
+  // Update token dialog state
+  const [updateTokenRepo, setUpdateTokenRepo] = useState<Repository | null>(null);
+  const [newToken, setNewToken] = useState('');
+  const [isUpdatingToken, setIsUpdatingToken] = useState(false);
+  const [updateTokenError, setUpdateTokenError] = useState<string | null>(null);
 
   // Load repositories on mount
   useEffect(() => {
@@ -114,14 +135,44 @@ export function RepositoriesPage() {
       return;
     }
 
+    // Validate token for private repos
+    if (isPrivate) {
+      if (!accessToken.trim()) {
+        setError('Inserisci un Personal Access Token per i repository privati');
+        return;
+      }
+
+      // Validate token before adding
+      setIsValidatingToken(true);
+      try {
+        const validation = await validateGitHubToken(url.trim(), accessToken.trim());
+        if (!validation.valid) {
+          setError(validation.error || 'Token non valido o senza permessi sufficienti');
+          setIsValidatingToken(false);
+          return;
+        }
+      } catch (err) {
+        setError('Errore durante la validazione del token');
+        setIsValidatingToken(false);
+        return;
+      }
+      setIsValidatingToken(false);
+    }
+
     setIsAdding(true);
 
     try {
-      const newRepo = await addRepository(url.trim());
+      const newRepo = await addRepository({
+        url: url.trim(),
+        isPrivate,
+        accessToken: isPrivate ? accessToken.trim() : undefined,
+      });
       setRepositories((prev) => [newRepo, ...prev]);
       setUrl('');
+      setAccessToken('');
+      setIsPrivate(false);
       toast.success('Repository aggiunto', {
-        description: `${newRepo.name} con ${newRepo.cardCount} card`,
+        description: `${newRepo.name} con ${newRepo.cardCount} card${isPrivate ? ' (privato)' : ''}`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore durante l\'aggiunta';
@@ -181,6 +232,36 @@ export function RepositoriesPage() {
     }
   };
 
+  const handleUpdateToken = async () => {
+    if (!updateTokenRepo || !newToken.trim()) return;
+
+    setUpdateTokenError(null);
+    setIsUpdatingToken(true);
+
+    try {
+      const updatedRepo = await updateRepositoryToken(updateTokenRepo.id, newToken.trim());
+      setRepositories((prev) =>
+        prev.map((r) => (r.id === updatedRepo.id ? updatedRepo : r))
+      );
+      setUpdateTokenRepo(null);
+      setNewToken('');
+      toast.success('Token aggiornato', {
+        description: 'Il repository verrà sincronizzato automaticamente',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Errore durante l\'aggiornamento';
+      setUpdateTokenError(message);
+    } finally {
+      setIsUpdatingToken(false);
+    }
+  };
+
+  const openUpdateTokenDialog = (repo: Repository) => {
+    setUpdateTokenRepo(repo);
+    setNewToken('');
+    setUpdateTokenError(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -226,12 +307,71 @@ export function RepositoriesPage() {
                     setError(null);
                   }}
                   placeholder="https://github.com/username/repository"
-                  disabled={isAdding}
+                  disabled={isAdding || isValidatingToken}
                 />
                 <p className="text-xs text-muted-foreground">
                   Il repository deve contenere un README.md con lumio_format_version: 1
                 </p>
               </div>
+
+              {/* Private Repository Toggle */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="private-toggle" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Repository privato
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Attiva se il repository non è pubblico
+                  </p>
+                </div>
+                <Switch
+                  id="private-toggle"
+                  checked={isPrivate}
+                  onCheckedChange={(checked: boolean) => {
+                    setIsPrivate(checked);
+                    if (!checked) {
+                      setAccessToken('');
+                    }
+                    setError(null);
+                  }}
+                  disabled={isAdding || isValidatingToken}
+                />
+              </div>
+
+              {/* PAT Input (visible only for private repos) */}
+              {isPrivate && (
+                <div className="space-y-2">
+                  <Label htmlFor="token" className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    Personal Access Token (PAT)
+                  </Label>
+                  <Input
+                    id="token"
+                    type="password"
+                    value={accessToken}
+                    onChange={(e) => {
+                      setAccessToken(e.target.value);
+                      setError(null);
+                    }}
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    disabled={isAdding || isValidatingToken}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Crea un{' '}
+                    <a
+                      href="https://github.com/settings/tokens/new?description=Lumio&scopes=repo"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Personal Access Token
+                    </a>
+                    {' '}con permesso "repo" per accedere ai repository privati.
+                    Il token verrà crittografato e memorizzato in modo sicuro.
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <Alert variant="destructive">
@@ -239,8 +379,8 @@ export function RepositoriesPage() {
                 </Alert>
               )}
 
-              <Button type="submit" disabled={isAdding || !url.trim()}>
-                {isAdding ? 'Aggiungendo...' : 'Aggiungi Repository'}
+              <Button type="submit" disabled={isAdding || isValidatingToken || !url.trim() || (isPrivate && !accessToken.trim())}>
+                {isValidatingToken ? 'Validando token...' : isAdding ? 'Aggiungendo...' : 'Aggiungi Repository'}
               </Button>
             </form>
           </CardContent>
@@ -274,11 +414,27 @@ export function RepositoriesPage() {
                           >
                             {getSyncStatusIcon(repo.syncStatus)}
                           </span>
+                          {repo.isPrivate && (
+                            <span title="Repository privato">
+                              <Lock className="h-4 w-4 text-muted-foreground" />
+                            </span>
+                          )}
                           <h3 className="font-semibold truncate">{repo.name}</h3>
+                          {repo.tokenStatus === 'invalid' && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
+                              <AlertTriangle className="h-3 w-3" />
+                              Token invalido
+                            </span>
+                          )}
                         </div>
                         {repo.description && (
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                             {repo.description}
+                          </p>
+                        )}
+                        {repo.tokenErrorMessage && (
+                          <p className="text-xs text-destructive mt-1">
+                            {repo.tokenErrorMessage}
                           </p>
                         )}
                         <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
@@ -305,11 +461,23 @@ export function RepositoriesPage() {
                         </a>
                       </div>
                       <div className="flex gap-2 shrink-0">
+                        {repo.tokenStatus === 'invalid' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openUpdateTokenDialog(repo)}
+                            disabled={syncingIds.has(repo.id) || deletingIds.has(repo.id)}
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                          >
+                            <Key className="h-3 w-3 mr-1" />
+                            Aggiorna token
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleSync(repo.id)}
-                          disabled={syncingIds.has(repo.id) || deletingIds.has(repo.id)}
+                          disabled={syncingIds.has(repo.id) || deletingIds.has(repo.id) || repo.tokenStatus === 'invalid'}
                         >
                           {syncingIds.has(repo.id) ? 'Sync...' : 'Sync'}
                         </Button>
@@ -354,6 +522,70 @@ export function RepositoriesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Update Token Dialog */}
+      <Dialog open={!!updateTokenRepo} onOpenChange={(open) => !open && setUpdateTokenRepo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Aggiorna Token
+            </DialogTitle>
+            <DialogDescription>
+              Il token per <strong>"{updateTokenRepo?.name}"</strong> non è più valido.
+              Inserisci un nuovo Personal Access Token per continuare a sincronizzare questo repository.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-token">Nuovo Personal Access Token</Label>
+              <Input
+                id="new-token"
+                type="password"
+                value={newToken}
+                onChange={(e) => {
+                  setNewToken(e.target.value);
+                  setUpdateTokenError(null);
+                }}
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                disabled={isUpdatingToken}
+              />
+              <p className="text-xs text-muted-foreground">
+                Crea un{' '}
+                <a
+                  href="https://github.com/settings/tokens/new?description=Lumio&scopes=repo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  nuovo Personal Access Token
+                </a>
+                {' '}con permesso "repo".
+              </p>
+            </div>
+            {updateTokenError && (
+              <Alert variant="destructive">
+                <AlertDescription>{updateTokenError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setUpdateTokenRepo(null)}
+              disabled={isUpdatingToken}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleUpdateToken}
+              disabled={isUpdatingToken || !newToken.trim()}
+            >
+              {isUpdatingToken ? 'Aggiornando...' : 'Aggiorna Token'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

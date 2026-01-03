@@ -9,6 +9,7 @@ const corsHeaders = {
 
 // Types
 type SyncStatus = "pending" | "syncing" | "synced" | "error";
+type TokenStatus = "valid" | "invalid" | "not_required";
 
 interface Repository {
   id: string;
@@ -17,6 +18,9 @@ interface Repository {
   name: string;
   description?: string;
   is_private: boolean;
+  encrypted_access_token?: string;
+  token_status: TokenStatus;
+  token_error_message?: string;
   format_version: number;
   last_commit_sha?: string;
   last_synced_at?: string;
@@ -25,6 +29,36 @@ interface Repository {
   card_count: number;
   created_at: string;
   updated_at: string;
+}
+
+// Sanitized repository for API responses (no sensitive data)
+interface SafeRepository {
+  id: string;
+  user_id: string;
+  url: string;
+  name: string;
+  description?: string;
+  is_private: boolean;
+  token_status: TokenStatus;
+  token_error_message?: string;
+  format_version: number;
+  last_commit_sha?: string;
+  last_synced_at?: string;
+  sync_status: SyncStatus;
+  sync_error_message?: string;
+  card_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Sanitize repository for API response - removes sensitive data
+ * SECURITY: Never expose encrypted_access_token to clients
+ */
+function sanitizeRepository(repo: Repository): SafeRepository {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { encrypted_access_token, ...safeRepo } = repo;
+  return safeRepo;
 }
 
 interface CardFrontmatter {
@@ -110,16 +144,87 @@ async function getUserId(
 }
 
 // =============================================================================
+// ENCRYPTION UTILITIES (AES-256-GCM) - Same as llm-proxy
+// =============================================================================
+
+const ALGORITHM = "AES-GCM";
+const IV_LENGTH = 12; // 96 bits for GCM
+
+async function getEncryptionKey(): Promise<CryptoKey> {
+  const keyBase64 = Deno.env.get("ENCRYPTION_KEY");
+  if (!keyBase64) {
+    throw new Error("ENCRYPTION_KEY environment variable not set");
+  }
+
+  const keyBytes = Uint8Array.from(atob(keyBase64), (c) => c.charCodeAt(0));
+
+  if (keyBytes.length !== 32) {
+    throw new Error("ENCRYPTION_KEY must be 32 bytes (256 bits) base64 encoded");
+  }
+
+  return await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: ALGORITHM },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptToken(plaintext: string): Promise<string> {
+  const key = await getEncryptionKey();
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const encodedText = new TextEncoder().encode(plaintext);
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: ALGORITHM, iv },
+    key,
+    encodedText
+  );
+
+  const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptToken(encryptedBase64: string): Promise<string> {
+  const key = await getEncryptionKey();
+  const combined = Uint8Array.from(atob(encryptedBase64), (c) => c.charCodeAt(0));
+
+  const iv = combined.slice(0, IV_LENGTH);
+  const ciphertext = combined.slice(IV_LENGTH);
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: ALGORITHM, iv },
+    key,
+    ciphertext
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
+// =============================================================================
 // GITHUB API
 // =============================================================================
 
-async function fetchGitHub(path: string): Promise<Response> {
-  return fetch(`https://api.github.com${path}`, {
-    headers: {
-      Accept: "application/vnd.github.v3+json",
-      "User-Agent": "Lumio-App/1.0",
-    },
-  });
+/**
+ * Fetch from GitHub API with optional authentication
+ * @param path - API path (e.g., /repos/owner/repo)
+ * @param token - Optional GitHub PAT for private repos
+ */
+async function fetchGitHub(path: string, token?: string): Promise<Response> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "Lumio-App/1.0",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  return fetch(`https://api.github.com${path}`, { headers });
 }
 
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
@@ -140,12 +245,16 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
 
 async function getRepoInfo(
   owner: string,
-  repo: string
+  repo: string,
+  token?: string
 ): Promise<GitHubRepoInfo> {
-  const response = await fetchGitHub(`/repos/${owner}/${repo}`);
+  const response = await fetchGitHub(`/repos/${owner}/${repo}`, token);
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error("Repository not found");
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`GitHub authentication failed: ${response.status}`);
     }
     throw new Error(`GitHub API error: ${response.status}`);
   }
@@ -155,12 +264,17 @@ async function getRepoInfo(
 async function getLatestCommit(
   owner: string,
   repo: string,
-  branch: string
+  branch: string,
+  token?: string
 ): Promise<GitHubCommit> {
   const response = await fetchGitHub(
-    `/repos/${owner}/${repo}/commits/${branch}`
+    `/repos/${owner}/${repo}/commits/${branch}`,
+    token
   );
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`GitHub authentication failed: ${response.status}`);
+    }
     throw new Error(`Failed to get latest commit: ${response.status}`);
   }
   return await response.json();
@@ -169,26 +283,53 @@ async function getLatestCommit(
 async function getFileContent(
   owner: string,
   repo: string,
-  path: string
+  path: string,
+  token?: string
 ): Promise<string> {
-  const response = await fetch(
-    `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${path}`
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to fetch file: ${path}`);
+  if (token) {
+    // For private repos, use GitHub API with authentication
+    const response = await fetchGitHub(
+      `/repos/${owner}/${repo}/contents/${path}`,
+      token
+    );
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`GitHub authentication failed: ${response.status}`);
+      }
+      throw new Error(`Failed to fetch file: ${path}`);
+    }
+    const data = await response.json();
+    // GitHub API returns content as base64
+    if (data.encoding === "base64" && data.content) {
+      return atob(data.content.replace(/\n/g, ""));
+    }
+    throw new Error(`Unexpected encoding for file: ${path}`);
+  } else {
+    // For public repos, use raw.githubusercontent.com (faster, no rate limit)
+    const response = await fetch(
+      `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${path}`
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${path}`);
+    }
+    return await response.text();
   }
-  return await response.text();
 }
 
 async function getRepoTree(
   owner: string,
   repo: string,
-  sha: string
+  sha: string,
+  token?: string
 ): Promise<GitHubTreeItem[]> {
   const response = await fetchGitHub(
-    `/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`
+    `/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`,
+    token
   );
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`GitHub authentication failed: ${response.status}`);
+    }
     throw new Error(`Failed to get repository tree: ${response.status}`);
   }
   const data = await response.json();
@@ -329,13 +470,86 @@ async function hashContent(content: string): Promise<string> {
 }
 
 // =============================================================================
+// LUMIOIGNORE SUPPORT
+// =============================================================================
+
+/**
+ * Parse .lumioignore file content into a list of patterns
+ * Supports:
+ * - Exact file paths (e.g., "cards/draft.md")
+ * - Directory patterns (e.g., "drafts/")
+ * - Glob patterns with * (e.g., "*.draft.md", "wip/*")
+ * - Comments starting with #
+ * - Empty lines are ignored
+ */
+function parseLumioIgnore(content: string): string[] {
+  return content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+}
+
+/**
+ * Check if a file path matches any of the ignore patterns
+ */
+function isIgnored(filePath: string, ignorePatterns: string[]): boolean {
+  for (const pattern of ignorePatterns) {
+    // Directory pattern (ends with /)
+    if (pattern.endsWith("/")) {
+      if (filePath.startsWith(pattern) || filePath.startsWith(pattern.slice(0, -1))) {
+        return true;
+      }
+    }
+    // Glob pattern with *
+    else if (pattern.includes("*")) {
+      const regexPattern = pattern
+        .replace(/\./g, "\\.")
+        .replace(/\*/g, ".*");
+      const regex = new RegExp(`^${regexPattern}$`);
+      if (regex.test(filePath)) {
+        return true;
+      }
+      // Also check just the filename for patterns like "*.draft.md"
+      const fileName = filePath.split("/").pop() || "";
+      if (regex.test(fileName)) {
+        return true;
+      }
+    }
+    // Exact match
+    else if (filePath === pattern) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Fetch .lumioignore file from repository if it exists
+ */
+async function fetchLumioIgnore(
+  owner: string,
+  repo: string,
+  token?: string
+): Promise<string[]> {
+  try {
+    const content = await getFileContent(owner, repo, ".lumioignore", token);
+    return parseLumioIgnore(content);
+  } catch {
+    // .lumioignore doesn't exist, return empty array
+    return [];
+  }
+}
+
+// =============================================================================
 // REPOSITORY OPERATIONS
 // =============================================================================
 
 async function importRepository(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-  url: string
+  url: string,
+  isPrivate: boolean = false,
+  accessToken?: string
 ): Promise<Repository> {
   // Parse URL
   const parsed = parseGitHubUrl(url);
@@ -343,6 +557,11 @@ async function importRepository(
     throw new Error("Invalid GitHub URL. Please use format: https://github.com/owner/repo");
   }
   const { owner, repo } = parsed;
+
+  // Validate: private repos require access token
+  if (isPrivate && !accessToken) {
+    throw new Error("Private repositories require an access token");
+  }
 
   // Check if already exists
   const { data: existing } = await supabase
@@ -356,22 +575,28 @@ async function importRepository(
     throw new Error("This repository is already added to your account");
   }
 
-  // Get repo info
-  const repoInfo = await getRepoInfo(owner, repo);
+  // Get repo info (with token for private repos)
+  const repoInfo = await getRepoInfo(owner, repo, accessToken);
 
   // Get latest commit
-  const latestCommit = await getLatestCommit(owner, repo, repoInfo.default_branch);
+  const latestCommit = await getLatestCommit(owner, repo, repoInfo.default_branch, accessToken);
 
   // Fetch and validate README.md
   let readmeContent: string;
   try {
-    readmeContent = await getFileContent(owner, repo, "README.md");
+    readmeContent = await getFileContent(owner, repo, "README.md", accessToken);
   } catch {
     throw new Error("Repository must have a README.md file in the root directory");
   }
 
   const { frontmatter: deckFrontmatter } = parseFrontmatter(readmeContent);
   const deckMeta = validateDeckFrontmatter(deckFrontmatter);
+
+  // Encrypt token for private repos
+  let encryptedToken: string | null = null;
+  if (isPrivate && accessToken) {
+    encryptedToken = await encryptToken(accessToken);
+  }
 
   // Insert repository with syncing status
   const { data: repoData, error: insertError } = await supabase
@@ -381,7 +606,9 @@ async function importRepository(
       url: url,
       name: repoInfo.name,
       description: deckMeta.description,
-      is_private: false,
+      is_private: isPrivate,
+      encrypted_access_token: encryptedToken,
+      token_status: isPrivate ? "valid" : "not_required",
       format_version: deckMeta.lumio_format_version,
       last_commit_sha: latestCommit.sha,
       sync_status: "syncing",
@@ -391,13 +618,16 @@ async function importRepository(
 
   if (insertError) throw insertError;
 
-  // Get all markdown files
-  const tree = await getRepoTree(owner, repo, latestCommit.sha);
+  // Fetch .lumioignore patterns (if file exists)
+  const ignorePatterns = await fetchLumioIgnore(owner, repo, accessToken);
+
+  // Get all markdown files, excluding ignored files
+  const tree = await getRepoTree(owner, repo, latestCommit.sha, accessToken);
   const mdFiles = tree.filter(
     (item) =>
       item.type === "blob" &&
       item.path.endsWith(".md") &&
-      item.path.toLowerCase() !== "readme.md"
+      !isIgnored(item.path, ignorePatterns)
   );
 
   // Parse and import cards
@@ -406,7 +636,7 @@ async function importRepository(
 
   for (const file of mdFiles) {
     try {
-      const rawContent = await getFileContent(owner, repo, file.path);
+      const rawContent = await getFileContent(owner, repo, file.path, accessToken);
       const { frontmatter, body } = parseFrontmatter(rawContent);
       const cardMeta = validateCardFrontmatter(frontmatter, file.path);
       const contentHash = await hashContent(rawContent);
@@ -454,13 +684,25 @@ async function importRepository(
   }
 
   // Update repository status
+  // Build detailed error message if any cards were skipped
+  let syncErrorMessage: string | null = null;
+  if (errors.length > 0) {
+    // Limit to first 5 errors to avoid overly long messages
+    const displayErrors = errors.slice(0, 5);
+    const remaining = errors.length - displayErrors.length;
+    syncErrorMessage = displayErrors.join("; ");
+    if (remaining > 0) {
+      syncErrorMessage += `; ... e altri ${remaining} errori`;
+    }
+  }
+
   const { data: updatedRepo, error: updateError } = await supabase
     .from("repositories")
     .update({
       sync_status: "synced",
       last_synced_at: new Date().toISOString(),
       card_count: cards.length,
-      sync_error_message: errors.length > 0 ? `${errors.length} cards skipped` : null,
+      sync_error_message: syncErrorMessage,
     })
     .eq("id", repoData.id)
     .select()
@@ -520,6 +762,25 @@ async function syncRepository(
   }
   const { owner, repo: repoName } = parsed;
 
+  // Decrypt token for private repos
+  let accessToken: string | undefined;
+  if (repo.is_private && repo.encrypted_access_token) {
+    try {
+      accessToken = await decryptToken(repo.encrypted_access_token);
+    } catch {
+      // Token decryption failed, mark as invalid
+      await supabase
+        .from("repositories")
+        .update({
+          token_status: "invalid",
+          token_error_message: "Failed to decrypt access token",
+          sync_status: "error",
+        })
+        .eq("id", repositoryId);
+      throw new Error("Failed to decrypt access token");
+    }
+  }
+
   // Update status to syncing
   await supabase
     .from("repositories")
@@ -528,16 +789,19 @@ async function syncRepository(
 
   try {
     // Get latest commit
-    const repoInfo = await getRepoInfo(owner, repoName);
-    const latestCommit = await getLatestCommit(owner, repoName, repoInfo.default_branch);
+    const repoInfo = await getRepoInfo(owner, repoName, accessToken);
+    const latestCommit = await getLatestCommit(owner, repoName, repoInfo.default_branch, accessToken);
 
-    // Get all markdown files
-    const tree = await getRepoTree(owner, repoName, latestCommit.sha);
+    // Fetch .lumioignore patterns (if file exists)
+    const ignorePatterns = await fetchLumioIgnore(owner, repoName, accessToken);
+
+    // Get all markdown files, excluding ignored files
+    const tree = await getRepoTree(owner, repoName, latestCommit.sha, accessToken);
     const mdFiles = tree.filter(
       (item) =>
         item.type === "blob" &&
         item.path.endsWith(".md") &&
-        item.path.toLowerCase() !== "readme.md"
+        !isIgnored(item.path, ignorePatterns)
     );
 
     // Parse cards
@@ -546,7 +810,7 @@ async function syncRepository(
 
     for (const file of mdFiles) {
       try {
-        const rawContent = await getFileContent(owner, repoName, file.path);
+        const rawContent = await getFileContent(owner, repoName, file.path, accessToken);
         const { frontmatter, body } = parseFrontmatter(rawContent);
         const cardMeta = validateCardFrontmatter(frontmatter, file.path);
         const contentHash = await hashContent(rawContent);
@@ -596,7 +860,19 @@ async function syncRepository(
       if (cardsError) throw cardsError;
     }
 
-    // Update repository
+    // Build detailed error message if any cards were skipped
+    let syncErrorMessage: string | null = null;
+    if (errors.length > 0) {
+      // Limit to first 5 errors to avoid overly long messages
+      const displayErrors = errors.slice(0, 5);
+      const remaining = errors.length - displayErrors.length;
+      syncErrorMessage = displayErrors.join("; ");
+      if (remaining > 0) {
+        syncErrorMessage += `; ... e altri ${remaining} errori`;
+      }
+    }
+
+    // Update repository (reset token error if sync succeeded)
     const { data: updatedRepo, error: updateError } = await supabase
       .from("repositories")
       .update({
@@ -604,7 +880,9 @@ async function syncRepository(
         sync_status: "synced",
         last_synced_at: new Date().toISOString(),
         card_count: cards.length,
-        sync_error_message: errors.length > 0 ? `${errors.length} cards skipped` : null,
+        sync_error_message: syncErrorMessage,
+        token_status: repo.is_private ? "valid" : "not_required",
+        token_error_message: null,
       })
       .eq("id", repositoryId)
       .select()
@@ -614,12 +892,19 @@ async function syncRepository(
 
     return updatedRepo;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Sync failed";
+    const isAuthError = errorMessage.includes("authentication failed");
+
     // Update status to error
     await supabase
       .from("repositories")
       .update({
         sync_status: "error",
-        sync_error_message: error instanceof Error ? error.message : "Sync failed",
+        sync_error_message: errorMessage,
+        // Mark token as invalid if auth error on private repo
+        ...(isAuthError && repo.is_private
+          ? { token_status: "invalid", token_error_message: errorMessage }
+          : {}),
       })
       .eq("id", repositoryId);
 
@@ -630,11 +915,12 @@ async function syncRepository(
 async function checkUpdates(): Promise<{ updated: number; errors: number }> {
   const serviceClient = createServiceSupabaseClient();
 
-  // Get all repositories that need checking
+  // Get all repositories that need checking (exclude those with invalid tokens)
   const { data: repos, error } = await serviceClient
     .from("repositories")
     .select("*")
-    .in("sync_status", ["synced", "pending"]);
+    .in("sync_status", ["synced", "pending"])
+    .or("token_status.eq.valid,token_status.eq.not_required");
 
   if (error) throw error;
   if (!repos || repos.length === 0) {
@@ -649,11 +935,32 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
       const parsed = parseGitHubUrl(repo.url);
       if (!parsed) continue;
 
-      const repoInfo = await getRepoInfo(parsed.owner, parsed.repo);
+      // Decrypt token for private repos
+      let accessToken: string | undefined;
+      if (repo.is_private && repo.encrypted_access_token) {
+        try {
+          accessToken = await decryptToken(repo.encrypted_access_token);
+        } catch {
+          // Token decryption failed, mark as invalid and skip
+          await serviceClient
+            .from("repositories")
+            .update({
+              token_status: "invalid",
+              token_error_message: "Failed to decrypt access token",
+              sync_status: "error",
+            })
+            .eq("id", repo.id);
+          errors++;
+          continue;
+        }
+      }
+
+      const repoInfo = await getRepoInfo(parsed.owner, parsed.repo, accessToken);
       const latestCommit = await getLatestCommit(
         parsed.owner,
         parsed.repo,
-        repoInfo.default_branch
+        repoInfo.default_branch,
+        accessToken
       );
 
       // Check if commit changed
@@ -664,20 +971,23 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
           .update({ sync_status: "syncing" })
           .eq("id", repo.id);
 
-        // Get all markdown files
-        const tree = await getRepoTree(parsed.owner, parsed.repo, latestCommit.sha);
+        // Fetch .lumioignore patterns (if file exists)
+        const ignorePatterns = await fetchLumioIgnore(parsed.owner, parsed.repo, accessToken);
+
+        // Get all markdown files, excluding ignored files
+        const tree = await getRepoTree(parsed.owner, parsed.repo, latestCommit.sha, accessToken);
         const mdFiles = tree.filter(
           (item) =>
             item.type === "blob" &&
             item.path.endsWith(".md") &&
-            item.path.toLowerCase() !== "readme.md"
+            !isIgnored(item.path, ignorePatterns)
         );
 
         // Parse cards
         const cards: ParsedCard[] = [];
         for (const file of mdFiles) {
           try {
-            const rawContent = await getFileContent(parsed.owner, parsed.repo, file.path);
+            const rawContent = await getFileContent(parsed.owner, parsed.repo, file.path, accessToken);
             const { frontmatter, body } = parseFrontmatter(rawContent);
             const cardMeta = validateCardFrontmatter(frontmatter, file.path);
             const contentHash = await hashContent(rawContent);
@@ -727,16 +1037,27 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
             sync_status: "synced",
             last_synced_at: new Date().toISOString(),
             card_count: cards.length,
+            token_status: repo.is_private ? "valid" : "not_required",
+            token_error_message: null,
           })
           .eq("id", repo.id);
 
         updated++;
       }
-    } catch {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const isAuthError = errorMessage.includes("authentication failed");
+
       errors++;
       await serviceClient
         .from("repositories")
-        .update({ sync_status: "error" })
+        .update({
+          sync_status: "error",
+          sync_error_message: errorMessage,
+          ...(isAuthError && repo.is_private
+            ? { token_status: "invalid", token_error_message: errorMessage }
+            : {}),
+        })
         .eq("id", repo.id);
     }
   }
@@ -832,6 +1153,85 @@ async function getCards(
 }
 
 /**
+ * Validate a GitHub token without saving it
+ * Used to verify token before adding a private repository
+ */
+async function validateGitHubToken(
+  url: string,
+  accessToken: string
+): Promise<{ valid: boolean; repoName?: string; error?: string }> {
+  const parsed = parseGitHubUrl(url);
+  if (!parsed) {
+    return { valid: false, error: "Invalid GitHub URL" };
+  }
+
+  try {
+    const repoInfo = await getRepoInfo(parsed.owner, parsed.repo, accessToken);
+    return { valid: true, repoName: repoInfo.name };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message.includes("authentication failed")) {
+      return { valid: false, error: "Invalid token or insufficient permissions" };
+    }
+    if (message.includes("not found")) {
+      return { valid: false, error: "Repository not found or token lacks access" };
+    }
+    return { valid: false, error: message };
+  }
+}
+
+/**
+ * Update the access token for an existing private repository
+ */
+async function updateRepositoryToken(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  repositoryId: string,
+  accessToken: string
+): Promise<Repository> {
+  // Get repository
+  const { data: repo, error: fetchError } = await supabase
+    .from("repositories")
+    .select("*")
+    .eq("id", repositoryId)
+    .eq("user_id", userId)
+    .single();
+
+  if (fetchError || !repo) {
+    throw new Error("Repository not found or access denied");
+  }
+
+  if (!repo.is_private) {
+    throw new Error("Cannot update token for public repository");
+  }
+
+  // Validate new token
+  const validation = await validateGitHubToken(repo.url, accessToken);
+  if (!validation.valid) {
+    throw new Error(validation.error || "Invalid token");
+  }
+
+  // Encrypt and save new token
+  const encryptedToken = await encryptToken(accessToken);
+
+  const { data: updatedRepo, error: updateError } = await supabase
+    .from("repositories")
+    .update({
+      encrypted_access_token: encryptedToken,
+      token_status: "valid",
+      token_error_message: null,
+      sync_status: "pending", // Trigger re-sync
+    })
+    .eq("id", repositoryId)
+    .select()
+    .single();
+
+  if (updateError) throw updateError;
+
+  return updatedRepo;
+}
+
+/**
  * Get ALL cards for a user across all their repositories
  * Used for study sessions
  */
@@ -902,7 +1302,7 @@ serve(async (req) => {
 
     switch (action) {
       case "add_repository": {
-        const { url } = body;
+        const { url, isPrivate, accessToken } = body;
         if (!url) {
           return new Response(
             JSON.stringify({ error: "Missing repository URL" }),
@@ -913,9 +1313,63 @@ serve(async (req) => {
           );
         }
 
-        const repository = await importRepository(supabase, userId, url);
+        if (isPrivate && !accessToken) {
+          return new Response(
+            JSON.stringify({ error: "Private repositories require an access token" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const repository = await importRepository(supabase, userId, url, isPrivate || false, accessToken);
         return new Response(
-          JSON.stringify({ success: true, repository }),
+          JSON.stringify({ success: true, repository: sanitizeRepository(repository) }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      case "validate_token": {
+        const { url, accessToken } = body;
+        if (!url || !accessToken) {
+          return new Response(
+            JSON.stringify({ error: "Missing url or accessToken" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const validation = await validateGitHubToken(url, accessToken);
+        return new Response(
+          JSON.stringify({ success: true, ...validation }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      case "update_token": {
+        const { repositoryId, accessToken } = body;
+        if (!repositoryId || !accessToken) {
+          return new Response(
+            JSON.stringify({ error: "Missing repositoryId or accessToken" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const updatedRepo = await updateRepositoryToken(supabase, userId, repositoryId, accessToken);
+        return new Response(
+          JSON.stringify({ success: true, repository: sanitizeRepository(updatedRepo) }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -956,7 +1410,7 @@ serve(async (req) => {
 
         const repository = await syncRepository(supabase, userId, repositoryId);
         return new Response(
-          JSON.stringify({ success: true, repository }),
+          JSON.stringify({ success: true, repository: sanitizeRepository(repository) }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -975,7 +1429,7 @@ serve(async (req) => {
       case "get_repositories": {
         const repositories = await getRepositories(supabase, userId);
         return new Response(
-          JSON.stringify({ success: true, repositories }),
+          JSON.stringify({ success: true, repositories: repositories.map(sanitizeRepository) }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,

@@ -40,6 +40,7 @@ pnpm build:packages
 # Start Supabase local
 GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase start
 supabase db push
+supabase functions deploy
 GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase functions serve
 
 # Run web app

@@ -9,9 +9,7 @@ function App() {
           <CardTitle className="text-center text-2xl">{APP_NAME}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-center text-muted-foreground">
-            AI-powered flashcard study platform
-          </p>
+          
           <div className="rounded-lg bg-muted p-4 font-mono text-sm">
             <div className="grid grid-cols-2 gap-2">
               <span className="text-muted-foreground">Version:</span>

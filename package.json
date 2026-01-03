@@ -2,7 +2,6 @@
   "name": "lumio",
   "private": true,
   "version": "0.5.4",
-  "description": "AI-powered flashcard study platform",
   "scripts": {
     "dev:web": "pnpm --filter @lumio/web dev",
     "dev:mobile": "pnpm --filter @lumio/mobile dev",
