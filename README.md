@@ -2,14 +2,11 @@
 
 ![logo](./lumio.svg "logo")
 
-
-
 AI-powered flashcard study platform. 
 
 ```
 Leggi CHANGELOG.md, CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pronto.
 ```
-
 
 **Production**: https://lumio.toto-castaldi.com/
 
