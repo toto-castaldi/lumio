@@ -87,6 +87,19 @@ export interface Card {
   updatedAt: string;
 }
 
+// Card asset (stored in public.card_assets table)
+// Maps original image paths in markdown to Supabase Storage paths
+export interface CardAsset {
+  id: string;
+  cardId: string;
+  originalPath: string;   // Original path in markdown (e.g., /assets/img/diagram.png)
+  storagePath: string;    // Path in Supabase Storage (e.g., user_id/repo_id/hash.png)
+  contentHash: string;    // SHA-256 of image content for deduplication
+  mimeType: string;       // e.g., image/png, image/jpeg
+  sizeBytes?: number;     // File size in bytes
+  createdAt: string;
+}
+
 // Card frontmatter from markdown parsing
 export interface CardFrontmatter {
   title: string;

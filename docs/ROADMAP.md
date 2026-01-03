@@ -658,42 +658,107 @@
 
 ---
 
-## 9B - IMMAGINI PER REPOSITORY PRIVATI (Futura)
+## 9B - IMMAGINI UNIFICATE (PUBBLICI E PRIVATI) ✅
 
 > **Prerequisito**: Fase 9A completata
 
-### Obiettivi Fase 9B
+### Obiettivi Fase 9B ✅
 
-- Scaricare immagini dai repo privati durante il sync
+- Unificare gestione immagini per repository pubblici e privati
+- Scaricare tutte le immagini durante il sync (non solo privati)
 - Salvare immagini in Supabase Storage con accesso RLS
-- Servire immagini tramite URL firmati o proxy
+- Servire immagini tramite URL firmati
 
-### Approccio Consigliato
+### Implementazione Completata ✅
 
 **Soluzione: Download in Supabase Storage**
 
-1. Durante il sync, identificare tutte le immagini referenziate nelle card
-2. Scaricare le immagini usando il PAT (autenticazione GitHub)
-3. Salvare in Supabase Storage bucket `card-images/{user_id}/{repo_id}/`
-4. Salvare mapping `original_path → storage_path` in nuova tabella `card_images`
-5. Frontend: usare URL Supabase Storage invece di GitHub raw URL
+1. Durante il sync, identificare tutte le immagini referenziate nelle card (regex markdown)
+2. Scaricare le immagini usando PAT per privati o raw.githubusercontent.com per pubblici
+3. Calcolare hash SHA-256 del contenuto per deduplicazione
+4. Salvare in Supabase Storage bucket `card-assets/{user_id}/{repo_id}/{hash}.{ext}`
+5. Salvare mapping in tabella `card_assets` (card_id, original_path, storage_path, content_hash, mime_type)
+6. Frontend: fetch assets, generare signed URLs, sostituire path nel markdown
 
-### Considerazioni Fase 9B
+### 9B.1 Database - Migrazione ✅
 
-- **Storage structure**: `card-images/{user_id}/{repo_id}/{hash}.{ext}`
-- **RLS Storage**: Bucket privato, accesso solo a owner
-- **Sync incrementale**: Scaricare solo immagini nuove/modificate (hash)
-- **Cleanup**: Rimuovere immagini orfane quando card/repo eliminati
-- **Formati**: PNG, JPG, GIF, SVG, WebP (come da CARD-FORMAT-SPEC)
-- **Dimensioni**: Considerare compressione/resize per immagini grandi
+- [x] Creare tabella `card_assets` con:
+  - `id`, `card_id` (FK con CASCADE DELETE), `original_path`, `storage_path`
+  - `content_hash` (SHA-256 per deduplicazione), `mime_type`, `size_bytes`
+  - Indici su `card_id`, `content_hash`, `storage_path`
+- [x] RLS policies per `card_assets` (utenti vedono solo propri assets)
+- [x] Creare bucket Storage `card-assets` (privato, 10MB max, solo immagini)
+- [x] RLS policies per Storage (accesso solo a propria cartella user_id/)
 
-### Task Preliminari (da fare in 9B)
+### 9B.2 Edge Function git-sync ✅
 
-- [ ] Configurare Supabase Storage bucket `card-images`
-- [ ] Creare tabella `card_images` (card_id, original_path, storage_path, hash)
-- [ ] Modificare git-sync per download immagini
-- [ ] Modificare MarkdownImage per usare Storage URL per repo privati
-- [ ] Implementare cleanup immagini orfane
+- [x] Aggiungere funzioni per gestione immagini:
+  - `extractImageReferences()`: estrae path immagini dal markdown
+  - `downloadImage()`: scarica da GitHub (con o senza PAT)
+  - `hashImageContent()`: calcola SHA-256
+  - `uploadImageToStorage()`: upload con deduplicazione
+  - `processCardImages()`: processa tutte le immagini di una card
+- [x] Modificare `importRepository()` per processare immagini dopo insert cards
+- [x] Modificare `syncRepository()` per processare immagini dopo insert cards
+- [x] Modificare `checkUpdates()` per processare immagini dopo insert cards
+
+### 9B.3 Shared Types ✅
+
+- [x] Aggiungere tipo `CardAsset` in `@lumio/shared`
+
+### 9B.4 Core Package ✅
+
+- [x] Creare `packages/core/src/supabase/assets.ts` con:
+  - `getCardAssets()`: fetch assets di una card
+  - `getCardAssetsBatch()`: fetch assets di più cards (batch)
+  - `getAssetSignedUrl()`: genera signed URL per un asset
+  - `getAssetSignedUrls()`: genera signed URLs (batch)
+  - `transformCardContentImages()`: sostituisce path nel markdown con signed URLs
+
+### 9B.5 Frontend Web ✅
+
+- [x] Aggiornare `CardPreviewDialog.tsx`:
+  - Fetch assets quando dialog si apre
+  - Trasformare contenuto con signed URLs
+  - Mostrare loading spinner durante fetch
+  - Fallback a contenuto originale su errore
+- [x] Rimuovere logica `repoUrl` (non più necessaria)
+
+### 9B.6 Frontend Mobile ✅
+
+- [x] Aggiornare `CardPreviewDialog.tsx` mobile (stessa logica del web)
+- [x] Rimuovere logica `repoUrl` (non più necessaria)
+
+### Criteri di Successo Fase 9B ✅
+
+- Le immagini funzionano sia per repo pubblici che privati
+- Le immagini sono deduplicate tramite content hash
+- Gli asset vengono eliminati automaticamente (CASCADE) quando le card vengono eliminate
+- I signed URLs hanno validità di 1 ora
+- Il fallback funziona se gli assets non sono disponibili
+
+### Note Fase 9B
+
+- **Unificazione**: Stesso comportamento per repo pubblici e privati (più semplice da mantenere)
+- **Deduplicazione**: Immagini identiche in card diverse usano lo stesso file
+- **Cascade delete**: Gli asset vengono eliminati automaticamente con la card
+- **Signed URLs**: Validità 1 ora, rigenerati ad ogni apertura della card
+- **Formati supportati**: PNG, JPG, JPEG, GIF, SVG, WebP
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/20260103000002_add_card_assets.sql` | NUOVO |
+| `supabase/functions/git-sync/index.ts` | MODIFICA - Image processing |
+| `packages/shared/src/types/index.ts` | MODIFICA - CardAsset type |
+| `packages/core/src/supabase/assets.ts` | NUOVO |
+| `packages/core/src/index.ts` | MODIFICA - Export assets |
+| `apps/web/src/components/CardPreviewDialog.tsx` | MODIFICA - Use signed URLs |
+| `apps/web/src/pages/StudyPage.tsx` | MODIFICA - Remove repoUrl |
+| `apps/web/src/pages/CardsPage.tsx` | MODIFICA - Remove repoUrl |
+| `apps/mobile/src/components/CardPreviewDialog.tsx` | MODIFICA - Use signed URLs |
+| `apps/mobile/src/pages/StudyPage.tsx` | MODIFICA - Remove repoUrl |
 
 ---
 

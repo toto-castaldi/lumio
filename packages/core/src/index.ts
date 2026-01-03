@@ -44,6 +44,15 @@ export {
   updateRepositoryToken,
 } from './supabase/repositories';
 
+// Export card assets functions
+export {
+  getCardAssets,
+  getCardAssetsBatch,
+  getAssetSignedUrl,
+  getAssetSignedUrls,
+  transformCardContentImages,
+} from './supabase/assets';
+
 // Export study functions
 export {
   getAvailableModels,

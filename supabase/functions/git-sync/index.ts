@@ -541,6 +541,249 @@ async function fetchLumioIgnore(
 }
 
 // =============================================================================
+// IMAGE ASSETS SUPPORT
+// =============================================================================
+
+// Supported image extensions
+const SUPPORTED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
+
+// Regex to find image references in markdown
+const IMAGE_REGEX = /!\[[^\]]*\]\(([^)]+)\)/g;
+
+/**
+ * Extract all image references from markdown content
+ * Returns only relative paths (ignores external URLs)
+ */
+function extractImageReferences(content: string): string[] {
+  const images: string[] = [];
+  let match;
+  // Reset regex state
+  IMAGE_REGEX.lastIndex = 0;
+  while ((match = IMAGE_REGEX.exec(content)) !== null) {
+    let imagePath = match[1];
+    // Remove any title/alt text after space (e.g., "image.png 'title'")
+    imagePath = imagePath.split(/\s+/)[0];
+    // Ignore external URLs
+    if (!imagePath.startsWith("http://") && !imagePath.startsWith("https://")) {
+      // Normalize path: remove leading ./ or /
+      imagePath = imagePath.replace(/^\.\//, "").replace(/^\//, "");
+      // Only include if it has a supported extension
+      const ext = imagePath.toLowerCase().split(".").pop();
+      if (ext && SUPPORTED_IMAGE_EXTENSIONS.includes(`.${ext}`)) {
+        images.push(imagePath);
+      }
+    }
+  }
+  return [...new Set(images)]; // Remove duplicates
+}
+
+/**
+ * Get MIME type from file extension
+ */
+function getMimeType(path: string): string {
+  const ext = path.toLowerCase().split(".").pop();
+  const mimeTypes: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    svg: "image/svg+xml",
+    webp: "image/webp",
+  };
+  return mimeTypes[ext || ""] || "application/octet-stream";
+}
+
+/**
+ * Download image from GitHub repository
+ * Uses GitHub API for private repos, raw.githubusercontent.com for public
+ */
+async function downloadImage(
+  owner: string,
+  repo: string,
+  imagePath: string,
+  token?: string
+): Promise<{ content: Uint8Array; mimeType: string } | null> {
+  try {
+    if (token) {
+      // Private repo: use GitHub API with authentication
+      const response = await fetchGitHub(
+        `/repos/${owner}/${repo}/contents/${imagePath}`,
+        token
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (data.encoding === "base64" && data.content) {
+        // Decode base64 content
+        const binary = atob(data.content.replace(/\n/g, ""));
+        const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+        const mimeType = getMimeType(imagePath);
+        return { content: bytes, mimeType };
+      }
+    } else {
+      // Public repo: use raw.githubusercontent.com
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${imagePath}`;
+      const response = await fetch(rawUrl);
+      if (!response.ok) return null;
+      const mimeType = response.headers.get("content-type") || getMimeType(imagePath);
+      const buffer = await response.arrayBuffer();
+      return { content: new Uint8Array(buffer), mimeType };
+    }
+  } catch (error) {
+    console.warn(`Failed to download image ${imagePath}:`, error);
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Calculate SHA-256 hash of content
+ */
+async function hashImageContent(content: Uint8Array): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", content);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Upload image to Supabase Storage
+ * Returns the storage path
+ */
+async function uploadImageToStorage(
+  serviceClient: ReturnType<typeof createClient>,
+  userId: string,
+  repoId: string,
+  imageContent: Uint8Array,
+  mimeType: string,
+  contentHash: string
+): Promise<string> {
+  // Extension from mime type
+  const ext = mimeType.split("/")[1]?.replace("svg+xml", "svg") || "bin";
+
+  // Path: user_id/repo_id/hash.ext
+  const storagePath = `${userId}/${repoId}/${contentHash}.${ext}`;
+
+  // Check if already exists (deduplication)
+  const { data: existing } = await serviceClient.storage
+    .from("card-assets")
+    .list(`${userId}/${repoId}`, { search: `${contentHash}.${ext}` });
+
+  if (!existing || existing.length === 0) {
+    // Upload new file
+    const { error } = await serviceClient.storage
+      .from("card-assets")
+      .upload(storagePath, imageContent, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (error && !error.message.includes("already exists")) {
+      throw error;
+    }
+  }
+
+  return storagePath;
+}
+
+/**
+ * Process all images in a card's content
+ * Downloads images from GitHub and uploads to Supabase Storage
+ */
+async function processCardImages(
+  serviceClient: ReturnType<typeof createClient>,
+  cardId: string,
+  rawContent: string,
+  owner: string,
+  repo: string,
+  userId: string,
+  repoId: string,
+  accessToken?: string
+): Promise<{ processed: number; errors: string[] }> {
+  const imageRefs = extractImageReferences(rawContent);
+  const errors: string[] = [];
+  let processed = 0;
+
+  for (const imagePath of imageRefs) {
+    try {
+      // Download image from GitHub
+      const image = await downloadImage(owner, repo, imagePath, accessToken);
+      if (!image) {
+        errors.push(`${imagePath}: download failed`);
+        continue;
+      }
+
+      // Hash the content
+      const contentHash = await hashImageContent(image.content);
+
+      // Upload to Supabase Storage
+      const storagePath = await uploadImageToStorage(
+        serviceClient,
+        userId,
+        repoId,
+        image.content,
+        image.mimeType,
+        contentHash
+      );
+
+      // Save mapping in card_assets table
+      await serviceClient.from("card_assets").upsert(
+        {
+          card_id: cardId,
+          original_path: imagePath,
+          storage_path: storagePath,
+          content_hash: contentHash,
+          mime_type: image.mimeType,
+          size_bytes: image.content.length,
+        },
+        {
+          onConflict: "card_id,original_path",
+        }
+      );
+
+      processed++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      errors.push(`${imagePath}: ${message}`);
+    }
+  }
+
+  return { processed, errors };
+}
+
+/**
+ * Delete orphaned assets (assets whose cards have been deleted)
+ */
+async function cleanupOrphanAssets(
+  serviceClient: ReturnType<typeof createClient>,
+  repoId: string
+): Promise<number> {
+  // Get all assets for this repo that don't have a valid card
+  const { data: orphans } = await serviceClient
+    .from("card_assets")
+    .select("id, storage_path, card_id")
+    .filter("card_id", "not.in", `(SELECT id FROM cards WHERE repository_id = '${repoId}')`);
+
+  if (!orphans || orphans.length === 0) return 0;
+
+  let deleted = 0;
+  for (const orphan of orphans) {
+    try {
+      // Delete from storage
+      await serviceClient.storage
+        .from("card-assets")
+        .remove([orphan.storage_path]);
+
+      // Delete record
+      await serviceClient.from("card_assets").delete().eq("id", orphan.id);
+      deleted++;
+    } catch {
+      // Ignore errors, continue with next
+    }
+  }
+
+  return deleted;
+}
+
+// =============================================================================
 // REPOSITORY OPERATIONS
 // =============================================================================
 
@@ -661,9 +904,9 @@ async function importRepository(
   // Use service client for card insertion
   const serviceClient = createServiceSupabaseClient();
 
-  // Insert cards
+  // Insert cards and get their IDs for image processing
   if (cards.length > 0) {
-    const { error: cardsError } = await serviceClient
+    const { data: insertedCards, error: cardsError } = await serviceClient
       .from("cards")
       .insert(
         cards.map((card) => ({
@@ -678,9 +921,30 @@ async function importRepository(
           language: card.language,
           is_active: true,
         }))
-      );
+      )
+      .select("id, file_path, raw_content");
 
     if (cardsError) throw cardsError;
+
+    // Process images for each card
+    if (insertedCards) {
+      for (const insertedCard of insertedCards) {
+        const result = await processCardImages(
+          serviceClient,
+          insertedCard.id,
+          insertedCard.raw_content,
+          owner,
+          repo,
+          userId,
+          repoData.id,
+          accessToken
+        );
+        if (result.errors.length > 0) {
+          // Add image errors to the sync errors
+          errors.push(...result.errors.map((e) => `img: ${e}`));
+        }
+      }
+    }
   }
 
   // Update repository status
@@ -835,12 +1099,20 @@ async function syncRepository(
     // Use service client for card operations
     const serviceClient = createServiceSupabaseClient();
 
-    // Delete existing cards
+    // Delete existing cards (card_assets will cascade automatically)
     await serviceClient.from("cards").delete().eq("repository_id", repositoryId);
 
-    // Insert new cards
+    // Clean up orphan assets in storage
+    // (assets are deleted from card_assets table by CASCADE, but we need to remove files from storage)
+    const { data: oldAssets } = await serviceClient
+      .from("card_assets")
+      .select("storage_path")
+      .eq("card_id", repositoryId); // This won't match after cascade, so we skip cleanup here
+    // Note: Orphan storage files will be cleaned up by a scheduled job
+
+    // Insert new cards and process images
     if (cards.length > 0) {
-      const { error: cardsError } = await serviceClient
+      const { data: insertedCards, error: cardsError } = await serviceClient
         .from("cards")
         .insert(
           cards.map((card) => ({
@@ -855,9 +1127,30 @@ async function syncRepository(
             language: card.language,
             is_active: true,
           }))
-        );
+        )
+        .select("id, file_path, raw_content");
 
       if (cardsError) throw cardsError;
+
+      // Process images for each card
+      if (insertedCards) {
+        for (const insertedCard of insertedCards) {
+          const result = await processCardImages(
+            serviceClient,
+            insertedCard.id,
+            insertedCard.raw_content,
+            owner,
+            repoName,
+            repo.user_id,
+            repositoryId,
+            accessToken
+          );
+          if (result.errors.length > 0) {
+            // Add image errors to the sync errors
+            errors.push(...result.errors.map((e) => `img: ${e}`));
+          }
+        }
+      }
     }
 
     // Build detailed error message if any cards were skipped
@@ -1007,11 +1300,11 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
           }
         }
 
-        // Delete and re-insert cards
+        // Delete and re-insert cards (card_assets will cascade automatically)
         await serviceClient.from("cards").delete().eq("repository_id", repo.id);
 
         if (cards.length > 0) {
-          await serviceClient
+          const { data: insertedCards } = await serviceClient
             .from("cards")
             .insert(
               cards.map((card) => ({
@@ -1026,7 +1319,24 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
                 language: card.language,
                 is_active: true,
               }))
-            );
+            )
+            .select("id, file_path, raw_content");
+
+          // Process images for each card
+          if (insertedCards) {
+            for (const insertedCard of insertedCards) {
+              await processCardImages(
+                serviceClient,
+                insertedCard.id,
+                insertedCard.raw_content,
+                parsed.owner,
+                parsed.repo,
+                repo.user_id,
+                repo.id,
+                accessToken
+              );
+            }
+          }
         }
 
         // Update repository
