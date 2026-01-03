@@ -1,6 +1,6 @@
 import { getSupabaseUrl, getSupabaseAnonKey } from './client';
 import { getAccessToken } from './auth';
-import type { Repository, Card, UserStats } from '@lumio/shared';
+import type { Repository, Card, UserStats, AddRepositoryOptions, TokenValidationResult } from '@lumio/shared';
 
 /**
  * Get the git-sync Edge Function URL
@@ -52,6 +52,8 @@ function mapRepository(dbRepo: Record<string, unknown>): Repository {
     name: dbRepo.name as string,
     description: dbRepo.description as string | undefined,
     isPrivate: dbRepo.is_private as boolean,
+    tokenStatus: (dbRepo.token_status as Repository['tokenStatus']) || 'not_required',
+    tokenErrorMessage: dbRepo.token_error_message as string | undefined,
     formatVersion: dbRepo.format_version as number,
     lastCommitSha: dbRepo.last_commit_sha as string | undefined,
     lastSyncedAt: dbRepo.last_synced_at as string | undefined,
@@ -66,13 +68,28 @@ function mapRepository(dbRepo: Record<string, unknown>): Repository {
 /**
  * Add a new repository from a GitHub URL
  * The repository will be validated and cards will be imported
- * @param url - GitHub repository URL (e.g., https://github.com/user/repo)
+ * @param options - Repository options including URL and optional private repo settings
  */
-export async function addRepository(url: string): Promise<Repository> {
+export async function addRepository(options: AddRepositoryOptions): Promise<Repository>;
+/**
+ * Add a new repository from a GitHub URL (legacy signature)
+ * @param url - GitHub repository URL (e.g., https://github.com/user/repo)
+ * @deprecated Use addRepository({ url, isPrivate, accessToken }) instead
+ */
+export async function addRepository(url: string): Promise<Repository>;
+export async function addRepository(urlOrOptions: string | AddRepositoryOptions): Promise<Repository> {
+  const options: AddRepositoryOptions = typeof urlOrOptions === 'string'
+    ? { url: urlOrOptions }
+    : urlOrOptions;
+
   const response = await callGitSync<{
     success: boolean;
     repository: Record<string, unknown>;
-  }>('add_repository', { url });
+  }>('add_repository', {
+    url: options.url,
+    isPrivate: options.isPrivate || false,
+    accessToken: options.accessToken,
+  });
 
   return mapRepository(response.repository);
 }
@@ -157,4 +174,50 @@ export async function getRepositoryCards(repositoryId: string): Promise<Card[]> 
   }>('get_cards', { repositoryId });
 
   return response.cards.map(mapCard);
+}
+
+// =============================================================================
+// PRIVATE REPOSITORY FUNCTIONS (Phase 9)
+// =============================================================================
+
+/**
+ * Validate a GitHub token for a repository URL without saving it
+ * Use this to verify a token before adding a private repository
+ * @param url - GitHub repository URL
+ * @param accessToken - GitHub Personal Access Token
+ */
+export async function validateGitHubToken(
+  url: string,
+  accessToken: string
+): Promise<TokenValidationResult> {
+  const response = await callGitSync<{
+    success: boolean;
+    valid: boolean;
+    repoName?: string;
+    error?: string;
+  }>('validate_token', { url, accessToken });
+
+  return {
+    valid: response.valid,
+    repoName: response.repoName,
+    error: response.error,
+  };
+}
+
+/**
+ * Update the access token for an existing private repository
+ * Use this when a token has been invalidated (expired/revoked)
+ * @param repositoryId - UUID of the repository
+ * @param accessToken - New GitHub Personal Access Token
+ */
+export async function updateRepositoryToken(
+  repositoryId: string,
+  accessToken: string
+): Promise<Repository> {
+  const response = await callGitSync<{
+    success: boolean;
+    repository: Record<string, unknown>;
+  }>('update_token', { repositoryId, accessToken });
+
+  return mapRepository(response.repository);
 }

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,12 +9,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/markdown";
 import type { Card } from "@lumio/shared";
+import { getCardAssets, transformCardContentImages } from "@lumio/core";
 
 interface CardPreviewDialogProps {
   card: Card | null;
   isOpen: boolean;
   onClose: () => void;
-  /** Optional repository URL for transforming relative image paths */
+  /** @deprecated No longer used - images are now fetched from Supabase Storage */
   repoUrl?: string;
 }
 
@@ -21,24 +23,56 @@ export function CardPreviewDialog({
   card,
   isOpen,
   onClose,
-  repoUrl,
 }: CardPreviewDialogProps) {
-  if (!card) return null;
+  const [transformedContent, setTransformedContent] = useState<string | null>(null);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
-  // Create image URL transformer if repoUrl is provided
-  const transformImageUrl = repoUrl
-    ? (src: string) => {
-        // If already absolute URL, return as-is
-        if (src.startsWith('http://') || src.startsWith('https://')) {
-          return src;
+  // Load and transform card content when card changes or dialog opens
+  useEffect(() => {
+    if (!card || !isOpen) {
+      setTransformedContent(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadAssets = async () => {
+      setIsLoadingAssets(true);
+      try {
+        const assets = await getCardAssets(card.id);
+        if (isCancelled) return;
+
+        if (assets.length === 0) {
+          // No assets to transform, use original content
+          setTransformedContent(card.content);
+        } else {
+          // Transform image URLs with signed URLs from Supabase Storage
+          const transformed = await transformCardContentImages(card.content, assets);
+          if (!isCancelled) {
+            setTransformedContent(transformed);
+          }
         }
-        // Parse GitHub URL and construct raw URL
-        const match = repoUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
-        if (!match) return src;
-        const cleanPath = src.replace(/^\/+/, '').replace(/^\.\.\/+/, '');
-        return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/main/${cleanPath}`;
+      } catch (err) {
+        console.error("Failed to load card assets:", err);
+        // Fallback to original content on error
+        if (!isCancelled) {
+          setTransformedContent(card.content);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingAssets(false);
+        }
       }
-    : undefined;
+    };
+
+    loadAssets();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [card, isOpen]);
+
+  if (!card) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -48,11 +82,16 @@ export function CardPreviewDialog({
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-4 px-4">
-          <MarkdownRenderer
-            content={card.content}
-            transformImageUrl={transformImageUrl}
-            className="pb-4"
-          />
+          {isLoadingAssets ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 rounded-full border-2 border-slate-300 border-t-transparent animate-spin" />
+            </div>
+          ) : (
+            <MarkdownRenderer
+              content={transformedContent || card.content}
+              className="pb-4"
+            />
+          )}
         </ScrollArea>
 
         <div className="flex-shrink-0 pt-4 border-t">

@@ -523,6 +523,245 @@
 
 ---
 
+## 9 - REPOSITORY PRIVATI GITHUB ✅
+
+### Obiettivi
+
+- Permettere agli utenti di aggiungere repository GitHub privati
+- Autenticazione tramite Personal Access Token (PAT) inserito manualmente dall'utente
+- Crittografia sicura del PAT server-side (AES-256-GCM)
+- Gestione token invalidi/scaduti con possibilità di aggiornamento
+- Fase 9A: Solo card testuali (immagini rimandate a fase successiva)
+
+### 9.1 Database - Migrazione ✅
+
+- [x] 9.1.1 Creare migrazione `add_repository_token_status.sql`:
+  - Aggiungere colonna `token_status` ENUM ('valid', 'invalid', 'not_required') DEFAULT 'not_required'
+  - Aggiungere colonna `token_error_message` TEXT NULL
+  - Aggiungere indice su `token_status` per query efficienti
+
+### 9.2 Edge Function git-sync - Autenticazione GitHub ✅
+
+- [x] 9.2.1 Aggiungere funzioni crittografia (copia da llm-proxy):
+  - `encryptToken(plainToken: string): Promise<string>`
+  - `decryptToken(encryptedToken: string): Promise<string>`
+- [x] 9.2.2 Creare `fetchGitHubAuthenticated(path, token?)` che:
+  - Usa header `Authorization: Bearer ${token}` se token presente
+  - Fallback a chiamata pubblica se token assente
+- [x] 9.2.3 Modificare `importRepository()`:
+  - Accettare parametri `isPrivate` e `accessToken`
+  - Se privato: validare token con chiamata a GitHub, criptare e salvare
+  - Impostare `token_status = 'valid'` se autenticazione OK
+- [x] 9.2.4 Modificare `syncRepository()` e `checkUpdates()`:
+  - Decriptare token se presente
+  - Usare `fetchGitHubAuthenticated()` per tutte le chiamate
+  - Gestire errori 401/403: impostare `token_status = 'invalid'`
+- [x] 9.2.5 Aggiungere action `update_token`:
+  - Input: `repositoryId`, `accessToken`
+  - Validare nuovo token con GitHub
+  - Criptare e aggiornare `encrypted_access_token`
+  - Reset `token_status = 'valid'`
+- [x] 9.2.6 Aggiungere action `validate_token`:
+  - Input: `url`, `accessToken`
+  - Verificare accesso al repo con il token fornito
+  - Ritornare `{ valid: boolean, repoName?: string, error?: string }`
+
+### 9.3 Shared Types ✅
+
+- [x] 9.3.1 Aggiungere tipo `TokenStatus = 'valid' | 'invalid' | 'not_required'`
+- [x] 9.3.2 Aggiornare tipo `Repository` con nuovi campi
+
+### 9.4 Core Package ✅
+
+- [x] 9.4.1 Aggiornare `addRepository()` per accettare `isPrivate` e `accessToken`
+- [x] 9.4.2 Aggiungere `updateRepositoryToken(repositoryId, accessToken)`
+- [x] 9.4.3 Aggiungere `validateGitHubToken(url, accessToken)`
+
+### 9.5 Frontend Web - Form Aggiungi Repository ✅
+
+- [x] 9.5.1 Modificare `RepositoriesPage.tsx`:
+  - Aggiungere switch/toggle "Repository privato"
+  - Aggiungere campo "Personal Access Token" (visibile solo se privato)
+  - Aggiungere link "Come creare un PAT" → docs GitHub
+  - Validazione: se privato, token obbligatorio
+- [x] 9.5.2 Aggiungere validazione token prima di submit:
+  - Chiamare `validate_token` per verificare accesso
+  - Mostrare errore se token non valido
+- [x] 9.5.3 Aggiornare chiamata `addRepository` con nuovi parametri
+
+### 9.6 Frontend Web - Lista Repository ✅
+
+- [x] 9.6.1 Modificare visualizzazione repository:
+  - Aggiungere icona lucchetto per repo privati
+  - Mostrare badge "Token invalido" se `token_status = 'invalid'`
+  - Mostrare `token_error_message` sotto il nome
+- [x] 9.6.2 Creare dialog "Aggiorna Token":
+  - Campo per nuovo PAT
+  - Validazione prima di salvare
+  - Chiamata a `update_token`
+- [x] 9.6.3 Aggiungere bottone "Aggiorna token" per repo con token invalido
+
+### 9.7 Frontend Mobile - Adattamenti ✅
+
+- [x] 9.7.1 Aggiornare `RepositoriesPage.tsx` mobile:
+  - Mostrare icona lucchetto per repo privati
+  - Mostrare badge "Token invalido"
+  - Link a versione web per gestione token (footer aggiornato)
+
+### 9.8 Sicurezza ✅
+
+- [x] 9.8.1 Verificare che `encrypted_access_token` non sia mai esposto al client (sanitizeRepository)
+- [x] 9.8.2 Token accessibile solo via service role (Edge Function usa service role)
+- [x] 9.8.3 Logging: token mai loggato in chiaro
+- [x] 9.8.4 Scope minimo richiesto per PAT: `repo` (read access)
+
+### 9.9 Testing e Documentazione ✅
+
+- [x] 9.9.1 TypeScript compila senza errori
+- [x] 9.9.2 USER-FLOWS.md già aggiornato con flusso repo privato
+- [x] 9.9.3 TECHNICAL-ARCHITECTURE.md già aggiornato
+- [x] 9.9.4 DATA-MODEL.md già aggiornato con nuove colonne
+
+### Criteri di Successo Fase 9
+
+- L'utente può aggiungere un repository GitHub privato inserendo un PAT
+- Il PAT viene criptato e salvato in modo sicuro
+- Il sync funziona correttamente per repo privati (card testuali)
+- Se il token scade/viene revocato, il repo viene marcato come "token invalido"
+- L'utente può aggiornare il token per un repo esistente
+- Le immagini nei repo privati vengono ignorate (placeholder o nascoste)
+- La lista repository mostra chiaramente quali sono privati
+
+### Note Fase 9
+
+- **Immagini**: Le immagini nei repo privati NON sono supportate in questa fase
+  - Il componente `MarkdownImage` deve gestire gracefully il fallimento per repo privati
+  - Considerare di nascondere le immagini o mostrare placeholder "Immagine non disponibile"
+- **Scope PAT**: Richiedere solo `repo` scope (accesso lettura a repo privati)
+- **Rate limiting**: GitHub ha limiti più alti per chiamate autenticate (5000/ora vs 60/ora)
+- **Crittografia**: Usare stessa `ENCRYPTION_KEY` delle API keys LLM
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/XXX_add_token_status.sql` | NUOVO |
+| `supabase/functions/git-sync/index.ts` | MODIFICA - Auth GitHub |
+| `packages/shared/src/types/index.ts` | MODIFICA - TokenStatus |
+| `packages/core/src/supabase/repositories.ts` | MODIFICA - Nuove funzioni |
+| `apps/web/src/pages/RepositoriesPage.tsx` | MODIFICA - UI repo privati |
+| `apps/web/src/components/AddRepositoryForm.tsx` | MODIFICA - Toggle privato + PAT |
+| `apps/web/src/components/UpdateTokenDialog.tsx` | NUOVO |
+| `apps/mobile/src/pages/RepositoriesPage.tsx` | MODIFICA - Icona privato |
+| `docs/USER-FLOWS.md` | MODIFICA |
+| `docs/TECHNICAL-ARCHITECTURE.md` | MODIFICA |
+
+---
+
+## 9B - IMMAGINI UNIFICATE (PUBBLICI E PRIVATI) ✅
+
+> **Prerequisito**: Fase 9A completata
+
+### Obiettivi Fase 9B ✅
+
+- Unificare gestione immagini per repository pubblici e privati
+- Scaricare tutte le immagini durante il sync (non solo privati)
+- Salvare immagini in Supabase Storage con accesso RLS
+- Servire immagini tramite URL firmati
+
+### Implementazione Completata ✅
+
+**Soluzione: Download in Supabase Storage**
+
+1. Durante il sync, identificare tutte le immagini referenziate nelle card (regex markdown)
+2. Scaricare le immagini usando PAT per privati o raw.githubusercontent.com per pubblici
+3. Calcolare hash SHA-256 del contenuto per deduplicazione
+4. Salvare in Supabase Storage bucket `card-assets/{user_id}/{repo_id}/{hash}.{ext}`
+5. Salvare mapping in tabella `card_assets` (card_id, original_path, storage_path, content_hash, mime_type)
+6. Frontend: fetch assets, generare signed URLs, sostituire path nel markdown
+
+### 9B.1 Database - Migrazione ✅
+
+- [x] Creare tabella `card_assets` con:
+  - `id`, `card_id` (FK con CASCADE DELETE), `original_path`, `storage_path`
+  - `content_hash` (SHA-256 per deduplicazione), `mime_type`, `size_bytes`
+  - Indici su `card_id`, `content_hash`, `storage_path`
+- [x] RLS policies per `card_assets` (utenti vedono solo propri assets)
+- [x] Creare bucket Storage `card-assets` (privato, 10MB max, solo immagini)
+- [x] RLS policies per Storage (accesso solo a propria cartella user_id/)
+
+### 9B.2 Edge Function git-sync ✅
+
+- [x] Aggiungere funzioni per gestione immagini:
+  - `extractImageReferences()`: estrae path immagini dal markdown
+  - `downloadImage()`: scarica da GitHub (con o senza PAT)
+  - `hashImageContent()`: calcola SHA-256
+  - `uploadImageToStorage()`: upload con deduplicazione
+  - `processCardImages()`: processa tutte le immagini di una card
+- [x] Modificare `importRepository()` per processare immagini dopo insert cards
+- [x] Modificare `syncRepository()` per processare immagini dopo insert cards
+- [x] Modificare `checkUpdates()` per processare immagini dopo insert cards
+
+### 9B.3 Shared Types ✅
+
+- [x] Aggiungere tipo `CardAsset` in `@lumio/shared`
+
+### 9B.4 Core Package ✅
+
+- [x] Creare `packages/core/src/supabase/assets.ts` con:
+  - `getCardAssets()`: fetch assets di una card
+  - `getCardAssetsBatch()`: fetch assets di più cards (batch)
+  - `getAssetSignedUrl()`: genera signed URL per un asset
+  - `getAssetSignedUrls()`: genera signed URLs (batch)
+  - `transformCardContentImages()`: sostituisce path nel markdown con signed URLs
+
+### 9B.5 Frontend Web ✅
+
+- [x] Aggiornare `CardPreviewDialog.tsx`:
+  - Fetch assets quando dialog si apre
+  - Trasformare contenuto con signed URLs
+  - Mostrare loading spinner durante fetch
+  - Fallback a contenuto originale su errore
+- [x] Rimuovere logica `repoUrl` (non più necessaria)
+
+### 9B.6 Frontend Mobile ✅
+
+- [x] Aggiornare `CardPreviewDialog.tsx` mobile (stessa logica del web)
+- [x] Rimuovere logica `repoUrl` (non più necessaria)
+
+### Criteri di Successo Fase 9B ✅
+
+- Le immagini funzionano sia per repo pubblici che privati
+- Le immagini sono deduplicate tramite content hash
+- Gli asset vengono eliminati automaticamente (CASCADE) quando le card vengono eliminate
+- I signed URLs hanno validità di 1 ora
+- Il fallback funziona se gli assets non sono disponibili
+
+### Note Fase 9B
+
+- **Unificazione**: Stesso comportamento per repo pubblici e privati (più semplice da mantenere)
+- **Deduplicazione**: Immagini identiche in card diverse usano lo stesso file
+- **Cascade delete**: Gli asset vengono eliminati automaticamente con la card
+- **Signed URLs**: Validità 1 ora, rigenerati ad ogni apertura della card
+- **Formati supportati**: PNG, JPG, JPEG, GIF, SVG, WebP
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/20260103000002_add_card_assets.sql` | NUOVO |
+| `supabase/functions/git-sync/index.ts` | MODIFICA - Image processing |
+| `packages/shared/src/types/index.ts` | MODIFICA - CardAsset type |
+| `packages/core/src/supabase/assets.ts` | NUOVO |
+| `packages/core/src/index.ts` | MODIFICA - Export assets |
+| `apps/web/src/components/CardPreviewDialog.tsx` | MODIFICA - Use signed URLs |
+| `apps/web/src/pages/StudyPage.tsx` | MODIFICA - Remove repoUrl |
+| `apps/web/src/pages/CardsPage.tsx` | MODIFICA - Remove repoUrl |
+| `apps/mobile/src/components/CardPreviewDialog.tsx` | MODIFICA - Use signed URLs |
+| `apps/mobile/src/pages/StudyPage.tsx` | MODIFICA - Remove repoUrl |
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT

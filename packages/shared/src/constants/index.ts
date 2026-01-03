@@ -1,6 +1,5 @@
 // App metadata
 export const APP_NAME = 'Lumio';
-export const APP_DESCRIPTION = 'AI-powered flashcard study platform';
 
 // SM-2 Algorithm defaults
 export const SM2_DEFAULTS = {

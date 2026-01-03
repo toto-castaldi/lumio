@@ -160,7 +160,6 @@ export function CardsPage() {
         card={selectedCard}
         isOpen={!!selectedCard}
         onClose={() => setSelectedCard(null)}
-        repoUrl={repository?.url}
       />
     </div>
   );

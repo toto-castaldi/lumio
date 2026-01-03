@@ -10,7 +10,6 @@ import {
   getDefaultPrompt,
   saveModelPreferences,
   validateAnswer,
-  getUserRepositories,
   type Card,
   type LLMProvider,
   type QuizQuestion,
@@ -370,8 +369,6 @@ export function StudyPage() {
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Repository URL map for image transformation
-  const [repoUrlMap, setRepoUrlMap] = useState<Record<string, string>>({});
 
   // Card preview dialog
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
@@ -383,19 +380,11 @@ export function StudyPage() {
 
   const loadInitialData = async () => {
     try {
-      const [modelsResponse, cards, preferences, repositories] = await Promise.all([
+      const [modelsResponse, cards, preferences] = await Promise.all([
         getAvailableModels(),
         getStudyCards(),
         getStudyPreferences(),
-        getUserRepositories(),
       ]);
-
-      // Build repository URL map for image transformation
-      const urlMap: Record<string, string> = {};
-      for (const repo of repositories) {
-        urlMap[repo.id] = repo.url;
-      }
-      setRepoUrlMap(urlMap);
 
       setAvailableModels(modelsResponse);
       setSystemPrompt(preferences.systemPrompt);
@@ -716,7 +705,6 @@ export function StudyPage() {
           card={session?.currentCard || null}
           isOpen={isCardPreviewOpen}
           onClose={() => setIsCardPreviewOpen(false)}
-          repoUrl={session?.currentCard ? repoUrlMap[session.currentCard.repositoryId] : undefined}
         />
       </div>
     </div>

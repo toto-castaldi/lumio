@@ -4,6 +4,9 @@ export type LLMProvider = 'openai' | 'anthropic';
 // Sync status for repositories
 export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'error';
 
+// Token status for private repositories (Phase 9)
+export type TokenStatus = 'valid' | 'invalid' | 'not_required';
+
 // Platform types
 export type Platform = 'web' | 'mobile';
 
@@ -55,6 +58,8 @@ export interface Repository {
   name: string;
   description?: string;
   isPrivate: boolean;
+  tokenStatus: TokenStatus;  // Phase 9: validity of access token
+  tokenErrorMessage?: string;  // Phase 9: error message if token is invalid
   formatVersion: number;
   lastCommitSha?: string;
   lastSyncedAt?: string;
@@ -82,6 +87,19 @@ export interface Card {
   updatedAt: string;
 }
 
+// Card asset (stored in public.card_assets table)
+// Maps original image paths in markdown to Supabase Storage paths
+export interface CardAsset {
+  id: string;
+  cardId: string;
+  originalPath: string;   // Original path in markdown (e.g., /assets/img/diagram.png)
+  storagePath: string;    // Path in Supabase Storage (e.g., user_id/repo_id/hash.png)
+  contentHash: string;    // SHA-256 of image content for deduplication
+  mimeType: string;       // e.g., image/png, image/jpeg
+  sizeBytes?: number;     // File size in bytes
+  createdAt: string;
+}
+
 // Card frontmatter from markdown parsing
 export interface CardFrontmatter {
   title: string;
@@ -100,6 +118,24 @@ export interface DeckFrontmatter {
 export interface UserStats {
   repositoryCount: number;
   cardCount: number;
+}
+
+// =============================================================================
+// REPOSITORY TYPES (Phase 9)
+// =============================================================================
+
+// Options for adding a repository
+export interface AddRepositoryOptions {
+  url: string;
+  isPrivate?: boolean;
+  accessToken?: string;  // Required if isPrivate is true
+}
+
+// Response from token validation
+export interface TokenValidationResult {
+  valid: boolean;
+  repoName?: string;
+  error?: string;
 }
 
 // =============================================================================

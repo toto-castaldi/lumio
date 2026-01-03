@@ -42,19 +42,21 @@ Questo documento definisce lo schema del database PostgreSQL su Supabase per Lum
                      │    │     cards       │                │
                      │    ├─────────────────┤                │
                      │    │ id (PK)         │◄───────────────┘
-                     │    │ repository_id(FK)
-                     │    │ file_path       │
-                     │    │ title           │
-                     │    │ content         │
-                     │    │ tags            │
-                     │    │ difficulty      │
-                     │    │ language        │
-                     │    │ content_hash    │
-                     │    │ created_at      │
-                     │    │ updated_at      │
-                     │    └────────┬────────┘
-                     │             │
-                     │             │
+                     │    │ repository_id(FK)                │
+                     │    │ file_path       │                │
+                     │    │ title           │                │
+                     │    │ content         │    ┌───────────────────┐
+                     │    │ tags            │    │   card_assets     │
+                     │    │ difficulty      │    ├───────────────────┤
+                     │    │ language        │───►│ id (PK)           │
+                     │    │ content_hash    │    │ card_id (FK)      │
+                     │    │ created_at      │    │ original_path     │
+                     │    │ updated_at      │    │ storage_path      │
+                     │    └────────┬────────┘    │ content_hash      │
+                     │             │             │ mime_type         │
+                     │             │             │ size_bytes        │
+                     │             │             │ created_at        │
+                     │             │             └───────────────────┘
 ┌────────────────────┼─────────────┼────────────────────────────────────┐
 │                    │             │                                    │
 │    ┌───────────────▼─────────────▼───────────┐                       │
@@ -181,6 +183,9 @@ CREATE TYPE llm_provider AS ENUM ('openai', 'anthropic');
 -- Stato sync repository
 CREATE TYPE sync_status AS ENUM ('pending', 'syncing', 'synced', 'error');
 
+-- Stato token repository privato (Fase 9)
+CREATE TYPE token_status AS ENUM ('valid', 'invalid', 'not_required');
+
 -- Piattaforma client
 CREATE TYPE platform AS ENUM ('web', 'mobile');
 
@@ -257,7 +262,9 @@ CREATE TABLE public.repositories (
     name TEXT NOT NULL,  -- Estratto da URL o README
     description TEXT,
     is_private BOOLEAN DEFAULT FALSE,
-    encrypted_access_token TEXT,  -- PAT criptato, solo per repo privati
+    encrypted_access_token TEXT,  -- PAT criptato con AES-256-GCM, solo per repo privati
+    token_status token_status DEFAULT 'not_required',  -- Fase 9: stato validità token
+    token_error_message TEXT,  -- Fase 9: messaggio errore se token invalido
     format_version INTEGER NOT NULL DEFAULT 1,
     last_commit_sha TEXT,
     last_synced_at TIMESTAMPTZ,
@@ -266,13 +273,14 @@ CREATE TABLE public.repositories (
     card_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     UNIQUE(user_id, url)
 );
 
 -- Indici
 CREATE INDEX idx_repositories_user_id ON repositories(user_id);
 CREATE INDEX idx_repositories_sync_status ON repositories(sync_status);
+CREATE INDEX idx_repositories_token_status ON repositories(token_status);  -- Fase 9
 
 -- Trigger
 CREATE TRIGGER set_repositories_updated_at
@@ -317,7 +325,35 @@ CREATE TRIGGER set_cards_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 4.5 user_cards
+### 4.5 card_assets
+
+Asset (immagini) scaricati dai repository e salvati in Supabase Storage.
+
+```sql
+CREATE TABLE public.card_assets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    original_path TEXT NOT NULL,        -- Path originale nel markdown (es. /assets/img/diagram.png)
+    storage_path TEXT NOT NULL,         -- Path in Supabase Storage (es. user_id/repo_id/hash.png)
+    content_hash TEXT NOT NULL,         -- SHA-256 del contenuto per deduplicazione
+    mime_type TEXT NOT NULL,            -- es. image/png, image/jpeg
+    size_bytes INTEGER,                 -- Dimensione file in bytes
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(card_id, original_path)      -- Una card non può avere due mapping per lo stesso path
+);
+
+-- Indici
+CREATE INDEX idx_card_assets_card_id ON card_assets(card_id);
+CREATE INDEX idx_card_assets_content_hash ON card_assets(content_hash);
+CREATE INDEX idx_card_assets_storage_path ON card_assets(storage_path);
+```
+
+> **Nota Fase 9B:** Gli asset vengono scaricati durante il sync e salvati in Supabase Storage.
+> Il `content_hash` permette la deduplicazione: immagini identiche in card diverse usano lo stesso file.
+> Il CASCADE DELETE elimina automaticamente gli asset quando la card viene eliminata.
+
+### 4.6 user_cards
 
 Stato di studio di ogni card per ogni utente (SM-2).
 
@@ -677,6 +713,7 @@ ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE study_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_study_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE card_assets ENABLE ROW LEVEL SECURITY;
 -- public_decks non ha RLS (è pubblico)
 ```
 
@@ -725,6 +762,26 @@ CREATE POLICY "Users can view cards from own repositories"
 -- Solo il sistema può inserire/modificare card (via service role)
 CREATE POLICY "Service role can manage cards"
     ON cards FOR ALL
+    USING (auth.jwt() ->> 'role' = 'service_role');
+```
+
+#### card_assets
+
+```sql
+-- Gli utenti possono vedere gli asset delle proprie card
+CREATE POLICY "Users can view assets of own cards"
+    ON card_assets FOR SELECT
+    USING (
+        card_id IN (
+            SELECT c.id FROM cards c
+            JOIN repositories r ON c.repository_id = r.id
+            WHERE r.user_id = auth.uid()
+        )
+    );
+
+-- Solo il sistema può gestire gli asset (via service role)
+CREATE POLICY "Service role can manage card_assets"
+    ON card_assets FOR ALL
     USING (auth.jwt() ->> 'role' = 'service_role');
 ```
 
@@ -858,9 +915,13 @@ ORDER BY priority, uc.mastery_score NULLS FIRST;
 | user_api_keys | user_id | BTREE | Filter by user |
 | repositories | user_id | BTREE | Filter by user |
 | repositories | sync_status | BTREE | Batch sync jobs |
+| repositories | token_status | BTREE | Filter by token validity (Fase 9) |
 | cards | repository_id | BTREE | Filter by repo |
 | cards | tags | GIN | Filter by tags |
 | cards | is_active | BTREE | Filter active cards |
+| card_assets | card_id | BTREE | Filter by card |
+| card_assets | content_hash | BTREE | Deduplication lookup |
+| card_assets | storage_path | BTREE | Storage path lookup |
 | user_cards | user_id | BTREE | Filter by user |
 | user_cards | card_id | BTREE | Join with cards |
 | user_cards | sm2_next_review | BTREE | Due cards query |
