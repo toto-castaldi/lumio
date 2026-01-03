@@ -103,7 +103,10 @@ export function DashboardPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 px-4 py-3 bg-white/80 backdrop-blur-lg border-b border-slate-100">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-800">{APP_NAME}</h1>
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Lumio" className="h-8 w-8" />
+            <h1 className="text-xl font-bold text-slate-800">{APP_NAME}</h1>
+          </div>
           <div className="flex items-center gap-2">
             <Avatar className="h-9 w-9 border-2 border-slate-100">
               <AvatarImage src={user?.avatarUrl} alt={user?.displayName} />

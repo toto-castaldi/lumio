@@ -50,7 +50,10 @@ export function DashboardPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+          <div className="flex items-center gap-3">
+            <img src="/logo.svg" alt="Lumio" className="h-10 w-10" />
+            <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">

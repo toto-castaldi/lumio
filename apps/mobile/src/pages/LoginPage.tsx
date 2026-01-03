@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle, APP_NAME, getVersionString } from '@lumio/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Sparkles } from 'lucide-react';
 
 export function LoginPage() {
   const { state } = useAuth();
@@ -28,9 +27,7 @@ export function LoginPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-white">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Sparkles className="w-8 h-8 text-primary" />
-          </div>
+          <img src="/logo.svg" alt="Lumio" className="w-16 h-16 mx-auto mb-4 animate-pulse" />
           <p className="text-slate-500 font-medium">Caricamento...</p>
         </div>
       </div>
@@ -43,11 +40,8 @@ export function LoginPage() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Logo/Brand */}
         <div className="text-center mb-12">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary/30">
-            <Sparkles className="w-10 h-10 text-white" />
-          </div>
+          <img src="/logo.svg" alt="Lumio" className="w-20 h-20 mx-auto mb-6" />
           <h1 className="text-3xl font-bold text-slate-800 mb-2">{APP_NAME}</h1>
-          
         </div>
 
         {/* Login Button */}

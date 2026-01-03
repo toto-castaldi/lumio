@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithGoogle, APP_NAME } from '@lumio/core';
+import { signInWithGoogle, APP_NAME, getVersionString } from '@lumio/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,16 +30,22 @@ export function LoginPage() {
 
   if (state === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Caricamento...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+        <div className="text-center">
+          <img src="/logo.svg" alt="Lumio" className="h-16 w-16 mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Caricamento...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-white">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src="/logo.svg" alt="Lumio" className="h-20 w-20" />
+          </div>
           <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -75,6 +81,7 @@ export function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      <p className="mt-6 text-xs text-muted-foreground">{getVersionString()}</p>
     </div>
   );
 }
