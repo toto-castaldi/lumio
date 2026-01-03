@@ -80,6 +80,8 @@ lumio/
 │   │   │   ├── lib/            # Utilities
 │   │   │   └── main.tsx
 │   │   ├── public/
+│   │   │   ├── favicon.svg     # Favicon browser
+│   │   │   └── logo.svg        # Logo per UI
 │   │   ├── index.html
 │   │   ├── vite.config.ts
 │   │   ├── tailwind.config.ts
@@ -94,7 +96,11 @@ lumio/
 │       │   ├── styles/         # CSS styles
 │       │   └── main.tsx
 │       ├── public/
-│       │   └── manifest.json   # PWA manifest
+│       │   ├── favicon.svg     # Favicon browser
+│       │   ├── logo.svg        # Logo per UI
+│       │   ├── icon-192.png    # PWA icon 192x192
+│       │   ├── icon-512.png    # PWA icon 512x512
+│       │   └── manifest.json   # PWA manifest (generato da vite-plugin-pwa)
 │       ├── index.html
 │       ├── vite.config.ts
 │       ├── tailwind.config.ts
@@ -930,6 +936,28 @@ La PWA è deployata su DigitalOcean come sito statico:
 - Aggiornamenti automatici (no download)
 - Stesso codebase web, manutenzione semplificata
 - Funziona su qualsiasi dispositivo con browser moderno
+
+### 8.4 Logo e Assets
+
+Il logo Lumio è una lampadina stilizzata con raggi, rappresenta l'illuminazione della conoscenza.
+
+**File sorgente:** `lumio.svg` nella root del progetto
+
+| File | Ubicazione | Utilizzo |
+|------|------------|----------|
+| `favicon.svg` | `apps/web/public/`, `apps/mobile/public/` | Favicon nel browser tab |
+| `logo.svg` | `apps/web/public/`, `apps/mobile/public/` | Logo nell'UI (LoginPage, Dashboard header) |
+| `icon-192.png` | `apps/mobile/public/` | Icona PWA 192x192 (richiesta per installazione) |
+| `icon-512.png` | `apps/mobile/public/` | Icona PWA 512x512 (richiesta per installazione) |
+
+**Generazione icone PWA:**
+```bash
+# Da lumio.svg genera le icone PNG per PWA
+npx sharp-cli -i lumio.svg -o apps/mobile/public/icon-192.png resize 192 192
+npx sharp-cli -i lumio.svg -o apps/mobile/public/icon-512.png resize 512 512
+```
+
+> **Nota:** Le icone PNG sono necessarie per il prompt di installazione PWA. Senza di esse, il browser non propone l'installazione dell'app.
 
 ---
 

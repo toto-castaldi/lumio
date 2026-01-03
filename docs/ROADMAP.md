@@ -533,7 +533,12 @@
 - [ ] le card come PDF !!!! Quando vengono importate vengono trasformate, vengono passate a AI come file e quando si aprono si vedono bene (compreso immagini)
 - [ ] le notifiche solo su PWA (no mail). Aggiorna documenti
 - [ ] termini di servizio
-- [x] logo :)
+- [x] Logo Lumio (lampadina stilizzata con raggi)
+  - File sorgente: `lumio.svg` nella root del progetto
+  - Favicon e logo per web: `apps/web/public/favicon.svg`, `apps/web/public/logo.svg`
+  - Favicon e logo per mobile: `apps/mobile/public/favicon.svg`, `apps/mobile/public/logo.svg`
+  - Icone PWA: `apps/mobile/public/icon-192.png`, `apps/mobile/public/icon-512.png`
+  - Integrato in: LoginPage, DashboardPage (header) per web e mobile
 - [ ] Il warning sulla dimensione del chunk (785 KB) è normale per un'app React con tutte le dipendenze - può essere ottimizzato in futuro con code-splitting ma non è bloccante.
 - [ ] multilinga ?
 - [ ] monitoraggio utente aggiornamento DECK
