@@ -319,20 +319,71 @@ Ogni environment ha:
 ### 4.2 Edge Functions
 
 #### git-sync
-Sincronizza i repository Git con il database locale.
+Sincronizza i repository Git con il database locale. Supporta sia repository pubblici che privati (Fase 9).
 
 ```
 Trigger: n8n (ogni ora, configurabile) + manuale da UI
-Input: repository_id
+Input: repository_id, (opzionale) accessToken per repo privati
 Flow:
-  1. Fetch repository metadata (ultimo commit)
-  2. Se cambiato, clone/pull repository
-  3. Parse tutti i file .md
-  4. Validate contro Card Format Spec
-  5. Upsert cards nel database
-  6. Download immagini in Storage
-  7. Update repository.last_synced_at
+  1. Verifica se repository è privato → decripta PAT
+  2. Fetch repository metadata (ultimo commit) con auth se privato
+  3. Se cambiato, clone/pull repository
+  4. Parse tutti i file .md
+  5. Validate contro Card Format Spec
+  6. Upsert cards nel database
+  7. Download immagini in Storage (solo repo pubblici in Fase 9A)
+  8. Update repository.last_synced_at
+  9. Se errore auth (401/403) → set token_status = 'invalid'
 ```
+
+**Azioni disponibili (Fase 9):**
+
+| Action | Descrizione |
+|--------|-------------|
+| `import_repository` | Importa un nuovo repository (pubblico o privato) |
+| `sync_repository` | Sincronizza un repository esistente |
+| `check_updates` | Verifica aggiornamenti per tutti i repository |
+| `validate_token` | Valida un PAT GitHub per un URL (senza salvare) |
+| `update_token` | Aggiorna il PAT per un repository esistente |
+
+**Autenticazione Repository Privati (Fase 9):**
+
+Il PAT (Personal Access Token) è criptato con la stessa logica delle API keys LLM:
+- **Algoritmo:** AES-256-GCM
+- **Chiave:** `ENCRYPTION_KEY` (stessa delle API keys)
+- **Storage:** `repositories.encrypted_access_token`
+- **Status:** `repositories.token_status` (valid/invalid/not_required)
+
+```
+Flusso aggiunta repo privato:
+┌─────────┐     ┌─────────────────┐     ┌─────────────┐     ┌────────────┐
+│ Client  │────▶│   git-sync      │────▶│  GitHub API │────▶│  Valida    │
+│         │     │   Edge Function │     │             │     │  accesso   │
+└─────────┘     └────────┬────────┘     └─────────────┘     └────────────┘
+                         │
+                         │ Se valido:
+                         │ 1. Encrypt(PAT) con ENCRYPTION_KEY
+                         │ 2. Salva in repositories.encrypted_access_token
+                         │ 3. Set token_status = 'valid'
+                         │ 4. Avvia sync
+                         ▼
+                ┌─────────────────┐
+                │   PostgreSQL    │
+                │   (repo + cards)│
+                └─────────────────┘
+```
+
+**Gestione Token Invalido:**
+
+Durante il sync, se GitHub ritorna 401 (Unauthorized) o 403 (Forbidden):
+1. Set `token_status = 'invalid'`
+2. Set `token_error_message` con dettagli errore
+3. Il sync fallisce, `sync_status = 'error'`
+4. Frontend mostra badge "Token invalido" con possibilità di aggiornare
+
+**Immagini nei Repo Privati (Fase 9A):**
+
+> ⚠️ **Limitazione Fase 9A:** Le immagini nei repository privati NON sono supportate. Il componente `MarkdownImage` mostrerà un placeholder o nasconderà le immagini per i repo privati. Il supporto completo alle immagini (download in Supabase Storage) è pianificato per la Fase 9B.
 
 #### llm-proxy
 Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.
@@ -1049,10 +1100,29 @@ openssl rand -base64 32
 # Esempio output: K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=
 ```
 
-### 10.2 Repository Access
+### 10.2 Repository Access (Fase 9)
 
-- Public repos: no auth needed
-- Private repos: PAT stored encrypted, scoped to read-only
+**Repository Pubblici:**
+- Nessuna autenticazione richiesta
+- Accesso via GitHub API pubblica (rate limit: 60 req/ora)
+
+**Repository Privati:**
+- Autenticazione via Personal Access Token (PAT)
+- PAT criptato con AES-256-GCM (stessa `ENCRYPTION_KEY` delle API keys)
+- Scope richiesto: `repo` (accesso lettura a repository privati)
+- Rate limit autenticato: 5000 req/ora
+
+**Flusso sicuro PAT:**
+1. Utente genera PAT su GitHub con scope `repo`
+2. Utente inserisce PAT nel form "Aggiungi Repository"
+3. Edge Function `git-sync` valida il PAT con GitHub API
+4. Se valido, cripta con `ENCRYPTION_KEY` e salva in `encrypted_access_token`
+5. PAT in chiaro mai persistito, mai loggato, mai inviato al client
+
+**Gestione scadenza/revoca:**
+- Se sync fallisce con 401/403 → `token_status = 'invalid'`
+- Frontend mostra avviso e permette aggiornamento token
+- Utente può inserire nuovo PAT senza rimuovere il repository
 
 ### 10.3 Data Isolation
 

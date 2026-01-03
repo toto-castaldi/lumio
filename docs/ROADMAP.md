@@ -523,6 +523,181 @@
 
 ---
 
+## 9 - REPOSITORY PRIVATI GITHUB
+
+### Obiettivi
+
+- Permettere agli utenti di aggiungere repository GitHub privati
+- Autenticazione tramite Personal Access Token (PAT) inserito manualmente dall'utente
+- Crittografia sicura del PAT server-side (AES-256-GCM)
+- Gestione token invalidi/scaduti con possibilità di aggiornamento
+- Fase 9A: Solo card testuali (immagini rimandate a fase successiva)
+
+### 9.1 Database - Migrazione
+
+- [ ] 9.1.1 Creare migrazione `add_repository_token_status.sql`:
+  - Aggiungere colonna `token_status` ENUM ('valid', 'invalid', 'not_required') DEFAULT 'not_required'
+  - Aggiungere colonna `token_error_message` TEXT NULL
+  - Aggiungere indice su `token_status` per query efficienti
+
+### 9.2 Edge Function git-sync - Autenticazione GitHub
+
+- [ ] 9.2.1 Aggiungere funzioni crittografia (copia da llm-proxy):
+  - `encryptToken(plainToken: string): Promise<string>`
+  - `decryptToken(encryptedToken: string): Promise<string>`
+- [ ] 9.2.2 Creare `fetchGitHubAuthenticated(path, token?)` che:
+  - Usa header `Authorization: Bearer ${token}` se token presente
+  - Fallback a chiamata pubblica se token assente
+- [ ] 9.2.3 Modificare `importRepository()`:
+  - Accettare parametri `isPrivate` e `accessToken`
+  - Se privato: validare token con chiamata a GitHub, criptare e salvare
+  - Impostare `token_status = 'valid'` se autenticazione OK
+- [ ] 9.2.4 Modificare `syncRepository()` e `checkUpdates()`:
+  - Decriptare token se presente
+  - Usare `fetchGitHubAuthenticated()` per tutte le chiamate
+  - Gestire errori 401/403: impostare `token_status = 'invalid'`
+- [ ] 9.2.5 Aggiungere action `update_token`:
+  - Input: `repositoryId`, `accessToken`
+  - Validare nuovo token con GitHub
+  - Criptare e aggiornare `encrypted_access_token`
+  - Reset `token_status = 'valid'`
+- [ ] 9.2.6 Aggiungere action `validate_token`:
+  - Input: `url`, `accessToken`
+  - Verificare accesso al repo con il token fornito
+  - Ritornare `{ valid: boolean, repoName?: string, error?: string }`
+
+### 9.3 Shared Types
+
+- [ ] 9.3.1 Aggiungere tipo `TokenStatus = 'valid' | 'invalid' | 'not_required'`
+- [ ] 9.3.2 Aggiornare tipo `Repository` con nuovi campi
+
+### 9.4 Core Package
+
+- [ ] 9.4.1 Aggiornare `addRepository()` per accettare `isPrivate` e `accessToken`
+- [ ] 9.4.2 Aggiungere `updateRepositoryToken(repositoryId, accessToken)`
+- [ ] 9.4.3 Aggiungere `validateGitHubToken(url, accessToken)`
+
+### 9.5 Frontend Web - Form Aggiungi Repository
+
+- [ ] 9.5.1 Modificare `AddRepositoryForm.tsx` (o componente equivalente):
+  - Aggiungere switch/toggle "Repository privato"
+  - Aggiungere campo "Personal Access Token" (visibile solo se privato)
+  - Aggiungere link "Come creare un PAT" → docs GitHub
+  - Validazione: se privato, token obbligatorio
+- [ ] 9.5.2 Aggiungere validazione token prima di submit:
+  - Chiamare `validate_token` per verificare accesso
+  - Mostrare errore se token non valido
+- [ ] 9.5.3 Aggiornare chiamata `addRepository` con nuovi parametri
+
+### 9.6 Frontend Web - Lista Repository
+
+- [ ] 9.6.1 Modificare visualizzazione repository:
+  - Aggiungere icona lucchetto per repo privati
+  - Mostrare badge "Token invalido" se `token_status = 'invalid'`
+  - Mostrare `token_error_message` in tooltip
+- [ ] 9.6.2 Creare dialog "Aggiorna Token":
+  - Campo per nuovo PAT
+  - Validazione prima di salvare
+  - Chiamata a `update_token`
+- [ ] 9.6.3 Aggiungere bottone "Aggiorna token" per repo con token invalido
+
+### 9.7 Frontend Mobile - Adattamenti
+
+- [ ] 9.7.1 Aggiornare `RepositoriesPage.tsx` mobile:
+  - Mostrare icona lucchetto per repo privati
+  - Mostrare badge "Token invalido"
+  - Link a versione web per gestione token (come per settings)
+
+### 9.8 Sicurezza
+
+- [ ] 9.8.1 Verificare che `encrypted_access_token` non sia mai esposto al client
+- [ ] 9.8.2 Aggiornare RLS: token accessibile solo via service role
+- [ ] 9.8.3 Logging: non loggare mai token in chiaro
+- [ ] 9.8.4 Documentare scope minimo richiesto per PAT (repo:read)
+
+### 9.9 Testing e Documentazione
+
+- [ ] 9.9.1 Testare flusso completo: aggiungi repo privato → sync → studio
+- [ ] 9.9.2 Testare token invalido: revocare PAT su GitHub → verificare gestione errore
+- [ ] 9.9.3 Testare aggiornamento token
+- [ ] 9.9.4 Aggiornare USER-FLOWS.md con flusso repo privato
+- [ ] 9.9.5 Aggiornare TECHNICAL-ARCHITECTURE.md
+
+### Criteri di Successo Fase 9
+
+- L'utente può aggiungere un repository GitHub privato inserendo un PAT
+- Il PAT viene criptato e salvato in modo sicuro
+- Il sync funziona correttamente per repo privati (card testuali)
+- Se il token scade/viene revocato, il repo viene marcato come "token invalido"
+- L'utente può aggiornare il token per un repo esistente
+- Le immagini nei repo privati vengono ignorate (placeholder o nascoste)
+- La lista repository mostra chiaramente quali sono privati
+
+### Note Fase 9
+
+- **Immagini**: Le immagini nei repo privati NON sono supportate in questa fase
+  - Il componente `MarkdownImage` deve gestire gracefully il fallimento per repo privati
+  - Considerare di nascondere le immagini o mostrare placeholder "Immagine non disponibile"
+- **Scope PAT**: Richiedere solo `repo` scope (accesso lettura a repo privati)
+- **Rate limiting**: GitHub ha limiti più alti per chiamate autenticate (5000/ora vs 60/ora)
+- **Crittografia**: Usare stessa `ENCRYPTION_KEY` delle API keys LLM
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/XXX_add_token_status.sql` | NUOVO |
+| `supabase/functions/git-sync/index.ts` | MODIFICA - Auth GitHub |
+| `packages/shared/src/types/index.ts` | MODIFICA - TokenStatus |
+| `packages/core/src/supabase/repositories.ts` | MODIFICA - Nuove funzioni |
+| `apps/web/src/pages/RepositoriesPage.tsx` | MODIFICA - UI repo privati |
+| `apps/web/src/components/AddRepositoryForm.tsx` | MODIFICA - Toggle privato + PAT |
+| `apps/web/src/components/UpdateTokenDialog.tsx` | NUOVO |
+| `apps/mobile/src/pages/RepositoriesPage.tsx` | MODIFICA - Icona privato |
+| `docs/USER-FLOWS.md` | MODIFICA |
+| `docs/TECHNICAL-ARCHITECTURE.md` | MODIFICA |
+
+---
+
+## 9B - IMMAGINI PER REPOSITORY PRIVATI (Futura)
+
+> **Prerequisito**: Fase 9A completata
+
+### Obiettivi Fase 9B
+
+- Scaricare immagini dai repo privati durante il sync
+- Salvare immagini in Supabase Storage con accesso RLS
+- Servire immagini tramite URL firmati o proxy
+
+### Approccio Consigliato
+
+**Soluzione: Download in Supabase Storage**
+
+1. Durante il sync, identificare tutte le immagini referenziate nelle card
+2. Scaricare le immagini usando il PAT (autenticazione GitHub)
+3. Salvare in Supabase Storage bucket `card-images/{user_id}/{repo_id}/`
+4. Salvare mapping `original_path → storage_path` in nuova tabella `card_images`
+5. Frontend: usare URL Supabase Storage invece di GitHub raw URL
+
+### Considerazioni Fase 9B
+
+- **Storage structure**: `card-images/{user_id}/{repo_id}/{hash}.{ext}`
+- **RLS Storage**: Bucket privato, accesso solo a owner
+- **Sync incrementale**: Scaricare solo immagini nuove/modificate (hash)
+- **Cleanup**: Rimuovere immagini orfane quando card/repo eliminati
+- **Formati**: PNG, JPG, GIF, SVG, WebP (come da CARD-FORMAT-SPEC)
+- **Dimensioni**: Considerare compressione/resize per immagini grandi
+
+### Task Preliminari (da fare in 9B)
+
+- [ ] Configurare Supabase Storage bucket `card-images`
+- [ ] Creare tabella `card_images` (card_id, original_path, storage_path, hash)
+- [ ] Modificare git-sync per download immagini
+- [ ] Modificare MarkdownImage per usare Storage URL per repo privati
+- [ ] Implementare cleanup immagini orfane
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT

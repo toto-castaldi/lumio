@@ -181,6 +181,9 @@ CREATE TYPE llm_provider AS ENUM ('openai', 'anthropic');
 -- Stato sync repository
 CREATE TYPE sync_status AS ENUM ('pending', 'syncing', 'synced', 'error');
 
+-- Stato token repository privato (Fase 9)
+CREATE TYPE token_status AS ENUM ('valid', 'invalid', 'not_required');
+
 -- Piattaforma client
 CREATE TYPE platform AS ENUM ('web', 'mobile');
 
@@ -257,7 +260,9 @@ CREATE TABLE public.repositories (
     name TEXT NOT NULL,  -- Estratto da URL o README
     description TEXT,
     is_private BOOLEAN DEFAULT FALSE,
-    encrypted_access_token TEXT,  -- PAT criptato, solo per repo privati
+    encrypted_access_token TEXT,  -- PAT criptato con AES-256-GCM, solo per repo privati
+    token_status token_status DEFAULT 'not_required',  -- Fase 9: stato validità token
+    token_error_message TEXT,  -- Fase 9: messaggio errore se token invalido
     format_version INTEGER NOT NULL DEFAULT 1,
     last_commit_sha TEXT,
     last_synced_at TIMESTAMPTZ,
@@ -266,13 +271,14 @@ CREATE TABLE public.repositories (
     card_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     UNIQUE(user_id, url)
 );
 
 -- Indici
 CREATE INDEX idx_repositories_user_id ON repositories(user_id);
 CREATE INDEX idx_repositories_sync_status ON repositories(sync_status);
+CREATE INDEX idx_repositories_token_status ON repositories(token_status);  -- Fase 9
 
 -- Trigger
 CREATE TRIGGER set_repositories_updated_at
@@ -858,6 +864,7 @@ ORDER BY priority, uc.mastery_score NULLS FIRST;
 | user_api_keys | user_id | BTREE | Filter by user |
 | repositories | user_id | BTREE | Filter by user |
 | repositories | sync_status | BTREE | Batch sync jobs |
+| repositories | token_status | BTREE | Filter by token validity (Fase 9) |
 | cards | repository_id | BTREE | Filter by repo |
 | cards | tags | GIN | Filter by tags |
 | cards | is_active | BTREE | Filter active cards |
