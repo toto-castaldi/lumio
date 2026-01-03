@@ -4,7 +4,7 @@
  * Questa versione viene aggiornata automaticamente da release-please.
  * NON modificare manualmente.
  */
-export const VERSION = "0.5.2";
+export const VERSION = "0.5.3";
 
 /**
  * Build info popolate a build time dalla CI.
