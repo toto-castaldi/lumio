@@ -301,7 +301,10 @@ async function getFileContent(
     const data = await response.json();
     // GitHub API returns content as base64
     if (data.encoding === "base64" && data.content) {
-      return atob(data.content.replace(/\n/g, ""));
+      // Decode base64 to bytes, then decode as UTF-8
+      const binary = atob(data.content.replace(/\n/g, ""));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return new TextDecoder("utf-8").decode(bytes);
     }
     throw new Error(`Unexpected encoding for file: ${path}`);
   } else {
