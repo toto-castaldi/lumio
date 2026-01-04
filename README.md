@@ -1,6 +1,6 @@
 # Lumio
 
-![logo](./lumio.svg "logo")
+![logo](logo.png "logo")
 
 AI-powered flashcard study platform. 
 
@@ -9,8 +9,6 @@ Leggi CHANGELOG.md, CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pront
 ```
 
 **Production**: https://lumio.toto-castaldi.com/
-
-**logo** https://editor.p5js.org/toto-castaldi/sketches/fJXY0xFkJ
 
 
 ## Quick Start
@@ -118,6 +116,26 @@ See `.env.example` files in each app for required variables.
 | `DO_USERNAME` | SSH username |
 | `DO_SSH_KEY` | SSH private key |
 
+## MCP
+
+### p5js
+
+```
+cd p5js-ai-editor
+node websocket-bridge-server.js
+```
+
+```
+cd p5js-ai-editor
+npm run dev
+```
+
 ## License
 
 Private - All rights reserved.
+
+## Toto-castaldi
+
+- Amber #FFA726
+- Coral #FF7061
+- Violet #9C68D4
