@@ -599,32 +599,42 @@ function resolveRelativePath(cardFilePath: string, imagePath: string): string {
   return resolvedParts.join("/");
 }
 
+interface ImageReference {
+  originalPath: string;  // Path as written in markdown (e.g., "../assets/image.png")
+  resolvedPath: string;  // Path resolved for GitHub download (e.g., "assets/image.png")
+}
+
 /**
  * Extract all image references from markdown content
- * Returns only relative paths (ignores external URLs)
+ * Returns both original paths (for DB storage) and resolved paths (for GitHub download)
  * cardFilePath is used to resolve relative paths like ../assets/image.png
  */
-function extractImageReferences(content: string, cardFilePath: string): string[] {
-  const images: string[] = [];
+function extractImageReferences(content: string, cardFilePath: string): ImageReference[] {
+  const images: ImageReference[] = [];
+  const seenOriginal = new Set<string>();
   let match;
   // Reset regex state
   IMAGE_REGEX.lastIndex = 0;
   while ((match = IMAGE_REGEX.exec(content)) !== null) {
-    let imagePath = match[1];
+    let originalPath = match[1];
     // Remove any title/alt text after space (e.g., "image.png 'title'")
-    imagePath = imagePath.split(/\s+/)[0];
+    originalPath = originalPath.split(/\s+/)[0];
     // Ignore external URLs
-    if (!imagePath.startsWith("http://") && !imagePath.startsWith("https://")) {
-      // Resolve relative path against card file location
-      imagePath = resolveRelativePath(cardFilePath, imagePath);
+    if (!originalPath.startsWith("http://") && !originalPath.startsWith("https://")) {
+      // Resolve relative path against card file location for GitHub download
+      const resolvedPath = resolveRelativePath(cardFilePath, originalPath);
       // Only include if it has a supported extension
-      const ext = imagePath.toLowerCase().split(".").pop();
+      const ext = resolvedPath.toLowerCase().split(".").pop();
       if (ext && SUPPORTED_IMAGE_EXTENSIONS.includes(`.${ext}`)) {
-        images.push(imagePath);
+        // Deduplicate by original path
+        if (!seenOriginal.has(originalPath)) {
+          seenOriginal.add(originalPath);
+          images.push({ originalPath, resolvedPath });
+        }
       }
     }
   }
-  return [...new Set(images)]; // Remove duplicates
+  return images;
 }
 
 /**
@@ -753,12 +763,12 @@ async function processCardImages(
   const errors: string[] = [];
   let processed = 0;
 
-  for (const imagePath of imageRefs) {
+  for (const imageRef of imageRefs) {
     try {
-      // Download image from GitHub
-      const image = await downloadImage(owner, repo, imagePath, accessToken);
+      // Download image from GitHub using resolved path
+      const image = await downloadImage(owner, repo, imageRef.resolvedPath, accessToken);
       if (!image) {
-        errors.push(`${imagePath}: download failed`);
+        errors.push(`${imageRef.originalPath}: download failed`);
         continue;
       }
 
@@ -776,10 +786,11 @@ async function processCardImages(
       );
 
       // Save mapping in card_assets table
+      // Use originalPath so frontend can match it with markdown content
       await serviceClient.from("card_assets").upsert(
         {
           card_id: cardId,
-          original_path: imagePath,
+          original_path: imageRef.originalPath,
           storage_path: storagePath,
           content_hash: contentHash,
           mime_type: image.mimeType,
@@ -793,7 +804,7 @@ async function processCardImages(
       processed++;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      errors.push(`${imagePath}: ${message}`);
+      errors.push(`${imageRef.originalPath}: ${message}`);
     }
   }
 

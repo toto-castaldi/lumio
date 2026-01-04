@@ -381,9 +381,13 @@ Durante il sync, se GitHub ritorna 401 (Unauthorized) o 403 (Forbidden):
 3. Il sync fallisce, `sync_status = 'error'`
 4. Frontend mostra badge "Token invalido" con possibilità di aggiornare
 
-**Immagini nei Repo Privati (Fase 9A):**
+**Immagini nei Repository (Fase 9B - Completata):**
 
-> ⚠️ **Limitazione Fase 9A:** Le immagini nei repository privati NON sono supportate. Il componente `MarkdownImage` mostrerà un placeholder o nasconderà le immagini per i repo privati. Il supporto completo alle immagini (download in Supabase Storage) è pianificato per la Fase 9B.
+Le immagini sono supportate sia per repository pubblici che privati:
+- Le immagini vengono scaricate da GitHub durante il sync e caricate su Supabase Storage
+- I path relativi (`../assets/image.png`) vengono risolti correttamente rispetto alla posizione della card
+- Tutti i formati di path sono supportati: assoluti (`/assets/`), relativi (`../assets/`), e locali (`./`)
+- Il frontend sostituisce i path originali con signed URLs di Supabase Storage
 
 #### llm-proxy
 Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.

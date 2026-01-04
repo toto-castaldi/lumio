@@ -693,7 +693,8 @@
 ### 9B.2 Edge Function git-sync ✅
 
 - [x] Aggiungere funzioni per gestione immagini:
-  - `extractImageReferences()`: estrae path immagini dal markdown
+  - `resolveRelativePath()`: risolve path relativi (`../assets/`) rispetto alla card
+  - `extractImageReferences()`: estrae path immagini dal markdown (originale + risolto)
   - `downloadImage()`: scarica da GitHub (con o senza PAT)
   - `hashImageContent()`: calcola SHA-256
   - `uploadImageToStorage()`: upload con deduplicazione
@@ -701,6 +702,7 @@
 - [x] Modificare `importRepository()` per processare immagini dopo insert cards
 - [x] Modificare `syncRepository()` per processare immagini dopo insert cards
 - [x] Modificare `checkUpdates()` per processare immagini dopo insert cards
+- [x] Supporto path relativi: `/assets/`, `../assets/`, `./`, path semplici
 
 ### 9B.3 Shared Types ✅
 
@@ -782,6 +784,7 @@
 - [ ] multilinga ?
 - [ ] monitoraggio utente aggiornamento DECK
 - [ ] monitoraggio di sistema aggiornamento DECK
+- [ ] Lumio è anche gateway per altre app che vogliono usare le card senza implementarsi il fetch manualmente. 
 
 ## BUG
 
