@@ -551,10 +551,60 @@ const SUPPORTED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".w
 const IMAGE_REGEX = /!\[[^\]]*\]\(([^)]+)\)/g;
 
 /**
+ * Resolve a relative path against a base directory
+ * e.g., resolveRelativePath("cards/exercise.md", "../assets/image.png") => "assets/image.png"
+ */
+function resolveRelativePath(cardFilePath: string, imagePath: string): string {
+  // Get the directory of the card file
+  const cardDir = cardFilePath.includes("/")
+    ? cardFilePath.substring(0, cardFilePath.lastIndexOf("/"))
+    : "";
+
+  // If imagePath starts with /, it's absolute from repo root
+  if (imagePath.startsWith("/")) {
+    return imagePath.substring(1);
+  }
+
+  // If imagePath starts with ./, remove it
+  if (imagePath.startsWith("./")) {
+    imagePath = imagePath.substring(2);
+  }
+
+  // If no ../, just combine paths
+  if (!imagePath.startsWith("../")) {
+    return cardDir ? `${cardDir}/${imagePath}` : imagePath;
+  }
+
+  // Handle ../ by going up directories
+  const cardParts = cardDir.split("/").filter(p => p);
+  const imageParts = imagePath.split("/");
+
+  let upCount = 0;
+  for (const part of imageParts) {
+    if (part === "..") {
+      upCount++;
+    } else {
+      break;
+    }
+  }
+
+  // Remove the ../ parts from image path
+  const remainingImageParts = imageParts.slice(upCount);
+
+  // Go up in card directory
+  const remainingCardParts = cardParts.slice(0, cardParts.length - upCount);
+
+  // Combine
+  const resolvedParts = [...remainingCardParts, ...remainingImageParts];
+  return resolvedParts.join("/");
+}
+
+/**
  * Extract all image references from markdown content
  * Returns only relative paths (ignores external URLs)
+ * cardFilePath is used to resolve relative paths like ../assets/image.png
  */
-function extractImageReferences(content: string): string[] {
+function extractImageReferences(content: string, cardFilePath: string): string[] {
   const images: string[] = [];
   let match;
   // Reset regex state
@@ -565,8 +615,8 @@ function extractImageReferences(content: string): string[] {
     imagePath = imagePath.split(/\s+/)[0];
     // Ignore external URLs
     if (!imagePath.startsWith("http://") && !imagePath.startsWith("https://")) {
-      // Normalize path: remove leading ./ or /
-      imagePath = imagePath.replace(/^\.\//, "").replace(/^\//, "");
+      // Resolve relative path against card file location
+      imagePath = resolveRelativePath(cardFilePath, imagePath);
       // Only include if it has a supported extension
       const ext = imagePath.toLowerCase().split(".").pop();
       if (ext && SUPPORTED_IMAGE_EXTENSIONS.includes(`.${ext}`)) {
@@ -692,13 +742,14 @@ async function processCardImages(
   serviceClient: ReturnType<typeof createClient>,
   cardId: string,
   rawContent: string,
+  cardFilePath: string,
   owner: string,
   repo: string,
   userId: string,
   repoId: string,
   accessToken?: string
 ): Promise<{ processed: number; errors: string[] }> {
-  const imageRefs = extractImageReferences(rawContent);
+  const imageRefs = extractImageReferences(rawContent, cardFilePath);
   const errors: string[] = [];
   let processed = 0;
 
@@ -933,6 +984,7 @@ async function importRepository(
           serviceClient,
           insertedCard.id,
           insertedCard.raw_content,
+          insertedCard.file_path,
           owner,
           repo,
           userId,
@@ -1139,6 +1191,7 @@ async function syncRepository(
             serviceClient,
             insertedCard.id,
             insertedCard.raw_content,
+            insertedCard.file_path,
             owner,
             repoName,
             repo.user_id,
@@ -1329,6 +1382,7 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
                 serviceClient,
                 insertedCard.id,
                 insertedCard.raw_content,
+                insertedCard.file_path,
                 parsed.owner,
                 parsed.repo,
                 repo.user_id,

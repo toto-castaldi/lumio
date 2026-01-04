@@ -249,18 +249,49 @@ dove $f$ è la frequenza respiratoria in atti/minuto.
 
 ## 5. Immagini e Assets
 
-### 5.1 Percorsi Relativi
+### 5.1 Percorsi delle Immagini
 
-Le immagini devono usare **percorsi relativi alla root del repository**:
+Lumio supporta diversi formati di percorso per referenziare le immagini. I percorsi vengono **risolti automaticamente** rispetto alla posizione del file card.
 
-```markdown
-![Diagramma respirazione](/assets/img/respirazione.png)
+#### Formati Supportati
+
+| Formato | Esempio | Risoluzione |
+|---------|---------|-------------|
+| **Assoluto** (da root repo) | `/assets/image.png` | `assets/image.png` |
+| **Relativo con `../`** | `../assets/image.png` | Risolto rispetto alla card |
+| **Relativo con `./`** | `./image.png` | Nella stessa cartella della card |
+| **Relativo semplice** | `image.png` | Nella stessa cartella della card |
+
+#### Esempi Pratici
+
+**Struttura repository:**
+```
+repository/
+├── assets/
+│   └── diagram.png
+├── cards/
+│   └── exercise.md      ← card qui
+└── README.md
 ```
 
-Oppure relativi al file card:
+**Dalla card `cards/exercise.md`, puoi referenziare l'immagine così:**
 
 ```markdown
-![Diagramma](../assets/img/respirazione.png)
+# Opzione 1: Path assoluto (consigliato)
+![Diagram](/assets/diagram.png)
+
+# Opzione 2: Path relativo con ../
+![Diagram](../assets/diagram.png)
+```
+
+Entrambi funzionano — Lumio risolve `../assets/diagram.png` a `assets/diagram.png` automaticamente.
+
+#### Raccomandazione
+
+Per massima chiarezza e portabilità, **consigliamo i path assoluti** che iniziano con `/`:
+
+```markdown
+![Immagine](/assets/img/nome-immagine.png)
 ```
 
 ### 5.2 Formati Supportati
@@ -526,6 +557,11 @@ Prima di pubblicare un deck compatibile con Lumio:
 ---
 
 ## 10. Changelog
+
+### Versione 1.2 (2026-01-04)
+- **Migliorato supporto path immagini**: ora i path relativi con `../` vengono risolti correttamente rispetto alla posizione della card
+- Supporto completo per: path assoluti (`/assets/`), relativi (`../assets/`), e locali (`./` o senza prefisso)
+- Documentazione aggiornata con esempi pratici per tutti i formati di path supportati
 
 ### Versione 1.1 (Fase 8)
 - Aggiunto supporto syntax highlighting per blocchi di codice
