@@ -4,7 +4,8 @@ function setup() {
 }
 
 function draw() {
-  background(255);
+  // Transparent background
+  clear();
   
   let cx = width / 2;
   let cy = height / 2;
@@ -55,7 +56,7 @@ function draw() {
   rect(rayOffset, -rayWidth/2, rayLength, rayWidth, 6);
   pop();
   
-  // Signature: horizontal line at bottom
+  // Signature line
   stroke(40);
   strokeWeight(6);
   strokeCap(ROUND);
