@@ -17,6 +17,7 @@ build/
 # IDE
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
@@ -51,3 +52,5 @@ coverage/
 *.ipa
 
 conf/client_secret_*.json
+
+.mcp.json

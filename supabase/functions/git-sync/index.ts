@@ -109,6 +109,32 @@ interface ParsedCard {
 }
 
 // =============================================================================
+// TIMEOUT UTILITIES
+// =============================================================================
+
+class TimeoutError extends Error {
+  constructor(message: string = "Operation timed out") {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}
+
+/**
+ * Run a promise with a timeout. Rejects with TimeoutError if not completed in time.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, message?: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new TimeoutError(message || `Operation timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
+// Per-repo timeout: 45 seconds (leaving 15s buffer for Edge Function's 60s limit)
+const PER_REPO_TIMEOUT_MS = 45000;
+
+// =============================================================================
 // SUPABASE CLIENT
 // =============================================================================
 
@@ -1134,27 +1160,127 @@ async function syncRepository(
         !isIgnored(item.path, ignorePatterns)
     );
 
-    // Parse cards
-    const cards: ParsedCard[] = [];
-    const errors: string[] = [];
+    // Use service client for card operations
+    const serviceClient = createServiceSupabaseClient();
 
+    // =====================================================================
+    // DELTA SYNC: Only process cards that changed
+    // =====================================================================
+
+    // Get existing cards for this repo
+    const { data: existingCards } = await serviceClient
+      .from("cards")
+      .select("id, file_path, content_hash")
+      .eq("repository_id", repositoryId);
+
+    const existingCardMap = new Map(
+      (existingCards || []).map((c) => [c.file_path, c])
+    );
+
+    // Track file paths we've seen in the new commit
+    const seenFilePaths = new Set<string>();
+    const errors: string[] = [];
+    let cardCount = 0;
+    let cardsAdded = 0;
+    let cardsModified = 0;
+    let cardsDeleted = 0;
+    let cardsUnchanged = 0;
+
+    // Process each markdown file
     for (const file of mdFiles) {
+      seenFilePaths.add(file.path);
+
       try {
         const rawContent = await getFileContent(owner, repoName, file.path, accessToken);
+        const contentHash = await hashContent(rawContent);
+        const existingCard = existingCardMap.get(file.path);
+
+        // UNCHANGED: Same hash, skip entirely (no image processing!)
+        if (existingCard && existingCard.content_hash === contentHash) {
+          cardsUnchanged++;
+          cardCount++;
+          continue;
+        }
+
+        // Parse card metadata
         const { frontmatter, body } = parseFrontmatter(rawContent);
         const cardMeta = validateCardFrontmatter(frontmatter, file.path);
-        const contentHash = await hashContent(rawContent);
 
-        cards.push({
-          filePath: file.path,
-          rawContent: rawContent,
-          title: cardMeta.title,
-          content: body.trim(),
-          tags: cardMeta.tags,
-          difficulty: cardMeta.difficulty,
-          language: cardMeta.language,
-          contentHash,
-        });
+        if (existingCard) {
+          // MODIFIED: Update existing card and re-process images
+          const { data: updatedCard } = await serviceClient
+            .from("cards")
+            .update({
+              content_hash: contentHash,
+              raw_content: rawContent,
+              title: cardMeta.title,
+              content: body.trim(),
+              tags: cardMeta.tags,
+              difficulty: cardMeta.difficulty,
+              language: cardMeta.language,
+              is_active: true,
+            })
+            .eq("id", existingCard.id)
+            .select("id, file_path, raw_content")
+            .single();
+
+          if (updatedCard) {
+            // Delete old assets and re-process images
+            await serviceClient.from("card_assets").delete().eq("card_id", existingCard.id);
+            const result = await processCardImages(
+              serviceClient,
+              updatedCard.id,
+              updatedCard.raw_content,
+              updatedCard.file_path,
+              owner,
+              repoName,
+              repo.user_id,
+              repositoryId,
+              accessToken
+            );
+            if (result.errors.length > 0) {
+              errors.push(...result.errors.map((e) => `img: ${e}`));
+            }
+          }
+          cardsModified++;
+        } else {
+          // NEW: Insert new card and process images
+          const { data: insertedCard } = await serviceClient
+            .from("cards")
+            .insert({
+              repository_id: repositoryId,
+              file_path: file.path,
+              content_hash: contentHash,
+              raw_content: rawContent,
+              title: cardMeta.title,
+              content: body.trim(),
+              tags: cardMeta.tags,
+              difficulty: cardMeta.difficulty,
+              language: cardMeta.language,
+              is_active: true,
+            })
+            .select("id, file_path, raw_content")
+            .single();
+
+          if (insertedCard) {
+            const result = await processCardImages(
+              serviceClient,
+              insertedCard.id,
+              insertedCard.raw_content,
+              insertedCard.file_path,
+              owner,
+              repoName,
+              repo.user_id,
+              repositoryId,
+              accessToken
+            );
+            if (result.errors.length > 0) {
+              errors.push(...result.errors.map((e) => `img: ${e}`));
+            }
+          }
+          cardsAdded++;
+        }
+        cardCount++;
       } catch (error) {
         errors.push(
           `${file.path}: ${error instanceof Error ? error.message : "Unknown error"}`
@@ -1162,71 +1288,23 @@ async function syncRepository(
       }
     }
 
-    // Use service client for card operations
-    const serviceClient = createServiceSupabaseClient();
-
-    // Delete existing cards (card_assets will cascade automatically)
-    await serviceClient.from("cards").delete().eq("repository_id", repositoryId);
-
-    // Clean up orphan assets in storage
-    // (assets are deleted from card_assets table by CASCADE, but we need to remove files from storage)
-    const { data: oldAssets } = await serviceClient
-      .from("card_assets")
-      .select("storage_path")
-      .eq("card_id", repositoryId); // This won't match after cascade, so we skip cleanup here
-    // Note: Orphan storage files will be cleaned up by a scheduled job
-
-    // Insert new cards and process images
-    if (cards.length > 0) {
-      const { data: insertedCards, error: cardsError } = await serviceClient
-        .from("cards")
-        .insert(
-          cards.map((card) => ({
-            repository_id: repositoryId,
-            file_path: card.filePath,
-            content_hash: card.contentHash,
-            raw_content: card.rawContent,
-            title: card.title,
-            content: card.content,
-            tags: card.tags,
-            difficulty: card.difficulty,
-            language: card.language,
-            is_active: true,
-          }))
-        )
-        .select("id, file_path, raw_content");
-
-      if (cardsError) throw cardsError;
-
-      // Process images for each card
-      if (insertedCards) {
-        for (const insertedCard of insertedCards) {
-          const result = await processCardImages(
-            serviceClient,
-            insertedCard.id,
-            insertedCard.raw_content,
-            insertedCard.file_path,
-            owner,
-            repoName,
-            repo.user_id,
-            repositoryId,
-            accessToken
-          );
-          if (result.errors.length > 0) {
-            // Add image errors to the sync errors
-            errors.push(...result.errors.map((e) => `img: ${e}`));
-          }
-        }
+    // DELETED: Remove cards that no longer exist in the repo
+    for (const [filePath, card] of existingCardMap) {
+      if (!seenFilePaths.has(filePath)) {
+        // card_assets will cascade delete automatically
+        await serviceClient.from("cards").delete().eq("id", card.id);
+        cardsDeleted++;
       }
     }
 
-    // Build detailed error message if any cards were skipped
-    let syncErrorMessage: string | null = null;
+    // Build sync summary message
+    const syncSummary = `Delta: +${cardsAdded} ~${cardsModified} -${cardsDeleted} =${cardsUnchanged}`;
+    let syncErrorMessage: string | null = syncSummary;
     if (errors.length > 0) {
       // Limit to first 5 errors to avoid overly long messages
       const displayErrors = errors.slice(0, 5);
       const remaining = errors.length - displayErrors.length;
-      syncErrorMessage = displayErrors.join("; ");
+      syncErrorMessage = `${syncSummary}; ${displayErrors.join("; ")}`;
       if (remaining > 0) {
         syncErrorMessage += `; ... e altri ${remaining} errori`;
       }
@@ -1239,7 +1317,7 @@ async function syncRepository(
         last_commit_sha: latestCommit.sha,
         sync_status: "synced",
         last_synced_at: new Date().toISOString(),
-        card_count: cards.length,
+        card_count: cardCount,
         sync_error_message: syncErrorMessage,
         token_status: repo.is_private ? "valid" : "not_required",
         token_error_message: null,
@@ -1274,6 +1352,18 @@ async function syncRepository(
 
 async function checkUpdates(): Promise<{ updated: number; errors: number }> {
   const serviceClient = createServiceSupabaseClient();
+
+  // STALE SYNC RECOVERY: Reset repos stuck in 'syncing' for more than 5 minutes
+  // This handles Edge Function timeouts where the status never gets updated
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  await serviceClient
+    .from("repositories")
+    .update({
+      sync_status: "synced",
+      sync_error_message: "Sync timed out - reset automatically",
+    })
+    .eq("sync_status", "syncing")
+    .lt("updated_at", fiveMinutesAgo);
 
   // Get all repositories that need checking (exclude those with invalid tokens)
   const { data: repos, error } = await serviceClient
@@ -1325,7 +1415,7 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
 
       // Check if commit changed
       if (latestCommit.sha !== repo.last_commit_sha) {
-        // Re-sync this repository
+        // Re-sync this repository using DELTA SYNC
         await serviceClient
           .from("repositories")
           .update({ sync_status: "syncing" })
@@ -1343,78 +1433,141 @@ async function checkUpdates(): Promise<{ updated: number; errors: number }> {
             !isIgnored(item.path, ignorePatterns)
         );
 
-        // Parse cards
-        const cards: ParsedCard[] = [];
+        // =====================================================================
+        // DELTA SYNC: Only process cards that changed
+        // =====================================================================
+
+        // Get existing cards for this repo
+        const { data: existingCards } = await serviceClient
+          .from("cards")
+          .select("id, file_path, content_hash")
+          .eq("repository_id", repo.id);
+
+        const existingCardMap = new Map(
+          (existingCards || []).map((c) => [c.file_path, c])
+        );
+
+        // Track file paths we've seen in the new commit
+        const seenFilePaths = new Set<string>();
+        let cardCount = 0;
+        let cardsAdded = 0;
+        let cardsModified = 0;
+        let cardsDeleted = 0;
+        let cardsUnchanged = 0;
+
+        // Process each markdown file
         for (const file of mdFiles) {
+          seenFilePaths.add(file.path);
+
           try {
             const rawContent = await getFileContent(parsed.owner, parsed.repo, file.path, accessToken);
+            const contentHash = await hashContent(rawContent);
+            const existingCard = existingCardMap.get(file.path);
+
+            // UNCHANGED: Same hash, skip entirely (no image processing!)
+            if (existingCard && existingCard.content_hash === contentHash) {
+              cardsUnchanged++;
+              cardCount++;
+              continue;
+            }
+
+            // Parse card metadata
             const { frontmatter, body } = parseFrontmatter(rawContent);
             const cardMeta = validateCardFrontmatter(frontmatter, file.path);
-            const contentHash = await hashContent(rawContent);
 
-            cards.push({
-              filePath: file.path,
-              rawContent: rawContent,
-              title: cardMeta.title,
-              content: body.trim(),
-              tags: cardMeta.tags,
-              difficulty: cardMeta.difficulty,
-              language: cardMeta.language,
-              contentHash,
-            });
+            if (existingCard) {
+              // MODIFIED: Update existing card and re-process images
+              const { data: updatedCard } = await serviceClient
+                .from("cards")
+                .update({
+                  content_hash: contentHash,
+                  raw_content: rawContent,
+                  title: cardMeta.title,
+                  content: body.trim(),
+                  tags: cardMeta.tags,
+                  difficulty: cardMeta.difficulty,
+                  language: cardMeta.language,
+                  is_active: true,
+                })
+                .eq("id", existingCard.id)
+                .select("id, file_path, raw_content")
+                .single();
+
+              if (updatedCard) {
+                // Delete old assets and re-process images
+                await serviceClient.from("card_assets").delete().eq("card_id", existingCard.id);
+                await processCardImages(
+                  serviceClient,
+                  updatedCard.id,
+                  updatedCard.raw_content,
+                  updatedCard.file_path,
+                  parsed.owner,
+                  parsed.repo,
+                  repo.user_id,
+                  repo.id,
+                  accessToken
+                );
+              }
+              cardsModified++;
+            } else {
+              // NEW: Insert new card and process images
+              const { data: insertedCard } = await serviceClient
+                .from("cards")
+                .insert({
+                  repository_id: repo.id,
+                  file_path: file.path,
+                  content_hash: contentHash,
+                  raw_content: rawContent,
+                  title: cardMeta.title,
+                  content: body.trim(),
+                  tags: cardMeta.tags,
+                  difficulty: cardMeta.difficulty,
+                  language: cardMeta.language,
+                  is_active: true,
+                })
+                .select("id, file_path, raw_content")
+                .single();
+
+              if (insertedCard) {
+                await processCardImages(
+                  serviceClient,
+                  insertedCard.id,
+                  insertedCard.raw_content,
+                  insertedCard.file_path,
+                  parsed.owner,
+                  parsed.repo,
+                  repo.user_id,
+                  repo.id,
+                  accessToken
+                );
+              }
+              cardsAdded++;
+            }
+            cardCount++;
           } catch {
             // Skip invalid cards
           }
         }
 
-        // Delete and re-insert cards (card_assets will cascade automatically)
-        await serviceClient.from("cards").delete().eq("repository_id", repo.id);
-
-        if (cards.length > 0) {
-          const { data: insertedCards } = await serviceClient
-            .from("cards")
-            .insert(
-              cards.map((card) => ({
-                repository_id: repo.id,
-                file_path: card.filePath,
-                content_hash: card.contentHash,
-                raw_content: card.rawContent,
-                title: card.title,
-                content: card.content,
-                tags: card.tags,
-                difficulty: card.difficulty,
-                language: card.language,
-                is_active: true,
-              }))
-            )
-            .select("id, file_path, raw_content");
-
-          // Process images for each card
-          if (insertedCards) {
-            for (const insertedCard of insertedCards) {
-              await processCardImages(
-                serviceClient,
-                insertedCard.id,
-                insertedCard.raw_content,
-                insertedCard.file_path,
-                parsed.owner,
-                parsed.repo,
-                repo.user_id,
-                repo.id,
-                accessToken
-              );
-            }
+        // DELETED: Remove cards that no longer exist in the repo
+        for (const [filePath, card] of existingCardMap) {
+          if (!seenFilePaths.has(filePath)) {
+            // card_assets will cascade delete automatically
+            await serviceClient.from("cards").delete().eq("id", card.id);
+            cardsDeleted++;
           }
         }
 
-        // Update repository
+        // Update repository with sync summary
+        const syncSummary = `Delta: +${cardsAdded} ~${cardsModified} -${cardsDeleted} =${cardsUnchanged}`;
         await serviceClient
           .from("repositories")
           .update({
             last_commit_sha: latestCommit.sha,
             sync_status: "synced",
             last_synced_at: new Date().toISOString(),
-            card_count: cards.length,
+            card_count: cardCount,
+            sync_error_message: syncSummary,
             token_status: repo.is_private ? "valid" : "not_required",
             token_error_message: null,
           })
