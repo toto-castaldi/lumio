@@ -15,13 +15,11 @@ import {
   getUserStats,
   type UserStats,
 } from '@lumio/core';
-import { FolderGit2, Layers, LogOut, Sparkles, ExternalLink } from 'lucide-react';
-
-const WEB_APP_URL = 'https://lumio.toto-castaldi.com';
+import { FolderGit2, Layers, LogOut, Sparkles } from 'lucide-react';
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { user, state, hasApiKey, logout } = useAuth();
+  const { user, state, logout } = useAuth();
   const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
@@ -50,31 +48,11 @@ export function DashboardPage() {
   };
 
   // Determine study button state
-  const canStudy = hasApiKey && stats.cardCount > 0;
+  const canStudy = stats.cardCount > 0;
   const studyButtonDisabled = isLoadingStats || !canStudy;
-
-  const handleOpenWebSettings = () => {
-    window.open(`${WEB_APP_URL}/settings`, '_blank');
-  };
 
   const getStudyMessage = () => {
     if (isLoadingStats) return null;
-    if (!hasApiKey) {
-      return {
-        text: 'Configura le API Keys dalla versione web per studiare',
-        action: (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10 rounded-xl mt-2"
-            onClick={handleOpenWebSettings}
-          >
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Apri Lumio Web
-          </Button>
-        ),
-      };
-    }
     if (stats.cardCount === 0) {
       return {
         text: 'Aggiungi un repository per iniziare a studiare',

@@ -1,12 +1,10 @@
 import { getSupabaseUrl, getSupabaseAnonKey } from './client';
 import { getAccessToken } from './auth';
 import type {
-  LLMProvider,
   Card,
   QuizQuestion,
-  AvailableModelsResponse,
-  StudyPreferences,
   ValidationResponse,
+  PlatformConfig,
 } from '@lumio/shared';
 
 /**
@@ -108,36 +106,27 @@ function mapCard(dbCard: Record<string, unknown>): Card {
 }
 
 /**
- * Get available LLM models for the current user
- * Returns all providers with their models and whether the user has configured them
+ * Get platform-level AI configuration
+ * Returns the provider, model, and system prompt configured for the platform
  */
-export async function getAvailableModels(): Promise<AvailableModelsResponse> {
-  const response = await callLlmProxy<AvailableModelsResponse & { success: boolean }>(
-    'get_available_models'
-  );
+export async function getPlatformConfig(): Promise<PlatformConfig> {
+  const response = await callLlmProxy<{
+    success: boolean;
+    config: PlatformConfig;
+  }>('get_platform_config');
 
-  return {
-    success: response.success,
-    providers: response.providers,
-  };
+  return response.config;
 }
 
 /**
  * Generate a quiz question for a card using AI
- * @param provider - LLM provider to use
- * @param modelId - Model ID to use
+ * Uses platform-configured provider, model, and system prompt
  * @param cardContent - The card content (markdown)
- * @param systemPrompt - Optional custom system prompt
  */
-export async function generateQuiz(
-  provider: LLMProvider,
-  modelId: string,
-  cardContent: string,
-  systemPrompt?: string
-): Promise<QuizQuestion> {
+export async function generateQuiz(cardContent: string): Promise<QuizQuestion> {
   const response = await callLlmProxy<{ success: boolean; quiz: QuizQuestion }>(
     'generate_quiz',
-    { provider, modelId, cardContent, systemPrompt }
+    { cardContent }
   );
 
   return response.quiz;
@@ -157,78 +146,14 @@ export async function getStudyCards(): Promise<Card[]> {
 }
 
 /**
- * Get study preferences for the current user
- * Returns the custom prompt if set, or the default prompt
- * Also returns preferred provider/model if set
- */
-export async function getStudyPreferences(): Promise<StudyPreferences> {
-  const response = await callLlmProxy<{
-    success: boolean;
-    systemPrompt: string;
-    isCustom: boolean;
-    preferredProvider?: LLMProvider;
-    preferredModel?: string;
-  }>('get_study_preferences');
-
-  return {
-    systemPrompt: response.systemPrompt,
-    isCustom: response.isCustom,
-    preferredProvider: response.preferredProvider,
-    preferredModel: response.preferredModel,
-  };
-}
-
-/**
- * Save custom study preferences
- * @param systemPrompt - The custom system prompt
- */
-export async function saveStudyPreferences(systemPrompt: string): Promise<void> {
-  await callLlmProxy('save_study_preferences', { systemPrompt });
-}
-
-/**
- * Reset study preferences to default
- */
-export async function resetStudyPreferences(): Promise<void> {
-  await callLlmProxy('reset_study_preferences');
-}
-
-/**
- * Get the default system prompt
- */
-export async function getDefaultPrompt(): Promise<string> {
-  const response = await callLlmProxy<{
-    success: boolean;
-    defaultPrompt: string;
-  }>('get_default_prompt');
-
-  return response.defaultPrompt;
-}
-
-/**
- * Save model preferences (provider and model)
- * @param provider - The LLM provider
- * @param modelId - The model ID
- */
-export async function saveModelPreferences(
-  provider: LLMProvider,
-  modelId: string
-): Promise<void> {
-  await callLlmProxy('save_model_preferences', { provider, modelId });
-}
-
-/**
  * Validate a user's answer using AI (Step 2)
- * @param provider - LLM provider to use
- * @param modelId - Model ID to use
+ * Uses platform-configured provider and model
  * @param cardContent - The card content (markdown)
  * @param question - The quiz question that was asked
  * @param userAnswer - The user's answer (A, B, C, or D)
  * @param correctAnswer - The correct answer (A, B, C, or D)
  */
 export async function validateAnswer(
-  provider: LLMProvider,
-  modelId: string,
   cardContent: string,
   question: string,
   userAnswer: string,
@@ -238,8 +163,6 @@ export async function validateAnswer(
     success: boolean;
     validation: ValidationResponse;
   }>('validate_answer', {
-    provider,
-    modelId,
     cardContent,
     question,
     userAnswer,

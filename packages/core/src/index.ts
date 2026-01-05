@@ -21,17 +21,6 @@ export {
   getAccessToken,
 } from './supabase/auth';
 
-// Export API keys functions
-export {
-  testApiKey,
-  getUserApiKeys,
-  saveApiKey,
-  deleteApiKey,
-  setPreferredProvider,
-  hasValidApiKey,
-  getPreferredProvider,
-} from './supabase/api-keys';
-
 // Export repository functions
 export {
   addRepository,
@@ -55,14 +44,9 @@ export {
 
 // Export study functions
 export {
-  getAvailableModels,
+  getPlatformConfig,
   generateQuiz,
   getStudyCards,
-  getStudyPreferences,
-  saveStudyPreferences,
-  resetStudyPreferences,
-  getDefaultPrompt,
-  saveModelPreferences,
   validateAnswer,
 } from './supabase/study';
 

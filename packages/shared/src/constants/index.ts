@@ -32,11 +32,11 @@ export const API_KEY_PREFIXES = {
 // Supported LLM models per provider
 export const LLM_MODELS = {
   openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] as const,
-  anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] as const,
+  anthropic: ['claude-sonnet-4-5', 'claude-opus-4-5', 'claude-sonnet-4', 'claude-3-5-haiku-latest'] as const,
 } as const;
 
 // Default LLM model per provider
 export const DEFAULT_LLM_MODEL = {
   openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-5-haiku-20241022',
+  anthropic: 'claude-3-5-haiku-latest',
 } as const;

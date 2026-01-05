@@ -1,47 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  getAvailableModels,
   generateQuiz,
   getStudyCards,
-  getStudyPreferences,
-  saveStudyPreferences,
-  resetStudyPreferences,
-  getDefaultPrompt,
-  saveModelPreferences,
   validateAnswer,
   type Card,
-  type LLMProvider,
   type QuizQuestion,
-  type AvailableModelsResponse,
   type ValidationResponse,
 } from '@lumio/core';
 import { Button } from '@/components/ui/button';
-import {
-  Card as CardUI,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { CardPreviewDialog } from '@/components/CardPreviewDialog';
-import { ChevronDown, ChevronLeft, Eye, Settings, Sparkles, Check, X, ExternalLink } from 'lucide-react';
-
-const WEB_APP_URL = 'https://lumio.toto-castaldi.com';
+import { ChevronLeft, Eye, Sparkles, Check, X } from 'lucide-react';
 
 // =============================================================================
 // TYPES
@@ -58,191 +28,6 @@ interface StudySession {
 }
 
 // =============================================================================
-// MOBILE STUDY CONTROLS
-// =============================================================================
-
-interface MobileStudyControlsProps {
-  availableModels: AvailableModelsResponse;
-  selectedProvider: LLMProvider | null;
-  selectedModel: string | null;
-  systemPrompt: string;
-  isCustomPrompt: boolean;
-  onProviderChange: (provider: LLMProvider) => void;
-  onModelChange: (modelId: string) => void;
-  onSystemPromptChange: (prompt: string) => void;
-  onSavePrompt: () => void;
-  onResetPrompt: () => void;
-  onViewCard: () => void;
-  isSavingPrompt: boolean;
-  currentCard: Card | null;
-  disabled: boolean;
-}
-
-function MobileStudyControls({
-  availableModels,
-  selectedProvider,
-  selectedModel,
-  systemPrompt,
-  isCustomPrompt,
-  onProviderChange,
-  onModelChange,
-  onSystemPromptChange,
-  onSavePrompt,
-  onResetPrompt,
-  onViewCard,
-  isSavingPrompt,
-  currentCard,
-  disabled,
-}: MobileStudyControlsProps) {
-  const [isPromptOpen, setIsPromptOpen] = useState(false);
-
-  const configuredProviders = availableModels.providers.filter(p => p.isConfigured);
-  const currentModels = selectedProvider
-    ? availableModels.providers.find(p => p.provider === selectedProvider)?.models || []
-    : [];
-
-  if (configuredProviders.length === 0) {
-    const handleOpenWebSettings = () => {
-      window.open(`${WEB_APP_URL}/settings`, '_blank');
-    };
-
-    return (
-      <div className="mx-4 p-5 rounded-2xl bg-amber-50 border border-amber-200">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <Settings className="w-5 h-5 text-amber-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-amber-900">Configurazione richiesta</h3>
-            <p className="text-sm text-amber-700 mt-1">
-              Configura almeno una API key per studiare.
-            </p>
-            <Button className="mt-3 h-11 rounded-xl" variant="outline" onClick={handleOpenWebSettings}>
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Apri Lumio Web
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-4 space-y-3">
-      {/* Provider & Model Selectors */}
-      <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200/60 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5 block">
-              Provider
-            </label>
-            <Select
-              value={selectedProvider || undefined}
-              onValueChange={(v) => onProviderChange(v as LLMProvider)}
-              disabled={disabled}
-            >
-              <SelectTrigger className="h-12 rounded-xl bg-white border-slate-200">
-                <SelectValue placeholder="Seleziona..." />
-              </SelectTrigger>
-              <SelectContent>
-                {configuredProviders.map(p => (
-                  <SelectItem key={p.provider} value={p.provider}>
-                    {p.provider === 'openai' ? 'OpenAI' : 'Anthropic'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5 block">
-              Modello
-            </label>
-            <Select
-              value={selectedModel || undefined}
-              onValueChange={onModelChange}
-              disabled={disabled || !selectedProvider}
-            >
-              <SelectTrigger className="h-12 rounded-xl bg-white border-slate-200">
-                <SelectValue placeholder="Seleziona..." />
-              </SelectTrigger>
-              <SelectContent>
-                {currentModels.map(m => (
-                  <SelectItem key={m.modelId} value={m.modelId}>
-                    {m.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* View Card Button */}
-        {currentCard && (
-          <Button
-            variant="outline"
-            onClick={onViewCard}
-            className="w-full h-12 rounded-xl bg-white border-slate-200 text-slate-700"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Vedi carta completa
-          </Button>
-        )}
-      </div>
-
-      {/* Collapsible Prompt Settings */}
-      <Collapsible open={isPromptOpen} onOpenChange={setIsPromptOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 border border-slate-200/60 text-sm font-medium text-slate-600 active:bg-slate-100 transition-colors">
-            <span className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Impostazioni Prompt
-              {isCustomPrompt && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                  personalizzato
-                </span>
-              )}
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${isPromptOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2">
-          <div className="pt-3 space-y-3">
-            <Textarea
-              className="min-h-[160px] rounded-xl bg-white border-slate-200 text-base resize-none"
-              value={systemPrompt}
-              onChange={(e) => onSystemPromptChange(e.target.value)}
-              placeholder="Inserisci il prompt di sistema..."
-              disabled={disabled}
-            />
-            <div className="flex gap-2">
-              <Button
-                onClick={onSavePrompt}
-                disabled={isSavingPrompt || disabled}
-                className="flex-1 h-12 rounded-xl"
-              >
-                {isSavingPrompt ? 'Salvando...' : 'Salva prompt'}
-              </Button>
-              {isCustomPrompt && (
-                <Button
-                  variant="outline"
-                  onClick={onResetPrompt}
-                  disabled={isSavingPrompt || disabled}
-                  className="h-12 rounded-xl px-4"
-                >
-                  Reset
-                </Button>
-              )}
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  );
-}
-
-// =============================================================================
 // MOBILE QUIZ COMPONENT
 // =============================================================================
 
@@ -252,6 +37,7 @@ interface MobileQuizProps {
   validationResult: ValidationResponse | null;
   onAnswer: (answer: string) => void;
   onNext: () => void;
+  onViewCard: () => void;
   isValidating: boolean;
   isLoadingNext: boolean;
   cardsRemaining: number;
@@ -263,6 +49,7 @@ function MobileQuiz({
   validationResult,
   onAnswer,
   onNext,
+  onViewCard,
   isValidating,
   isLoadingNext,
   cardsRemaining,
@@ -330,9 +117,19 @@ function MobileQuiz({
         <span className="text-slate-500">
           <span className="font-medium text-slate-700">{card.title}</span>
         </span>
-        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
-          {cardsRemaining} rimanenti
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+            {cardsRemaining} rimanenti
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onViewCard}
+            className="h-8 px-3 rounded-full"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Question Card */}
@@ -459,17 +256,7 @@ export function StudyPage() {
 
   // State
   const [state, setState] = useState<StudyState>('loading');
-  const [availableModels, setAvailableModels] = useState<AvailableModelsResponse | null>(null);
   const [session, setSession] = useState<StudySession | null>(null);
-
-  // Selected provider/model
-  const [selectedProvider, setSelectedProvider] = useState<LLMProvider | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
-
-  // Prompt state
-  const [systemPrompt, setSystemPrompt] = useState('');
-  const [isCustomPrompt, setIsCustomPrompt] = useState(false);
-  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
 
   // Loading states
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
@@ -485,34 +272,7 @@ export function StudyPage() {
 
   const loadInitialData = async () => {
     try {
-      const [modelsResponse, cards, preferences] = await Promise.all([
-        getAvailableModels(),
-        getStudyCards(),
-        getStudyPreferences(),
-      ]);
-
-      setAvailableModels(modelsResponse);
-      setSystemPrompt(preferences.systemPrompt);
-      setIsCustomPrompt(preferences.isCustom);
-
-      const configuredProviders = modelsResponse.providers.filter(p => p.isConfigured);
-
-      if (preferences.preferredProvider && preferences.preferredModel) {
-        const providerStillConfigured = configuredProviders.some(
-          p => p.provider === preferences.preferredProvider
-        );
-        if (providerStillConfigured) {
-          setSelectedProvider(preferences.preferredProvider);
-          setSelectedModel(preferences.preferredModel);
-        }
-      }
-
-      if (!preferences.preferredProvider && configuredProviders.length > 0) {
-        setSelectedProvider(configuredProviders[0].provider);
-        if (configuredProviders[0].models.length > 0) {
-          setSelectedModel(configuredProviders[0].models[0].modelId);
-        }
-      }
+      const cards = await getStudyCards();
 
       if (cards.length === 0) {
         setState('no_cards');
@@ -543,7 +303,7 @@ export function StudyPage() {
   }, []);
 
   const loadNextCard = async () => {
-    if (!session || !selectedProvider || !selectedModel) return;
+    if (!session) return;
 
     setIsLoadingQuiz(true);
 
@@ -555,7 +315,7 @@ export function StudyPage() {
         return;
       }
 
-      const quiz = await generateQuiz(selectedProvider, selectedModel, nextCard.rawContent, systemPrompt);
+      const quiz = await generateQuiz(nextCard.rawContent);
 
       setSession(prev => ({
         ...prev!,
@@ -573,14 +333,12 @@ export function StudyPage() {
   };
 
   const handleAnswer = async (answer: string) => {
-    if (!session?.currentCard || !session?.currentQuiz || !selectedProvider || !selectedModel) return;
+    if (!session?.currentCard || !session?.currentQuiz) return;
 
     setIsValidating(true);
 
     try {
       const validation = await validateAnswer(
-        selectedProvider,
-        selectedModel,
         session.currentCard.rawContent,
         session.currentQuiz.question,
         answer,
@@ -605,63 +363,6 @@ export function StudyPage() {
       }));
     } finally {
       setIsValidating(false);
-    }
-  };
-
-  const handleProviderChange = async (provider: LLMProvider) => {
-    setSelectedProvider(provider);
-    setSelectedModel(null);
-
-    const providerModels = availableModels?.providers.find(p => p.provider === provider)?.models;
-    if (providerModels && providerModels.length > 0) {
-      const newModelId = providerModels[0].modelId;
-      setSelectedModel(newModelId);
-      try {
-        await saveModelPreferences(provider, newModelId);
-      } catch (err) {
-        console.error('Failed to save model preference:', err);
-      }
-    }
-  };
-
-  const handleModelChange = async (modelId: string) => {
-    setSelectedModel(modelId);
-    if (selectedProvider) {
-      try {
-        await saveModelPreferences(selectedProvider, modelId);
-      } catch (err) {
-        console.error('Failed to save model preference:', err);
-      }
-    }
-  };
-
-  const handleSavePrompt = async () => {
-    setIsSavingPrompt(true);
-    try {
-      await saveStudyPreferences(systemPrompt);
-      setIsCustomPrompt(true);
-      toast.success('Prompt salvato');
-    } catch (err) {
-      console.error('Failed to save prompt:', err);
-      toast.error('Errore nel salvataggio del prompt');
-    } finally {
-      setIsSavingPrompt(false);
-    }
-  };
-
-  const handleResetPrompt = async () => {
-    setIsSavingPrompt(true);
-    try {
-      await resetStudyPreferences();
-      const defaultPrompt = await getDefaultPrompt();
-      setSystemPrompt(defaultPrompt);
-      setIsCustomPrompt(false);
-      toast.success('Prompt ripristinato');
-    } catch (err) {
-      console.error('Failed to reset prompt:', err);
-      toast.error('Errore nel ripristino del prompt');
-    } finally {
-      setIsSavingPrompt(false);
     }
   };
 
@@ -726,29 +427,22 @@ export function StudyPage() {
         );
       }
 
-      const canStart = selectedProvider && selectedModel;
       return (
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-5">
             <Sparkles className="w-10 h-10 text-primary" />
           </div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">
-            {canStart ? 'Pronto per studiare' : 'Seleziona provider e modello'}
-          </h2>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Pronto per studiare</h2>
           <p className="text-slate-500 mb-6">
-            {canStart
-              ? `Hai ${session?.cards.length || 0} carte disponibili`
-              : 'Scegli il provider AI per iniziare'}
+            Hai {session?.cards.length || 0} carte disponibili
           </p>
-          {canStart && (
-            <Button
-              onClick={loadNextCard}
-              className="h-14 px-8 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Genera domanda
-            </Button>
-          )}
+          <Button
+            onClick={loadNextCard}
+            className="h-14 px-8 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20"
+          >
+            <Sparkles className="w-5 h-5 mr-2" />
+            Genera domanda
+          </Button>
         </div>
       );
     }
@@ -760,6 +454,7 @@ export function StudyPage() {
         validationResult={session.validationResult}
         onAnswer={handleAnswer}
         onNext={loadNextCard}
+        onViewCard={() => setIsCardPreviewOpen(true)}
         isValidating={isValidating}
         isLoadingNext={isLoadingQuiz}
         cardsRemaining={session.cards.length - session.seenCardIds.size}
@@ -784,30 +479,8 @@ export function StudyPage() {
         </div>
       </header>
 
-      {/* Controls (always visible when models loaded) */}
-      {availableModels && state === 'studying' && (
-        <div className="py-4">
-          <MobileStudyControls
-            availableModels={availableModels}
-            selectedProvider={selectedProvider}
-            selectedModel={selectedModel}
-            systemPrompt={systemPrompt}
-            isCustomPrompt={isCustomPrompt}
-            onProviderChange={handleProviderChange}
-            onModelChange={handleModelChange}
-            onSystemPromptChange={setSystemPrompt}
-            onSavePrompt={handleSavePrompt}
-            onResetPrompt={handleResetPrompt}
-            onViewCard={() => setIsCardPreviewOpen(true)}
-            isSavingPrompt={isSavingPrompt}
-            currentCard={session?.currentCard || null}
-            disabled={isLoadingQuiz || isValidating}
-          />
-        </div>
-      )}
-
       {/* Main Content */}
-      <main className="flex-1 flex flex-col pb-8">
+      <main className="flex-1 flex flex-col py-4">
         {renderContent()}
       </main>
 

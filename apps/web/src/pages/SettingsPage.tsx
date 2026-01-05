@@ -8,9 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ApiKeySettings } from '@/components/ApiKeySettings';
 import { ArrowLeft, LogOut } from 'lucide-react';
-import { APP_NAME } from '@lumio/core';
 
 export function SettingsPage() {
   const { user, logout } = useAuth();
@@ -33,12 +31,6 @@ export function SettingsPage() {
           </Button>
           <h1 className="text-2xl font-bold">Impostazioni</h1>
         </div>
-
-        {/* API Keys Section */}
-        <section>
-          <h2 className="text-lg font-semibold mb-4">API Keys</h2>
-          <ApiKeySettings />
-        </section>
 
         {/* Account Section */}
         <section>

@@ -764,6 +764,118 @@
 
 ---
 
+## 10 - CENTRALIZZAZIONE AI API KEYS
+
+### Obiettivi Fase 10
+
+- Migrare dal paradigma "API keys per-utente" al paradigma "API keys centralizzate a livello piattaforma"
+- Le API keys (OpenAI, Anthropic) sono configurate come Supabase Secrets dall'admin
+- Provider, modello e system prompt sono configurati in una tabella database (modificabile da Supabase Studio)
+- Rimuovere completamente l'UI di configurazione API keys da web e mobile
+- Semplificare drasticamente il codice (rimozione ~1500 righe)
+
+### 10.1 Database - Migrazioni
+
+- [x] 10.1.1 Creare tabella `platform_config` con chiavi:
+  - `llm_provider` (default: "anthropic")
+  - `llm_model` (default: "claude-3-5-haiku-latest")
+  - `system_prompt` (default: prompt italiano per quiz)
+- [x] 10.1.2 RLS policy: SELECT per authenticated users, nessun UPDATE per utenti normali
+- [x] 10.1.3 DROP TABLE `user_api_keys`
+- [x] 10.1.4 DROP TABLE `user_study_preferences`
+
+### 10.2 Supabase Secrets (Configurazione Manuale)
+
+- [ ] 10.2.1 Configurare `OPENAI_API_KEY` via Supabase Dashboard (Secrets)
+- [ ] 10.2.2 Configurare `ANTHROPIC_API_KEY` via Supabase Dashboard (Secrets)
+
+### 10.3 Edge Function llm-proxy
+
+- [x] 10.3.1 Rimuovere codice crittografia (~80 righe)
+- [x] 10.3.2 Rimuovere actions obsolete: test_key, save_key, get_keys, delete_key, set_preferred, has_valid_key, get_study_preferences, save_study_preferences, etc.
+- [x] 10.3.3 Aggiungere action `get_platform_config`
+- [x] 10.3.4 Semplificare `generate_quiz` (legge config da platform_config, API key da env)
+- [x] 10.3.5 Semplificare `validate_answer` (legge config da platform_config, API key da env)
+- [x] 10.3.6 Riduzione da ~1160 righe a ~500 righe
+
+### 10.4 Packages (shared + core)
+
+- [x] 10.4.1 Rimuovere tipi obsoleti: `UserApiKey`, `StudyPreferences`, `AVAILABLE_MODELS`, `AvailableModelsResponse`
+- [x] 10.4.2 Aggiungere tipo `PlatformConfig`
+- [x] 10.4.3 Eliminare `packages/core/src/supabase/api-keys.ts`
+- [x] 10.4.4 Semplificare `packages/core/src/supabase/study.ts`:
+  - Rimuovere: getAvailableModels, getStudyPreferences, saveStudyPreferences, resetStudyPreferences, getDefaultPrompt, saveModelPreferences
+  - Semplificare signature: `generateQuiz(cardContent)`, `validateAnswer(cardContent, question, userAnswer, correctAnswer)`
+  - Aggiungere: `getPlatformConfig()`
+- [x] 10.4.5 Aggiornare `packages/core/src/index.ts`
+
+### 10.5 Frontend Web
+
+- [x] 10.5.1 Semplificare `AuthContext.tsx`:
+  - Rimuovere: `hasApiKey`, `refreshApiKeyStatus`, `checkApiKeys()`
+- [x] 10.5.2 Semplificare `DashboardPage.tsx`:
+  - `canStudy = stats.cardCount > 0` (non più dipendente da hasApiKey)
+  - Rimuovere messaggi "Configura API Keys"
+- [x] 10.5.3 Semplificare `StudyPage.tsx`:
+  - Rimuovere `StudyControls` component (~200 righe)
+  - Rimuovere state: selectedProvider, selectedModel, systemPrompt, isCustomPrompt
+  - Semplificare chiamate: `generateQuiz(cardContent)`, `validateAnswer(...)`
+- [x] 10.5.4 Semplificare `SettingsPage.tsx`:
+  - Rimuovere sezione "API Keys"
+  - Eliminare `ApiKeySettings.tsx`
+
+### 10.6 Frontend Mobile
+
+- [x] 10.6.1 Semplificare `AuthContext.tsx` (come web)
+- [x] 10.6.2 Semplificare `DashboardPage.tsx`:
+  - Rimuovere logica hasApiKey e link "Apri Lumio Web"
+- [x] 10.6.3 Semplificare `StudyPage.tsx`:
+  - Rimuovere `MobileStudyControls` component (~200 righe)
+  - Rimuovere selezione provider/model/prompt
+
+### 10.7 Documentazione
+
+- [x] 10.7.1 Aggiornare ROADMAP.md con Fase 10
+
+### Criteri di Successo Fase 10
+
+- Le API keys sono configurate centralmente come Supabase Secrets
+- La configurazione AI (provider, model, prompt) è in `platform_config` table
+- L'admin può modificare la configurazione da Supabase Studio
+- Gli utenti non vedono mai UI per configurazione API keys
+- Login → Dashboard → Study funziona senza blocchi (se cardCount > 0)
+- Il codice è significativamente più semplice (~1500 righe rimosse)
+
+### Note Fase 10
+
+- **Data loss intenzionale**: Le tabelle `user_api_keys` e `user_study_preferences` vengono eliminate
+- **Pre-requisito deploy**: Configurare Supabase Secrets PRIMA di applicare le migrazioni
+- **Rollback**: Non previsto (cambio paradigmatico)
+- **Costi API**: I costi delle chiamate AI sono a carico della piattaforma, non degli utenti
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/20260105000001_add_platform_config.sql` | NUOVO |
+| `supabase/migrations/20260105000002_drop_user_api_keys.sql` | NUOVO |
+| `supabase/migrations/20260105000003_drop_user_study_preferences.sql` | NUOVO |
+| `supabase/functions/llm-proxy/index.ts` | MODIFICA MAGGIORE (~600 righe rimosse) |
+| `packages/shared/src/types/index.ts` | MODIFICA - Rimuovere tipi obsoleti |
+| `packages/core/src/supabase/api-keys.ts` | ELIMINARE |
+| `packages/core/src/supabase/study.ts` | MODIFICA MAGGIORE |
+| `packages/core/src/index.ts` | MODIFICA |
+| `apps/web/src/contexts/AuthContext.tsx` | MODIFICA |
+| `apps/web/src/pages/DashboardPage.tsx` | MODIFICA |
+| `apps/web/src/pages/StudyPage.tsx` | MODIFICA MAGGIORE |
+| `apps/web/src/pages/SettingsPage.tsx` | MODIFICA |
+| `apps/web/src/components/ApiKeySettings.tsx` | ELIMINARE |
+| `apps/mobile/src/contexts/AuthContext.tsx` | MODIFICA |
+| `apps/mobile/src/pages/DashboardPage.tsx` | MODIFICA |
+| `apps/mobile/src/pages/StudyPage.tsx` | MODIFICA MAGGIORE |
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [ ] Proteggere le edge functions con JWT

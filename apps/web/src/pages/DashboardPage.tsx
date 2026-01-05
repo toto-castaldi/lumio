@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -14,7 +13,7 @@ import { Settings } from 'lucide-react';
 import { APP_NAME, getVersionString, getUserStats, type UserStats } from '@lumio/core';
 
 export function DashboardPage() {
-  const { user, hasApiKey } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
@@ -36,11 +35,10 @@ export function DashboardPage() {
       .slice(0, 2);
   };
 
-  // Determine study button state and message
-  const canStudy = hasApiKey && stats.cardCount > 0;
+  // Determine study button state
+  const canStudy = stats.cardCount > 0;
   const getStudyMessage = () => {
     if (isLoadingStats) return 'Caricamento...';
-    if (!hasApiKey) return 'Configura le API Keys per studiare';
     if (stats.cardCount === 0) return 'Aggiungi un repository per iniziare';
     return '';
   };
@@ -82,11 +80,6 @@ export function DashboardPage() {
                 <h2 className="text-lg font-semibold">Pronto a studiare?</h2>
                 <p className="text-sm text-muted-foreground">
                   {getStudyMessage()}
-                  {!hasApiKey && !isLoadingStats && (
-                    <Link to="/settings" className="ml-1 underline">
-                      Vai alle Impostazioni
-                    </Link>
-                  )}
                 </p>
               </div>
               {isLoadingStats || !canStudy ? (
@@ -139,7 +132,7 @@ export function DashboardPage() {
                 </CardContent>
               </Card>
 
-              
+
             </div>
           </CardContent>
         </Card>

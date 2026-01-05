@@ -10,7 +10,6 @@ import {
   onAuthStateChange,
   getCurrentUser,
   signOut as supabaseSignOut,
-  getUserApiKeys,
   type AuthUser,
   type AuthState,
 } from '@lumio/core';
@@ -18,9 +17,7 @@ import {
 interface AuthContextType {
   user: AuthUser | null;
   state: AuthState;
-  hasApiKey: boolean;
   logout: () => Promise<void>;
-  refreshApiKeyStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,23 +36,6 @@ createSupabaseClient(
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [state, setState] = useState<AuthState>('loading');
-  const [hasApiKey, setHasApiKey] = useState(false);
-
-  // Check if user has API keys
-  const checkApiKeys = async (): Promise<boolean> => {
-    try {
-      const keys = await getUserApiKeys();
-      return keys.length > 0;
-    } catch {
-      return false;
-    }
-  };
-
-  // Refresh API key status
-  const refreshApiKeyStatus = async () => {
-    const hasKeys = await checkApiKeys();
-    setHasApiKey(hasKeys);
-  };
 
   useEffect(() => {
     // Check initial auth state
@@ -63,14 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const currentUser = await getCurrentUser();
         setUser(currentUser);
-
-        if (currentUser) {
-          const hasKeys = await checkApiKeys();
-          setHasApiKey(hasKeys);
-          setState('ready');
-        } else {
-          setState('logged_out');
-        }
+        setState(currentUser ? 'ready' : 'logged_out');
       } catch (error) {
         console.error('Auth check failed:', error);
         setState('logged_out');
@@ -84,15 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       data: { subscription },
     } = onAuthStateChange(async (authUser) => {
       setUser(authUser);
-
-      if (authUser) {
-        const hasKeys = await checkApiKeys();
-        setHasApiKey(hasKeys);
-        setState('ready');
-      } else {
-        setState('logged_out');
-        setHasApiKey(false);
-      }
+      setState(authUser ? 'ready' : 'logged_out');
     });
 
     return () => subscription.unsubscribe();
@@ -102,13 +67,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await supabaseSignOut();
     setUser(null);
     setState('logged_out');
-    setHasApiKey(false);
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, state, hasApiKey, logout, refreshApiKeyStatus }}
-    >
+    <AuthContext.Provider value={{ user, state, logout }}>
       {children}
     </AuthContext.Provider>
   );
