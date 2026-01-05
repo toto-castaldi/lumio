@@ -104,7 +104,7 @@ export function DashboardPage() {
       <header className="sticky top-0 z-10 px-4 py-3 bg-white/80 backdrop-blur-lg border-b border-slate-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Lumio" className="h-8 w-8" />
+            <img src="/logo.svg" alt="Lumio" className="h-11 w-11" />
             <h1 className="text-xl font-bold text-slate-800">{APP_NAME}</h1>
           </div>
           <div className="flex items-center gap-2">

@@ -51,7 +51,7 @@ export function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Lumio" className="h-10 w-10" />
+            <img src="/logo.svg" alt="Lumio" className="h-12" />
             <h1 className="text-2xl font-bold">{APP_NAME}</h1>
           </div>
           <div className="flex items-center gap-4">

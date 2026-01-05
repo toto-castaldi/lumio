@@ -32,7 +32,7 @@ export function LoginPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-white">
         <div className="text-center">
-          <img src="/logo.png" alt="Lumio" className="h-16 w-16 mx-auto mb-4 animate-pulse" />
+          <img src="/logo.svg" alt="Lumio" className="h-16 w-16 mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Caricamento...</p>
         </div>
       </div>
@@ -44,7 +44,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/logo.png" alt="Lumio" className="h-20 w-20" />
+            <img src="/logo.svg" alt="Lumio" className="h-20 w-20" />
           </div>
           <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
         </CardHeader>
@@ -76,9 +76,6 @@ export function LoginPage() {
             Accedi con Google
           </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Registrandoti accetti i nostri termini di servizio
-          </p>
         </CardContent>
       </Card>
       <p className="mt-6 text-xs text-muted-foreground">{getVersionString()}</p>

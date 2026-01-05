@@ -1,6 +1,6 @@
 # Lumio
 
-![logo](logo.png "logo")
+![logo](logo.svg "logo")
 
 AI-powered flashcard study platform. 
 

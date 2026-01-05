@@ -27,7 +27,7 @@ export function LoginPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-white">
         <div className="text-center">
-          <img src="/logo.png" alt="Lumio" className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+          <img src="/logo.svg" alt="Lumio" className="w-16 h-16 mx-auto mb-4 animate-pulse" />
           <p className="text-slate-500 font-medium">Caricamento...</p>
         </div>
       </div>
@@ -40,7 +40,7 @@ export function LoginPage() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Logo/Brand */}
         <div className="text-center mb-12">
-          <img src="/logo.png" alt="Lumio" className="w-20 h-20 mx-auto mb-6" />
+          <img src="/logo.svg" alt="Lumio" className="w-20 h-20 mx-auto mb-6" />
           <h1 className="text-3xl font-bold text-slate-800 mb-2">{APP_NAME}</h1>
         </div>
 
