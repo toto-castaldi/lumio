@@ -325,16 +325,52 @@ Sincronizza i repository Git con il database locale. Supporta sia repository pub
 Trigger: n8n (ogni ora, configurabile) + manuale da UI
 Input: repository_id, (opzionale) accessToken per repo privati
 Flow:
-  1. Verifica se repository è privato → decripta PAT
-  2. Fetch repository metadata (ultimo commit) con auth se privato
-  3. Se cambiato, clone/pull repository
-  4. Parse tutti i file .md
-  5. Validate contro Card Format Spec
-  6. Upsert cards nel database
-  7. Download immagini in Storage (solo repo pubblici in Fase 9A)
-  8. Update repository.last_synced_at
-  9. Se errore auth (401/403) → set token_status = 'invalid'
+  1. Stale Sync Recovery: reset repo stuck in 'syncing' > 5 min
+  2. Verifica se repository è privato → decripta PAT
+  3. Fetch repository metadata (ultimo commit) con auth se privato
+  4. Se cambiato → DELTA SYNC:
+     a. Fetch cards esistenti con content_hash
+     b. Per ogni file .md nel nuovo commit:
+        - Calcola hash contenuto
+        - Se UNCHANGED (stesso hash) → SKIP (no image processing!)
+        - Se MODIFIED (hash diverso) → UPDATE card + re-process images
+        - Se NEW → INSERT card + process images
+     c. Cards non più presenti → DELETE
+  5. Download immagini SOLO per cards nuove/modificate
+  6. Update repository con sync summary
+  7. Se errore auth (401/403) → set token_status = 'invalid'
 ```
+
+**Delta Sync (Ottimizzazione Performance):**
+
+Il delta sync riduce drasticamente il tempo di sincronizzazione processando solo le card modificate.
+
+| Scenario | Prima (Full Sync) | Dopo (Delta Sync) |
+|----------|-------------------|-------------------|
+| 1 card modificata su 13 | 73 immagini scaricate | ~5 immagini scaricate |
+| Nessuna modifica | 73 immagini scaricate | 0 immagini scaricate |
+| Nuova card aggiunta | 73 immagini scaricate | ~5 immagini (solo nuova card) |
+
+**Sync Summary:**
+
+Dopo ogni sync, il campo `sync_error_message` contiene un riepilogo:
+```
+Delta: +1 ~2 -0 =10
+```
+Dove:
+- `+N` = cards aggiunte
+- `~N` = cards modificate
+- `-N` = cards eliminate
+- `=N` = cards invariate (skipped)
+
+**Stale Sync Recovery:**
+
+Per gestire timeout delle Edge Functions (limite 150s), all'inizio di ogni `check_updates`:
+1. Cerca repository con `sync_status = 'syncing'` e `updated_at` > 5 minuti fa
+2. Reset automatico a `sync_status = 'synced'`
+3. Messaggio: "Sync timed out - reset automatically"
+
+Questo garantisce che repository bloccati vengano recuperati automaticamente al prossimo ciclo n8n.
 
 **Azioni disponibili (Fase 9):**
 
