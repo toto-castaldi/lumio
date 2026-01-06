@@ -878,6 +878,7 @@
 
 ## BACKLOG - Miglioramenti Futuri
 
+- [x] studio : possibilità di "saltare" una carta durante lo studio (web + mobile)
 - [ ] Proteggere le edge functions con JWT
 - [ ] Ogni carta deve spiegare le sue fonti
 - [ ] Web Push Notifications per PWA

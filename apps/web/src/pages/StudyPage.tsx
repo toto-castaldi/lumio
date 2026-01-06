@@ -43,9 +43,11 @@ interface QuizComponentProps {
   validationResult: ValidationResponse | null;
   onAnswer: (answer: string) => void;
   onNext: () => void;
+  onSkip: () => void;
   onViewCard: () => void;
   isValidating: boolean;
   isLoadingNext: boolean;
+  isSkipping: boolean;
   cardsRemaining: number;
 }
 
@@ -55,9 +57,11 @@ function QuizComponent({
   validationResult,
   onAnswer,
   onNext,
+  onSkip,
   onViewCard,
   isValidating,
   isLoadingNext,
+  isSkipping,
   cardsRemaining,
 }: QuizComponentProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -102,9 +106,21 @@ function QuizComponent({
           <span className="mx-2">•</span>
           <span>{cardsRemaining} carte rimanenti</span>
         </div>
-        <Button variant="outline" size="sm" onClick={onViewCard}>
-          Vedi carta
-        </Button>
+        <div className="flex items-center gap-2">
+          {!validationResult && !isValidating && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSkip}
+              disabled={isSkipping}
+            >
+              {isSkipping ? 'Saltando...' : 'Salta'}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={onViewCard}>
+            Vedi carta
+          </Button>
+        </div>
       </div>
 
       {/* Question */}
@@ -183,6 +199,7 @@ export function StudyPage() {
   // Loading states
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
 
   // Card preview dialog
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
@@ -290,6 +307,38 @@ export function StudyPage() {
     }
   };
 
+  const handleSkip = async () => {
+    if (!session) return;
+
+    setIsSkipping(true);
+
+    try {
+      const nextCard = selectRandomCard(session.cards, session.seenCardIds);
+
+      if (!nextCard) {
+        setState('completed');
+        return;
+      }
+
+      const quiz = await generateQuiz(nextCard.rawContent);
+
+      setSession(prev => ({
+        ...prev!,
+        currentCard: nextCard,
+        currentQuiz: quiz,
+        validationResult: null,
+        seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
+      }));
+
+      toast.info('Carta saltata');
+    } catch (err) {
+      console.error('Failed to skip card:', err);
+      toast.error(err instanceof Error ? err.message : 'Errore nel saltare la carta');
+    } finally {
+      setIsSkipping(false);
+    }
+  };
+
   // Render based on state
   const renderContent = () => {
     if (state === 'loading') {
@@ -373,9 +422,11 @@ export function StudyPage() {
         validationResult={session.validationResult}
         onAnswer={handleAnswer}
         onNext={loadNextCard}
+        onSkip={handleSkip}
         onViewCard={() => setIsCardPreviewOpen(true)}
         isValidating={isValidating}
         isLoadingNext={isLoadingQuiz}
+        isSkipping={isSkipping}
         cardsRemaining={session.cards.length - session.seenCardIds.size}
       />
     );
