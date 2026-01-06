@@ -1,7 +1,7 @@
 {
   "name": "lumio",
   "private": true,
-  "version": "0.8.2",
+  "version": "0.8.3",
   "scripts": {
     "dev:web": "pnpm --filter @lumio/web dev",
     "dev:mobile": "pnpm --filter @lumio/mobile dev",
