@@ -116,24 +116,22 @@ function MobileQuiz({
 
   return (
     <div className="px-4 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      {/* Progress Indicator */}
+      {/* Controls */}
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-500">
-          <span className="font-medium text-slate-700">{card.title}</span>
+        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+          {cardsRemaining} rimanenti
         </span>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
-            {cardsRemaining} rimanenti
-          </span>
           {!validationResult && !isValidating && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={onSkip}
               disabled={isSkipping}
               className="h-8 px-3 rounded-full"
             >
-              <SkipForward className="w-4 h-4" />
+              <SkipForward className="w-4 h-4 mr-1" />
+              {isSkipping ? 'Saltando...' : 'Salta'}
             </Button>
           )}
           <Button
@@ -142,9 +140,15 @@ function MobileQuiz({
             onClick={onViewCard}
             className="h-8 px-3 rounded-full"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-4 h-4 mr-1" />
+            Vedi
           </Button>
         </div>
+      </div>
+
+      {/* Card Title */}
+      <div className="text-sm text-slate-500">
+        <span className="font-medium text-slate-700">{card.title}</span>
       </div>
 
       {/* Question Card */}
