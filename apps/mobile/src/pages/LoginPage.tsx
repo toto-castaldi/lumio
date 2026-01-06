@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithGoogle, APP_NAME, getVersionString } from '@lumio/core';
+import { signInWithGoogle, APP_NAME } from '@lumio/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
@@ -72,16 +72,8 @@ export function LoginPage() {
             Accedi con Google
           </Button>
 
-          <p className="text-center text-sm text-slate-400">
-            Registrandoti accetti i nostri termini di servizio
-          </p>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="px-6 py-6 text-center">
-        <p className="text-xs text-slate-400">{getVersionString()}</p>
-      </footer>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithGoogle, APP_NAME, getVersionString } from '@lumio/core';
+import { signInWithGoogle, APP_NAME } from '@lumio/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -78,7 +78,6 @@ export function LoginPage() {
 
         </CardContent>
       </Card>
-      <p className="mt-6 text-xs text-muted-foreground">{getVersionString()}</p>
     </div>
   );
 }

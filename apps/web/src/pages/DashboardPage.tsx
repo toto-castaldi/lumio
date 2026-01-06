@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,13 +9,27 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Settings } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { LogOut, Info } from 'lucide-react';
 import { APP_NAME, getVersionString, getUserStats, type UserStats } from '@lumio/core';
 
 export function DashboardPage() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     getUserStats()
@@ -52,24 +66,33 @@ export function DashboardPage() {
             <img src="/logo.svg" alt="Lumio" className="h-12" />
             <h1 className="text-2xl font-bold">{APP_NAME}</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatarUrl} alt={user?.displayName} />
-                <AvatarFallback>
-                  {getInitials(user?.displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-muted-foreground">
-                {user?.displayName || user?.email}
-              </span>
-            </div>
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/settings">
-                <Settings className="h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity">
+                  <AvatarImage src={user?.avatarUrl} alt={user?.displayName} />
+                  <AvatarFallback>
+                    {getInitials(user?.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <p className="text-sm font-medium">{user?.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <Info className="mr-2 h-4 w-4" />
+                {getVersionString()}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                Esci
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Study Button */}
@@ -136,11 +159,6 @@ export function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground">
-          {getVersionString()}
-        </div>
       </div>
     </div>
   );

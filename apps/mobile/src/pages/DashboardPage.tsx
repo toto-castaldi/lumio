@@ -10,12 +10,20 @@ import {
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   APP_NAME,
   getVersionString,
   getUserStats,
   type UserStats,
 } from '@lumio/core';
-import { FolderGit2, Layers, LogOut, Sparkles } from 'lucide-react';
+import { FolderGit2, Layers, LogOut, Sparkles, Info } from 'lucide-react';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -85,20 +93,33 @@ export function DashboardPage() {
             <img src="/logo.svg" alt="Lumio" className="h-11 w-11" />
             <h1 className="text-xl font-bold text-slate-800">{APP_NAME}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Avatar className="h-9 w-9 border-2 border-slate-100">
-              <AvatarImage src={user?.avatarUrl} alt={user?.displayName} />
-              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                {getInitials(user?.displayName)}
-              </AvatarFallback>
-            </Avatar>
-            <button
-              onClick={handleLogout}
-              className="h-9 w-9 flex items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <Avatar className="h-9 w-9 border-2 border-slate-100 cursor-pointer hover:opacity-80 transition-opacity">
+                  <AvatarImage src={user?.avatarUrl} alt={user?.displayName} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                    {getInitials(user?.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <p className="text-sm font-medium">{user?.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <Info className="mr-2 h-4 w-4" />
+                {getVersionString()}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                Esci
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -181,11 +202,6 @@ export function DashboardPage() {
         </div>
 
       </main>
-
-      {/* Footer */}
-      <footer className="px-4 py-4 text-center">
-        <p className="text-xs text-slate-400">{getVersionString()}</p>
-      </footer>
     </div>
   );
 }
