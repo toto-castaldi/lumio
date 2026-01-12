@@ -25,12 +25,9 @@ export {
 export {
   addRepository,
   deleteRepository,
-  syncRepository,
   getUserRepositories,
   getUserStats,
   getRepositoryCards,
-  validateGitHubToken,
-  updateRepositoryToken,
 } from './supabase/repositories';
 
 // Export card assets functions

@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { getUserRepositories, type Repository } from '@lumio/core';
-import { ChevronLeft, FolderGit2, ExternalLink, Layers, RefreshCw, Lock, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, FolderGit2, ExternalLink, Layers, RefreshCw, Lock } from 'lucide-react';
 
 const WEB_APP_URL = 'https://lumio.toto-castaldi.com';
 
@@ -114,12 +114,6 @@ export function RepositoriesPage() {
                             <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                           )}
                         </div>
-                        {repo.tokenStatus === 'invalid' && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <AlertTriangle className="w-3 h-3 text-rose-500" />
-                            <span className="text-xs text-rose-500 font-medium">Token invalido</span>
-                          </div>
-                        )}
                         <CardDescription className="text-xs truncate mt-0.5">
                           {repo.url}
                         </CardDescription>
@@ -133,11 +127,6 @@ export function RepositoriesPage() {
                         <span className="font-medium">{repo.cardCount || 0}</span>
                         <span className="text-slate-400">card</span>
                       </div>
-                      {repo.lastSyncedAt && (
-                        <span className="text-xs text-slate-400">
-                          Sync: {new Date(repo.lastSyncedAt).toLocaleDateString('it-IT')}
-                        </span>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -160,7 +149,7 @@ export function RepositoriesPage() {
       <footer className="px-4 py-4">
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
           <p className="text-xs text-slate-500 text-center">
-            Per aggiungere, rimuovere repository o gestire i token dei repository privati, usa la versione Web.
+            Per aggiungere o rimuovere repository, usa la versione Web.
           </p>
         </div>
       </footer>

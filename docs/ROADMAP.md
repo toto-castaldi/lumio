@@ -876,6 +876,142 @@
 
 ---
 
+## 11 - INTEGRAZIONE DOCORA (Push Model)
+
+### Obiettivi Fase 11
+
+- Migrare da modello **PULL** (Lumio fetcha da GitHub) a modello **PUSH** (Docora invia webhook a Lumio)
+- Eliminare la complessità del polling GitHub e gestione PAT
+- Delegare a Docora il monitoraggio repository e l'invio di notifiche webhook
+- Semplificare drasticamente il codice (~1500 righe rimosse)
+
+### Contesto
+
+**Docora** è un servizio esterno che monitora repository GitHub e invia notifiche webhook quando ci sono cambiamenti. Lumio si registra su Docora e riceve aggiornamenti in tempo reale invece di fare polling periodico.
+
+**Vantaggi:**
+- Aggiornamenti in tempo reale invece di polling orario
+- Nessuna gestione PAT lato Lumio (Docora gestisce l'autenticazione GitHub)
+- Meno codice da mantenere
+- Nessun rate limiting GitHub per Lumio
+
+### 11.1 Database Migration
+
+- [x] Aggiungere colonna `docora_repository_id` a `repositories`
+- [x] Rimuovere colonne obsolete: `encrypted_access_token`, `token_status`, `token_error_message`, `last_commit_sha`, `last_synced_at`
+- [x] Creare tabella `webhook_chunks` per gestire file chunked (>1MB)
+- [x] Creare RPC functions: `increment_card_count`, `decrement_card_count`
+
+### 11.2 Nuova Edge Function docora-webhook
+
+- [x] Creare `supabase/functions/docora-webhook/index.ts`
+- [x] Implementare verifica HMAC-SHA256 signature
+- [x] Implementare endpoint `/create` per nuovi file
+- [x] Implementare endpoint `/update` per file modificati
+- [x] Implementare endpoint `/delete` per file rimossi
+- [x] Gestire file chunked (assembla quando completi)
+- [x] Validare `README.md` (lumio_format_version)
+- [x] Processare immagini (base64 → Supabase Storage)
+- [x] Aggiungere deploy in CI/CD
+
+### 11.3 Semplificare git-sync Edge Function
+
+- [x] Rimuovere `check_updates` action (~200 righe)
+- [x] Rimuovere `sync_repository` action (~400 righe)
+- [x] Rimuovere `validate_token` action (~50 righe)
+- [x] Rimuovere `update_token` action (~50 righe)
+- [x] Rimuovere tutto il codice GitHub API (~300 righe)
+- [x] Rimuovere crittografia PAT (~80 righe)
+- [x] Rimuovere parsing .lumioignore (~50 righe)
+- [x] Aggiungere Docora client (register/unregister repository)
+- [x] Modificare `add_repository` per chiamare Docora API
+
+**Azioni mantenute:**
+| Action | Descrizione |
+|--------|-------------|
+| `add_repository` | Chiama Docora API, salva `docora_repository_id` |
+| `delete_repository` | Chiama Docora API per stop watching |
+| `get_repositories` | Invariato |
+| `get_stats` | Invariato |
+| `get_cards` | Invariato |
+| `get_all_cards` | Invariato |
+
+### 11.4 Aggiornare Packages
+
+- [x] Rimuovere tipo `TokenStatus` da `@lumio/shared`
+- [x] Aggiornare interfaccia `Repository` (rimuovere campi obsoleti, aggiungere `docoraRepositoryId`)
+- [x] Rimuovere `TokenValidationResult` interface
+- [x] Aggiornare `mapRepository()` in `@lumio/core`
+- [x] Rimuovere funzioni: `syncRepository`, `validateGitHubToken`, `updateRepositoryToken`
+
+### 11.5 Semplificare Frontend
+
+**Web:**
+- [x] Rimuovere campo input PAT per repo privati
+- [x] Rimuovere dialog "Aggiorna token"
+- [x] Rimuovere badge "Token invalido"
+- [x] Rimuovere bottone "Sincronizza"
+- [x] Semplificare form: solo URL + isPrivate toggle + PAT opzionale
+
+**Mobile:**
+- [x] Rimuovere badge token status
+- [x] Aggiornare footer message
+
+### 11.6 CI/CD
+
+- [x] Aggiungere deploy `docora-webhook` in `.github/workflows/ci-deploy.yml`
+
+### 11.7 Documentazione
+
+- [x] Aggiornare ROADMAP.md (questa sezione)
+- [x] Aggiornare TECHNICAL-ARCHITECTURE.md
+- [x] Aggiornare DATA-MODEL.md
+
+### 11.8 Disabilitare n8n Job
+
+- [ ] Disabilitare/eliminare job `sync_repositories` che chiama `check_updates`
+- [ ] Il job `recalculate_study_plans` rimane invariato
+
+### Criteri di Successo Fase 11
+
+- I repository vengono aggiornati in tempo reale tramite webhook
+- Nessun polling GitHub (n8n job disabilitato)
+- Il codice è significativamente più semplice (~1500 righe rimosse)
+- Le card vengono create/aggiornate/eliminate tramite webhook
+- Le immagini vengono processate correttamente (base64 → Storage)
+- La UI non mostra più opzioni relative a token/sync manuale
+
+### Note Fase 11
+
+- **PAT opzionale**: L'utente può inserire PAT per repo privati, ma viene passato a Docora (non salvato in Lumio)
+- **Validazione lazy**: Lumio registra subito su Docora, valida quando arrivano le card
+- **.lumioignore**: Gestito completamente da Docora (non invia file ignorati)
+- **Webhook HMAC**: Autenticazione tramite `DOCORA_CLIENT_AUTH_KEY`
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/20260112000001_docora_integration.sql` | NUOVO |
+| `supabase/functions/docora-webhook/index.ts` | NUOVO |
+| `supabase/functions/git-sync/index.ts` | MODIFICA MAGGIORE (~1500 righe rimosse) |
+| `packages/shared/src/types/index.ts` | MODIFICA |
+| `packages/core/src/supabase/repositories.ts` | MODIFICA |
+| `packages/core/src/index.ts` | MODIFICA |
+| `apps/web/src/pages/RepositoriesPage.tsx` | MODIFICA MAGGIORE |
+| `apps/mobile/src/pages/RepositoriesPage.tsx` | MODIFICA |
+| `.github/workflows/ci-deploy.yml` | MODIFICA |
+
+### Environment Variables Nuove
+
+| Variabile | Descrizione |
+|-----------|-------------|
+| `DOCORA_JWT_TOKEN` | JWT per autenticare chiamate a Docora API |
+| `DOCORA_CLIENT_AUTH_KEY` | Secret per verifica HMAC webhook |
+| `DOCORA_API_URL` | URL Docora API (default: `https://api.docora.toto-castaldi.com`) |
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [x] studio : possibilità di "saltare" una carta durante lo studio (web + mobile)
