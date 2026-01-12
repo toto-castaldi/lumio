@@ -30,6 +30,7 @@ cp apps/web/.env.example apps/web/.env.local
 cp apps/mobile/.env.example apps/mobile/.env.local
 
 # Build shared packages (required before running apps)
+pnpm typecheck
 pnpm build:packages
 
 # Start Supabase local

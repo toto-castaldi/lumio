@@ -1,0 +1,83 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Lumio : Supabase",
+      "type": "shell",
+      "command": "set -a && source supabase/.env.local && set +a && supabase start",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "supabase"
+      },
+      "detail": "Start Supabase with Google OAuth (loads env from supabase/.env.local)"
+    },
+    {
+      "label": "Lumio : Supabase Functions",
+      "type": "shell",
+      "command": "supabase functions serve --env-file supabase/.env.local",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "supabase"
+      },
+      "detail": "Serve Edge Functions locally with hot reload"
+    },
+    {
+      "label": "Lumio : Supabase DB Push",
+      "type": "shell",
+      "command": "supabase db push",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "supabase"
+      },
+      "detail": "Apply pending migrations to local database"
+    },
+    {
+      "label": "Lumio : Web",
+      "type": "shell",
+      "command": "pnpm dev:web",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev"
+      },
+      "detail": "Start web app dev server (http://localhost:5173)"
+    },
+    {
+      "label": "Lumio : Mobile",
+      "type": "shell",
+      "command": "pnpm dev:mobile",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev"
+      },
+      "detail": "Start mobile PWA dev server (http://localhost:5174)"
+    }
+  ]
+}
