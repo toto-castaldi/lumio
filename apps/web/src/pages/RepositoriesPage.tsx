@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   addRepository,
   deleteRepository,
-  getUserRepositories,
   type Repository,
   type SyncStatus,
 } from '@lumio/core';
+import { useRealtimeRepositories } from '@/hooks/useRealtimeRepositories';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,8 +63,9 @@ function getSyncStatusColor(status: SyncStatus): string {
 }
 
 export function RepositoriesPage() {
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use realtime hook for automatic updates
+  const { repositories, isLoading, refresh } = useRealtimeRepositories();
+
   const [url, setUrl] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [accessToken, setAccessToken] = useState('');
@@ -72,23 +73,6 @@ export function RepositoriesPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
-
-  // Load repositories on mount
-  useEffect(() => {
-    loadRepositories();
-  }, []);
-
-  const loadRepositories = async () => {
-    try {
-      const repos = await getUserRepositories();
-      setRepositories(repos);
-    } catch (err) {
-      console.error('Failed to load repositories:', err);
-      toast.error('Errore nel caricamento dei repository');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAddRepository = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,18 +98,19 @@ export function RepositoriesPage() {
     setIsAdding(true);
 
     try {
-      const newRepo = await addRepository({
+      await addRepository({
         url: url.trim(),
         isPrivate,
         accessToken: isPrivate ? accessToken.trim() : undefined,
       });
-      setRepositories((prev) => [newRepo, ...prev]);
       setUrl('');
       setAccessToken('');
       setIsPrivate(false);
       toast.success('Repository aggiunto', {
         description: `Le card verranno sincronizzate automaticamente`,
       });
+      // Realtime will handle the update, but refresh just in case
+      refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore durante l\'aggiunta';
       setError(message);
@@ -147,8 +132,9 @@ export function RepositoriesPage() {
 
     try {
       await deleteRepository(repoId);
-      setRepositories((prev) => prev.filter((r) => r.id !== repoId));
       toast.success('Repository eliminato');
+      // Realtime will handle the update, but refresh just in case
+      refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore durante l\'eliminazione';
       toast.error('Eliminazione fallita', { description: message });

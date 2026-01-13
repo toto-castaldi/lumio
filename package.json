@@ -14,7 +14,7 @@
     "clean": "pnpm -r clean",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
-    "supabase:functions": "supabase functions serve",
+    "supabase:functions": "supabase functions serve --env-file supabase/.env.local --no-verify-jwt",
     "commit": "cz",
     "prepare": "husky"
   },

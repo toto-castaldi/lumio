@@ -1225,7 +1225,7 @@ openssl rand -base64 32
 | `RESEND_API_KEY` | Resend API key for emails |
 | `ENCRYPTION_KEY` | Key for encrypting API keys |
 | `DOCORA_API_URL` | URL Docora API (default: `https://api.docora.toto-castaldi.com`) |
-| `DOCORA_JWT_TOKEN` | JWT per autenticare chiamate a Docora API |
+| `DOCORA_TOKEN_AUTHENTICATION` | JWT per autenticare chiamate a Docora API |
 | `DOCORA_CLIENT_AUTH_KEY` | Secret per verifica HMAC webhook |
 
 ### 11.4 GitHub Actions Secrets
@@ -1245,7 +1245,7 @@ openssl rand -base64 32
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `DOCORA_API_URL` | URL Docora API (Fase 11) |
-| `DOCORA_JWT_TOKEN` | JWT per Docora API (Fase 11) |
+| `DOCORA_TOKEN_AUTHENTICATION` | JWT per Docora API (Fase 11) |
 | `DOCORA_CLIENT_AUTH_KEY` | Secret per webhook HMAC (Fase 11) |
 
 ### 11.5 GitHub Actions Variables
@@ -1308,7 +1308,7 @@ GOOGLE_CLIENT_ID="your-client-id" GOOGLE_CLIENT_SECRET="your-secret" supabase st
 supabase db push
 
 # Deploy functions locally
-supabase functions serve --env-file supabase/.env.local
+supabase functions serve --env-file supabase/.env.local --no-verify-jwt
 
 # Stop
 supabase stop

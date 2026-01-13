@@ -75,7 +75,7 @@ async function getUserId(
 // =============================================================================
 
 const DOCORA_API_URL = Deno.env.get("DOCORA_API_URL") || "https://api.docora.toto-castaldi.com";
-const DOCORA_JWT_TOKEN = Deno.env.get("DOCORA_JWT_TOKEN");
+const DOCORA_TOKEN_AUTHENTICATION = Deno.env.get("DOCORA_TOKEN_AUTHENTICATION");
 
 interface DocoraRepository {
   repository_id: string;
@@ -93,14 +93,14 @@ async function docoraAddRepository(
   githubUrl: string,
   githubToken?: string
 ): Promise<DocoraRepository> {
-  if (!DOCORA_JWT_TOKEN) {
-    throw new Error("DOCORA_JWT_TOKEN not configured");
+  if (!DOCORA_TOKEN_AUTHENTICATION) {
+    throw new Error("DOCORA_TOKEN_AUTHENTICATION not configured");
   }
 
   const response = await fetch(`${DOCORA_API_URL}/api/repositories`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${DOCORA_JWT_TOKEN}`,
+      "Authorization": `Bearer ${DOCORA_TOKEN_AUTHENTICATION}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -121,14 +121,14 @@ async function docoraAddRepository(
  * Unregister a repository from Docora monitoring
  */
 async function docoraDeleteRepository(docoraRepositoryId: string): Promise<void> {
-  if (!DOCORA_JWT_TOKEN) {
-    throw new Error("DOCORA_JWT_TOKEN not configured");
+  if (!DOCORA_TOKEN_AUTHENTICATION) {
+    throw new Error("DOCORA_TOKEN_AUTHENTICATION not configured");
   }
 
   const response = await fetch(`${DOCORA_API_URL}/api/repositories/${docoraRepositoryId}`, {
     method: "DELETE",
     headers: {
-      "Authorization": `Bearer ${DOCORA_JWT_TOKEN}`,
+      "Authorization": `Bearer ${DOCORA_TOKEN_AUTHENTICATION}`,
     },
   });
 

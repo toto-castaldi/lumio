@@ -37,7 +37,7 @@ pnpm build:packages
 GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase start
 supabase db push
 supabase functions deploy
-GOOGLE_CLIENT_ID="XYZ" GOOGLE_CLIENT_SECRET="ABC" supabase functions serve
+supabase functions serve --env-file supabase/.env.local --no-verify-jwt
 
 # Run web app
 pnpm dev:web

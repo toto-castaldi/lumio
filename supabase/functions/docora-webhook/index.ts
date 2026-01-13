@@ -72,8 +72,9 @@ async function verifyHmacSignature(
   signature: string
 ): Promise<boolean> {
   const clientAuthKey = Deno.env.get("DOCORA_CLIENT_AUTH_KEY");
+  console.log("[verifyHmac] Key configured:", !!clientAuthKey);
   if (!clientAuthKey) {
-    console.error("DOCORA_CLIENT_AUTH_KEY not configured");
+    console.error("[verifyHmac] DOCORA_CLIENT_AUTH_KEY not configured");
     return false;
   }
 
@@ -104,6 +105,9 @@ async function verifyHmacSignature(
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
+  console.log("[verifyHmac] Received sig:", signature?.substring(0, 30) + "...");
+  console.log("[verifyHmac] Computed sig:", computedSignature.substring(0, 30) + "...");
+  console.log("[verifyHmac] Match:", signature === computedSignature);
   return signature === computedSignature;
 }
 
@@ -182,51 +186,55 @@ function parseFrontmatter(content: string): {
   return { frontmatter, body };
 }
 
-function validateDeckFrontmatter(
+/**
+ * Extract deck metadata from frontmatter (no validation - just parsing with defaults)
+ */
+function extractDeckMetadata(
   frontmatter: Record<string, unknown>
 ): DeckFrontmatter {
-  if (typeof frontmatter.lumio_format_version !== "number") {
-    throw new Error(
-      "Invalid deck: missing or invalid lumio_format_version in README.md"
-    );
-  }
-  if (frontmatter.lumio_format_version !== 1) {
-    throw new Error(
-      `Unsupported format version: ${frontmatter.lumio_format_version}. Only version 1 is supported.`
-    );
-  }
-  if (
-    typeof frontmatter.description !== "string" ||
-    !frontmatter.description
-  ) {
-    throw new Error("Invalid deck: missing description in README.md");
-  }
   return {
-    lumio_format_version: frontmatter.lumio_format_version,
-    description: frontmatter.description,
+    lumio_format_version:
+      typeof frontmatter.lumio_format_version === "number"
+        ? frontmatter.lumio_format_version
+        : 1,
+    description:
+      typeof frontmatter.description === "string"
+        ? frontmatter.description
+        : "",
   };
 }
 
-function validateCardFrontmatter(
+/**
+ * Extract card metadata from frontmatter (no validation - just parsing with defaults)
+ */
+function extractCardMetadata(
   frontmatter: Record<string, unknown>,
   filePath: string
 ): CardFrontmatter {
-  if (typeof frontmatter.title !== "string" || !frontmatter.title) {
-    throw new Error(`Invalid card ${filePath}: missing title`);
-  }
-  if (!Array.isArray(frontmatter.tags) || frontmatter.tags.length === 0) {
-    throw new Error(`Invalid card ${filePath}: missing or empty tags`);
-  }
+  // Use filename without extension as fallback title
+  const fileName = filePath.split("/").pop() || filePath;
+  const fallbackTitle = fileName.replace(/\.md$/i, "");
 
-  const difficulty =
-    typeof frontmatter.difficulty === "number" ? frontmatter.difficulty : 3;
-  if (difficulty < 1 || difficulty > 5) {
-    throw new Error(`Invalid card ${filePath}: difficulty must be 1-5`);
+  // Extract title with fallback
+  const title =
+    typeof frontmatter.title === "string" && frontmatter.title
+      ? frontmatter.title
+      : fallbackTitle;
+
+  // Extract tags with fallback to empty array
+  const tags = Array.isArray(frontmatter.tags)
+    ? frontmatter.tags.map((t) => String(t).toLowerCase())
+    : [];
+
+  // Extract difficulty with bounds clamping
+  let difficulty = 3;
+  if (typeof frontmatter.difficulty === "number") {
+    difficulty = Math.max(1, Math.min(5, frontmatter.difficulty));
   }
 
   return {
-    title: frontmatter.title,
-    tags: frontmatter.tags.map((t) => String(t).toLowerCase()),
+    title,
+    tags,
     difficulty,
     language:
       typeof frontmatter.language === "string" ? frontmatter.language : "en",
@@ -410,16 +418,25 @@ async function findRepositoryByDocoraId(
   serviceClient: ReturnType<typeof createClient>,
   docoraRepositoryId: string
 ): Promise<LumioRepository | null> {
+  console.log("[findRepositoryByDocoraId] Looking for:", docoraRepositoryId);
   const { data, error } = await serviceClient
     .from("repositories")
     .select("*")
     .eq("docora_repository_id", docoraRepositoryId)
     .single();
 
+  if (error) {
+    console.log("[findRepositoryByDocoraId] Error:", error.message, error.code);
+  }
+  if (!data) {
+    console.log("[findRepositoryByDocoraId] No data found");
+  }
+
   if (error || !data) {
     return null;
   }
 
+  console.log("[findRepositoryByDocoraId] Found:", data.id, data.name);
   return data;
 }
 
@@ -435,12 +452,14 @@ async function handleCreate(
   payload: DocoraWebhookPayload
 ): Promise<{ success: boolean; message: string }> {
   const { repository, file, chunk, commit_sha } = payload;
+  console.log("[handleCreate] Starting with docora_id:", repository.repository_id);
 
   // Find Lumio repository by Docora ID
   const repo = await findRepositoryByDocoraId(
     serviceClient,
     repository.repository_id
   );
+  console.log("[handleCreate] Found repo:", repo ? repo.id : "NOT FOUND");
   if (!repo) {
     return {
       success: false,
@@ -484,39 +503,23 @@ async function handleCreate(
   const filePath = file.path;
   const fileName = filePath.split("/").pop() || "";
 
-  // README.md - validate deck format
+  // README.md - extract deck metadata (no validation)
   if (fileName.toLowerCase() === "readme.md") {
-    try {
-      const { frontmatter } = parseFrontmatter(content);
-      const deckMeta = validateDeckFrontmatter(frontmatter);
+    const { frontmatter } = parseFrontmatter(content);
+    const deckMeta = extractDeckMetadata(frontmatter);
 
-      // Update repository with deck metadata
-      await serviceClient
-        .from("repositories")
-        .update({
-          description: deckMeta.description,
-          format_version: deckMeta.lumio_format_version,
-          sync_status: "synced",
-          sync_error_message: null,
-        })
-        .eq("id", repo.id);
+    // Update repository with deck metadata
+    await serviceClient
+      .from("repositories")
+      .update({
+        description: deckMeta.description,
+        format_version: deckMeta.lumio_format_version,
+        sync_status: "synced",
+        sync_error_message: null,
+      })
+      .eq("id", repo.id);
 
-      return { success: true, message: "README.md validated and processed" };
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Invalid README.md";
-
-      // Mark repo as error
-      await serviceClient
-        .from("repositories")
-        .update({
-          sync_status: "error",
-          sync_error_message: errorMessage,
-        })
-        .eq("id", repo.id);
-
-      return { success: false, message: errorMessage };
-    }
+    return { success: true, message: "README.md processed" };
   }
 
   // Image files - store as asset (no card association until card arrives)
@@ -545,59 +548,56 @@ async function handleCreate(
 
   // Markdown card files
   if (filePath.endsWith(".md")) {
-    try {
-      const { frontmatter, body } = parseFrontmatter(content);
-      const cardMeta = validateCardFrontmatter(frontmatter, filePath);
-      const contentHash = await hashContent(content);
+    const { frontmatter, body } = parseFrontmatter(content);
+    const cardMeta = extractCardMetadata(frontmatter, filePath);
+    const contentHash = await hashContent(content);
 
-      // Insert card
-      const { data: insertedCard, error: insertError } = await serviceClient
-        .from("cards")
-        .insert({
-          repository_id: repo.id,
-          file_path: filePath,
-          content_hash: contentHash,
-          raw_content: content,
-          title: cardMeta.title,
-          content: body.trim(),
-          tags: cardMeta.tags,
-          difficulty: cardMeta.difficulty,
-          language: cardMeta.language,
-          is_active: true,
-        })
-        .select("id")
-        .single();
+    // Insert card
+    const { data: insertedCard, error: insertError } = await serviceClient
+      .from("cards")
+      .insert({
+        repository_id: repo.id,
+        file_path: filePath,
+        content_hash: contentHash,
+        raw_content: content,
+        title: cardMeta.title,
+        content: body.trim(),
+        tags: cardMeta.tags,
+        difficulty: cardMeta.difficulty,
+        language: cardMeta.language,
+        is_active: true,
+      })
+      .select("id")
+      .single();
 
-      if (insertError) {
-        // Check if it's a duplicate
-        if (insertError.code === "23505") {
-          return {
-            success: false,
-            message: `Card already exists: ${filePath}`,
-          };
-        }
-        throw insertError;
+    if (insertError) {
+      // Check if it's a duplicate - still return success (Docora did its job)
+      if (insertError.code === "23505") {
+        return {
+          success: true,
+          message: `Card already exists: ${filePath}`,
+        };
       }
-
-      // Process images referenced in the card
-      const imageRefs = extractImageReferences(content);
-      for (const imagePath of imageRefs) {
-        // Check if image exists in storage by looking for assets with this path
-        // This creates the card_assets mapping
-        // Images were uploaded separately, we just need to link them
-        // For now, we'll rely on the image webhook having been processed first
-      }
-
-      // Update card count
-      await serviceClient.rpc("increment_card_count", {
-        repo_id: repo.id,
-      });
-
-      return { success: true, message: `Card created: ${filePath}` };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      return { success: false, message: `Failed to create card: ${errorMessage}` };
+      // Log error but return success (Docora notification received)
+      console.error(`[handleCreate] DB error for ${filePath}:`, insertError);
+      return { success: true, message: `Card received: ${filePath}` };
     }
+
+    // Update card count and sync status
+    await serviceClient.rpc("increment_card_count", {
+      repo_id: repo.id,
+    });
+
+    // Mark repository as synced (first card received = sync working)
+    await serviceClient
+      .from("repositories")
+      .update({
+        sync_status: "synced",
+        sync_error_message: null,
+      })
+      .eq("id", repo.id);
+
+    return { success: true, message: `Card created: ${filePath}` };
   }
 
   // Other files - ignore
@@ -657,37 +657,22 @@ async function handleUpdate(
   const filePath = file.path;
   const fileName = filePath.split("/").pop() || "";
 
-  // README.md
+  // README.md - extract deck metadata (no validation)
   if (fileName.toLowerCase() === "readme.md") {
-    try {
-      const { frontmatter } = parseFrontmatter(content);
-      const deckMeta = validateDeckFrontmatter(frontmatter);
+    const { frontmatter } = parseFrontmatter(content);
+    const deckMeta = extractDeckMetadata(frontmatter);
 
-      await serviceClient
-        .from("repositories")
-        .update({
-          description: deckMeta.description,
-          format_version: deckMeta.lumio_format_version,
-          sync_status: "synced",
-          sync_error_message: null,
-        })
-        .eq("id", repo.id);
+    await serviceClient
+      .from("repositories")
+      .update({
+        description: deckMeta.description,
+        format_version: deckMeta.lumio_format_version,
+        sync_status: "synced",
+        sync_error_message: null,
+      })
+      .eq("id", repo.id);
 
-      return { success: true, message: "README.md updated" };
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Invalid README.md";
-
-      await serviceClient
-        .from("repositories")
-        .update({
-          sync_status: "error",
-          sync_error_message: errorMessage,
-        })
-        .eq("id", repo.id);
-
-      return { success: false, message: errorMessage };
-    }
+    return { success: true, message: "README.md updated" };
   }
 
   // Image files
@@ -716,69 +701,77 @@ async function handleUpdate(
 
   // Markdown card files
   if (filePath.endsWith(".md")) {
-    try {
-      const { frontmatter, body } = parseFrontmatter(content);
-      const cardMeta = validateCardFrontmatter(frontmatter, filePath);
-      const contentHash = await hashContent(content);
+    const { frontmatter, body } = parseFrontmatter(content);
+    const cardMeta = extractCardMetadata(frontmatter, filePath);
+    const contentHash = await hashContent(content);
 
-      // Find existing card
-      const { data: existingCard } = await serviceClient
+    // Find existing card
+    const { data: existingCard } = await serviceClient
+      .from("cards")
+      .select("id")
+      .eq("repository_id", repo.id)
+      .eq("file_path", filePath)
+      .single();
+
+    if (existingCard) {
+      // Update existing card
+      await serviceClient
         .from("cards")
-        .select("id")
-        .eq("repository_id", repo.id)
-        .eq("file_path", filePath)
-        .single();
+        .update({
+          content_hash: contentHash,
+          raw_content: content,
+          title: cardMeta.title,
+          content: body.trim(),
+          tags: cardMeta.tags,
+          difficulty: cardMeta.difficulty,
+          language: cardMeta.language,
+          is_active: true,
+        })
+        .eq("id", existingCard.id);
 
-      if (existingCard) {
-        // Update existing card
-        await serviceClient
-          .from("cards")
-          .update({
-            content_hash: contentHash,
-            raw_content: content,
-            title: cardMeta.title,
-            content: body.trim(),
-            tags: cardMeta.tags,
-            difficulty: cardMeta.difficulty,
-            language: cardMeta.language,
-            is_active: true,
-          })
-          .eq("id", existingCard.id);
+      // Delete old assets and re-link
+      await serviceClient
+        .from("card_assets")
+        .delete()
+        .eq("card_id", existingCard.id);
 
-        // Delete old assets and re-link
-        await serviceClient
-          .from("card_assets")
-          .delete()
-          .eq("card_id", existingCard.id);
+      return { success: true, message: `Card updated: ${filePath}` };
+    } else {
+      // Card doesn't exist - treat as create
+      const { error: insertError } = await serviceClient
+        .from("cards")
+        .insert({
+          repository_id: repo.id,
+          file_path: filePath,
+          content_hash: contentHash,
+          raw_content: content,
+          title: cardMeta.title,
+          content: body.trim(),
+          tags: cardMeta.tags,
+          difficulty: cardMeta.difficulty,
+          language: cardMeta.language,
+          is_active: true,
+        });
 
-        return { success: true, message: `Card updated: ${filePath}` };
-      } else {
-        // Card doesn't exist - treat as create
-        const { error: insertError } = await serviceClient
-          .from("cards")
-          .insert({
-            repository_id: repo.id,
-            file_path: filePath,
-            content_hash: contentHash,
-            raw_content: content,
-            title: cardMeta.title,
-            content: body.trim(),
-            tags: cardMeta.tags,
-            difficulty: cardMeta.difficulty,
-            language: cardMeta.language,
-            is_active: true,
-          });
-
-        if (insertError) throw insertError;
-
-        // Update card count
-        await serviceClient.rpc("increment_card_count", { repo_id: repo.id });
-
-        return { success: true, message: `Card created (was new): ${filePath}` };
+      if (insertError) {
+        // Log error but return success (Docora notification received)
+        console.error(`[handleUpdate] DB error for ${filePath}:`, insertError);
+        return { success: true, message: `Card received: ${filePath}` };
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      return { success: false, message: `Failed to update card: ${errorMessage}` };
+
+      // Update card count and sync status
+      await serviceClient.rpc("increment_card_count", { repo_id: repo.id });
+
+      // Mark repository as synced
+      await serviceClient
+        .from("repositories")
+        .update({
+          sync_status: "synced",
+          sync_error_message: null,
+        })
+        .eq("id", repo.id);
+
+      return { success: true, message: `Card created (was new): ${filePath}` };
     }
   }
 
@@ -860,8 +853,12 @@ serve(async (req) => {
     const signature = req.headers.get("x-docora-signature");
     const timestamp = req.headers.get("x-docora-timestamp");
 
+    console.log("[docora-webhook] Received request");
+    console.log("[docora-webhook] Headers:", { appId, signature: signature?.substring(0, 20) + "...", timestamp });
+
     // Validate headers presence
     if (!appId || !signature || !timestamp) {
+      console.log("[docora-webhook] ERROR: Missing headers");
       return new Response(
         JSON.stringify({ error: "Missing Docora headers" }),
         {
@@ -874,6 +871,7 @@ serve(async (req) => {
     // Validate app ID
     const expectedAppId = Deno.env.get("DOCORA_APP_ID");
     if (expectedAppId && appId !== expectedAppId) {
+      console.log("[docora-webhook] ERROR: Invalid app ID", { expected: expectedAppId, received: appId });
       return new Response(JSON.stringify({ error: "Invalid app ID" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -882,10 +880,13 @@ serve(async (req) => {
 
     // Get raw body for HMAC verification
     const rawBody = await req.text();
+    console.log("[docora-webhook] Body length:", rawBody.length);
 
     // Verify HMAC signature
     const isValid = await verifyHmacSignature(rawBody, timestamp, signature);
+    console.log("[docora-webhook] HMAC valid:", isValid);
     if (!isValid) {
+      console.log("[docora-webhook] ERROR: Invalid signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -894,11 +895,17 @@ serve(async (req) => {
 
     // Parse payload
     const payload: DocoraWebhookPayload = JSON.parse(rawBody);
+    console.log("[docora-webhook] Payload:", {
+      repository_id: payload.repository?.repository_id,
+      file_path: payload.file?.path,
+      commit_sha: payload.commit_sha,
+    });
 
     // Get action from URL path
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
     const action = pathParts[pathParts.length - 1]; // Last part: create, update, delete
+    console.log("[docora-webhook] Action:", action, "Path parts:", pathParts);
 
     const serviceClient = createServiceSupabaseClient();
 
@@ -906,15 +913,19 @@ serve(async (req) => {
 
     switch (action) {
       case "create":
+        console.log("[docora-webhook] Calling handleCreate");
         result = await handleCreate(serviceClient, payload);
         break;
       case "update":
+        console.log("[docora-webhook] Calling handleUpdate");
         result = await handleUpdate(serviceClient, payload);
         break;
       case "delete":
+        console.log("[docora-webhook] Calling handleDelete");
         result = await handleDelete(serviceClient, payload);
         break;
       default:
+        console.log("[docora-webhook] ERROR: Unknown action:", action);
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
           {
@@ -924,6 +935,7 @@ serve(async (req) => {
         );
     }
 
+    console.log("[docora-webhook] Result:", result);
     const status = result.success ? 200 : 400;
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -931,7 +943,7 @@ serve(async (req) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Webhook error:", message);
+    console.error("[docora-webhook] EXCEPTION:", message, error);
 
     return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

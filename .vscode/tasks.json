@@ -19,7 +19,7 @@
     {
       "label": "Lumio : Supabase Functions",
       "type": "shell",
-      "command": "supabase functions serve --env-file supabase/.env.local",
+      "command": "supabase functions serve --env-file supabase/.env.local --no-verify-jwt",
       "options": {
         "cwd": "${workspaceFolder}"
       },

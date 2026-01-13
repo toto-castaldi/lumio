@@ -1006,7 +1006,7 @@
 
 | Variabile | Descrizione |
 |-----------|-------------|
-| `DOCORA_JWT_TOKEN` | JWT per autenticare chiamate a Docora API |
+| `DOCORA_TOKEN_AUTHENTICATION` | JWT per autenticare chiamate a Docora API |
 | `DOCORA_CLIENT_AUTH_KEY` | Secret per verifica HMAC webhook |
 | `DOCORA_API_URL` | URL Docora API (default: `https://api.docora.toto-castaldi.com`) |
 
