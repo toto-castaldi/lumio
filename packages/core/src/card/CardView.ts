@@ -62,6 +62,46 @@ export class CardView {
   }
 
   /**
+   * Resolve a relative path based on the card's file path
+   * Example: card at "cards/exercise.md" with image "../assets/img.png" -> "assets/img.png"
+   */
+  private resolveRelativePath(imagePath: string): string {
+    // If absolute path (starts with /), just remove the leading slash
+    if (imagePath.startsWith('/')) {
+      return imagePath.slice(1);
+    }
+
+    // If not a relative path (no ./ or ../), return as-is
+    if (!imagePath.startsWith('./') && !imagePath.startsWith('../')) {
+      return imagePath;
+    }
+
+    // Get the directory of the card file
+    // e.g., "cards/exercise.md" -> "cards"
+    const cardDir = this.card.filePath.includes('/')
+      ? this.card.filePath.substring(0, this.card.filePath.lastIndexOf('/'))
+      : '';
+
+    // Split into path segments
+    const cardSegments = cardDir ? cardDir.split('/') : [];
+    const imageSegments = imagePath.split('/');
+
+    // Process each segment of the image path
+    const resultSegments = [...cardSegments];
+    for (const segment of imageSegments) {
+      if (segment === '..') {
+        // Go up one directory
+        resultSegments.pop();
+      } else if (segment !== '.' && segment !== '') {
+        // Add the segment
+        resultSegments.push(segment);
+      }
+    }
+
+    return resultSegments.join('/');
+  }
+
+  /**
    * Transform relative image URLs to absolute Supabase Storage URLs
    */
   private transformImageUrls(content: string): string {
@@ -71,12 +111,12 @@ export class CardView {
         return match;
       }
 
-      // Remove leading slash if present for storage path
-      const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+      // Resolve relative path based on card's file location
+      const resolvedPath = this.resolveRelativePath(path);
 
       // Construct Supabase Storage URL
-      // Format: {supabaseUrl}/storage/v1/object/public/card-assets/{userId}/{repoId}/{originalPath}
-      const storageUrl = `${this.supabaseUrl}/storage/v1/object/public/card-assets/${this.repository.userId}/${this.repository.id}/${cleanPath}`;
+      // Format: {supabaseUrl}/storage/v1/object/public/card-assets/{userId}/{repoId}/{resolvedPath}
+      const storageUrl = `${this.supabaseUrl}/storage/v1/object/public/card-assets/${this.repository.userId}/${this.repository.id}/${resolvedPath}`;
 
       return `![${alt}](${storageUrl})`;
     });

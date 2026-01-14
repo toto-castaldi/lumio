@@ -18,24 +18,24 @@ interface DocoraRepository {
   name: string;
 }
 
-interface DocoraFile {
-  path: string;
-  sha: string;
-  size: number;
-  content: string;
-  content_encoding?: "base64";
-}
-
 interface DocoraChunk {
   id: string;
   index: number;
   total: number;
 }
 
+interface DocoraFile {
+  path: string;
+  sha: string;
+  size: number;
+  content: string;
+  content_encoding?: "base64";
+  chunk?: DocoraChunk;  // Chunk info is INSIDE file object
+}
+
 interface DocoraWebhookPayload {
   repository: DocoraRepository;
   file: DocoraFile;
-  chunk?: DocoraChunk;
   commit_sha: string;
   timestamp: string;
 }
@@ -358,8 +358,10 @@ async function handleChunk(
   chunk: DocoraChunk,
   content: string
 ): Promise<string | null> {
+  console.log(`[handleChunk] Storing chunk ${chunk.index + 1}/${chunk.total} for ${filePath} (chunk_id: ${chunk.id})`);
+
   // Store this chunk
-  await serviceClient.from("webhook_chunks").upsert(
+  const { error: upsertError } = await serviceClient.from("webhook_chunks").upsert(
     {
       chunk_id: chunk.id,
       repository_id: repositoryId,
@@ -372,23 +374,40 @@ async function handleChunk(
     { onConflict: "chunk_id,chunk_index" }
   );
 
+  if (upsertError) {
+    console.error(`[handleChunk] Upsert ERROR: ${upsertError.message} (code: ${upsertError.code})`);
+    return null;
+  }
+  console.log(`[handleChunk] Chunk stored successfully`);
+
   // Check if all chunks received
-  const { data: chunks } = await serviceClient
+  const { data: chunks, error: selectError } = await serviceClient
     .from("webhook_chunks")
     .select("chunk_index, content")
     .eq("chunk_id", chunk.id)
     .order("chunk_index", { ascending: true });
+
+  if (selectError) {
+    console.error(`[handleChunk] Select ERROR: ${selectError.message}`);
+    return null;
+  }
+
+  console.log(`[handleChunk] Found ${chunks?.length || 0} chunks out of ${chunk.total} needed`);
 
   if (!chunks || chunks.length !== chunk.total) {
     // Not all chunks received yet
     return null;
   }
 
+  console.log(`[handleChunk] All ${chunk.total} chunks received! Assembling...`);
+
   // All chunks received - assemble content
   const assembledContent = chunks.map((c) => c.content).join("");
+  console.log(`[handleChunk] Assembled content length: ${assembledContent.length}`);
 
   // Clean up chunks
   await serviceClient.from("webhook_chunks").delete().eq("chunk_id", chunk.id);
+  console.log(`[handleChunk] Chunks cleaned up`);
 
   return assembledContent;
 }
@@ -448,7 +467,8 @@ async function handleCreate(
   serviceClient: ReturnType<typeof createClient>,
   payload: DocoraWebhookPayload
 ): Promise<{ success: boolean; message: string }> {
-  const { repository, file, chunk, commit_sha } = payload;
+  const { repository, file, commit_sha } = payload;
+  const chunk = file.chunk;  // Chunk info is inside file object
   console.log("[handleCreate] Starting with docora_id:", repository.repository_id);
 
   // Find Lumio repository by Docora ID
@@ -464,7 +484,79 @@ async function handleCreate(
     };
   }
 
-  // Decode content
+  const filePath = file.path;
+  const fileName = filePath.split("/").pop() || "";
+
+  // =========================================================================
+  // IMAGES - Handle BEFORE generic content decoding (binary files, not UTF-8)
+  // =========================================================================
+  if (isImageFile(filePath)) {
+    try {
+      console.log(`[Image Debug] Path: ${filePath}, chunk: ${chunk ? `${chunk.index + 1}/${chunk.total}` : 'none'}`);
+
+      let imageBase64: string;
+
+      // Handle chunked images (large files sent in multiple parts)
+      if (chunk) {
+        const assembled = await handleChunk(
+          serviceClient,
+          repo.id,
+          file.path,
+          chunk,
+          file.content
+        );
+        if (!assembled) {
+          // Not all chunks received yet
+          console.log(`[Image Debug] Chunk ${chunk.index + 1}/${chunk.total} received, waiting for more...`);
+          return {
+            success: true,
+            message: `Image chunk ${chunk.index + 1}/${chunk.total} received`,
+          };
+        }
+        // All chunks assembled
+        console.log(`[Image Debug] All ${chunk.total} chunks assembled, total length: ${assembled.length}`);
+        imageBase64 = assembled;
+      } else {
+        // Single-part image
+        imageBase64 = file.content;
+      }
+
+      // Decode base64 to binary using standard base64 decoding
+      console.log(`[Image Debug] Decoding base64, length: ${imageBase64.length}`);
+
+      // Clean base64 string (remove whitespace)
+      const cleanBase64 = imageBase64.replace(/[\r\n\s]/g, '');
+      console.log(`[Image Debug] Clean base64 length: ${cleanBase64.length}`);
+
+      // Use standard base64 decoding from Deno std library
+      const { decode: decodeBase64 } = await import("https://deno.land/std@0.177.0/encoding/base64.ts");
+      const bytes = decodeBase64(cleanBase64);
+      console.log(`[Image Debug] Decoded bytes length: ${bytes.length}, first 10 bytes: ${Array.from(bytes.slice(0, 10)).join(',')}`);
+
+      const mimeType = getMimeType(filePath);
+
+      await uploadImageToStorage(
+        serviceClient,
+        repo.user_id,
+        repo.id,
+        filePath,
+        bytes,
+        mimeType
+      );
+
+      return { success: true, message: `Image stored: ${filePath}` };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const stack = err instanceof Error ? err.stack : "";
+      console.error(`[Image Debug] Error storing image: ${errorMessage}`);
+      console.error(`[Image Debug] Stack: ${stack}`);
+      return { success: false, message: `Failed to store image: ${errorMessage}` };
+    }
+  }
+
+  // =========================================================================
+  // TEXT FILES - Decode content as UTF-8
+  // =========================================================================
   let content: string;
   if (file.content_encoding === "base64") {
     // Handle chunked files
@@ -496,10 +588,6 @@ async function handleCreate(
     content = file.content;
   }
 
-  // Handle different file types
-  const filePath = file.path;
-  const fileName = filePath.split("/").pop() || "";
-
   // README.md - extract deck metadata (no validation)
   if (fileName.toLowerCase() === "readme.md") {
     const { frontmatter } = parseFrontmatter(content);
@@ -529,29 +617,6 @@ async function handleCreate(
       .eq("id", repo.id);
 
     return { success: true, message: ".lumioignore saved" };
-  }
-
-  // Image files - store as asset (no card association until card arrives)
-  if (isImageFile(filePath)) {
-    try {
-      const binary = atob(file.content);
-      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-      const mimeType = getMimeType(filePath);
-
-      await uploadImageToStorage(
-        serviceClient,
-        repo.user_id,
-        repo.id,
-        filePath,
-        bytes,
-        mimeType
-      );
-
-      return { success: true, message: `Image stored: ${filePath}` };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      return { success: false, message: `Failed to store image: ${errorMessage}` };
-    }
   }
 
   // Markdown card files
@@ -614,7 +679,8 @@ async function handleUpdate(
   serviceClient: ReturnType<typeof createClient>,
   payload: DocoraWebhookPayload
 ): Promise<{ success: boolean; message: string }> {
-  const { repository, file, chunk } = payload;
+  const { repository, file } = payload;
+  const chunk = file.chunk;  // Chunk info is inside file object
 
   // Find Lumio repository
   const repo = await findRepositoryByDocoraId(
@@ -917,10 +983,13 @@ serve(async (req) => {
 
     // Parse payload
     const payload: DocoraWebhookPayload = JSON.parse(rawBody);
+    const fileChunk = payload.file?.chunk;
     console.log("[docora-webhook] Payload:", {
       repository_id: payload.repository?.repository_id,
       file_path: payload.file?.path,
       commit_sha: payload.commit_sha,
+      has_chunk: !!fileChunk,
+      chunk_info: fileChunk ? `${fileChunk.index + 1}/${fileChunk.total} (id: ${fileChunk.id})` : 'none',
     });
 
     // Get action from URL path
