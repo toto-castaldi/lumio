@@ -58,3 +58,6 @@ export {
   isImageUrl,
   SUPPORTED_IMAGE_EXTENSIONS,
 } from './markdown';
+
+// Export Deck class for card filtering
+export { Deck } from './deck';

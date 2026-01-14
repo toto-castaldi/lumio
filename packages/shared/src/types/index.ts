@@ -43,10 +43,10 @@ export interface Repository {
   description?: string;
   isPrivate: boolean;
   docoraRepositoryId?: string;  // Phase 11: Docora integration
+  lumioignoreContent?: string;  // Content of .lumioignore file for filtering cards
   formatVersion: number;
   syncStatus: SyncStatus;
   syncErrorMessage?: string;
-  cardCount: number;
   createdAt: string;
   updatedAt: string;
 }

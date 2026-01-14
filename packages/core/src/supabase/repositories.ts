@@ -53,10 +53,10 @@ function mapRepository(dbRepo: Record<string, unknown>): Repository {
     description: dbRepo.description as string | undefined,
     isPrivate: dbRepo.is_private as boolean,
     docoraRepositoryId: dbRepo.docora_repository_id as string | undefined,
+    lumioignoreContent: dbRepo.lumioignore_content as string | undefined,
     formatVersion: dbRepo.format_version as number,
     syncStatus: dbRepo.sync_status as Repository['syncStatus'],
     syncErrorMessage: dbRepo.sync_error_message as string | undefined,
-    cardCount: dbRepo.card_count as number,
     createdAt: dbRepo.created_at as string,
     updatedAt: dbRepo.updated_at as string,
   };

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   addRepository,
   deleteRepository,
+  getRepositoryCards,
+  Deck,
   type Repository,
   type SyncStatus,
 } from '@lumio/core';
@@ -65,6 +67,33 @@ function getSyncStatusColor(status: SyncStatus): string {
 export function RepositoriesPage() {
   // Use realtime hook for automatic updates
   const { repositories, isLoading, refresh } = useRealtimeRepositories();
+
+  // Card counts per repository (filtered by .lumioignore)
+  const [cardCounts, setCardCounts] = useState<Map<string, number>>(new Map());
+
+  // Load card counts when repositories change
+  useEffect(() => {
+    const loadCardCounts = async () => {
+      const counts = new Map<string, number>();
+      await Promise.all(
+        repositories.map(async (repo) => {
+          try {
+            const cards = await getRepositoryCards(repo.id);
+            const deck = new Deck(repo, cards);
+            counts.set(repo.id, deck.getActiveCardCount());
+          } catch (err) {
+            console.error(`Failed to load cards for ${repo.id}:`, err);
+            counts.set(repo.id, 0);
+          }
+        })
+      );
+      setCardCounts(counts);
+    };
+
+    if (repositories.length > 0) {
+      loadCardCounts();
+    }
+  }, [repositories]);
 
   const [url, setUrl] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -316,7 +345,11 @@ export function RepositoriesPage() {
                             to={`/repositories/${repo.id}/cards`}
                             className="text-primary hover:underline"
                           >
-                            {repo.cardCount} card
+                            {cardCounts.has(repo.id)
+                              ? cardCounts.get(repo.id) === 1
+                                ? '1 carta'
+                                : `${cardCounts.get(repo.id)} carte`
+                              : 'Caricamento...'}
                           </Link>
                           {repo.syncErrorMessage && (
                             <span className="text-yellow-600">

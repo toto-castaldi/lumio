@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   generateQuiz,
   getStudyCards,
+  getUserRepositories,
   validateAnswer,
+  Deck,
   type Card,
   type QuizQuestion,
   type ValidationResponse,
@@ -211,16 +213,41 @@ export function StudyPage() {
 
   const loadInitialData = async () => {
     try {
-      const cards = await getStudyCards();
+      // Load repositories and cards in parallel
+      const [repositories, allCards] = await Promise.all([
+        getUserRepositories(),
+        getStudyCards(),
+      ]);
 
-      if (cards.length === 0) {
+      // Filter cards per repository using Deck class
+      const repoMap = new Map(repositories.map(r => [r.id, r]));
+      const filteredCards: Card[] = [];
+
+      // Group cards by repository
+      const cardsByRepo = new Map<string, Card[]>();
+      for (const card of allCards) {
+        const repoCards = cardsByRepo.get(card.repositoryId) || [];
+        repoCards.push(card);
+        cardsByRepo.set(card.repositoryId, repoCards);
+      }
+
+      // Filter each group using Deck
+      for (const [repoId, repoCards] of cardsByRepo) {
+        const repo = repoMap.get(repoId);
+        if (repo) {
+          const deck = new Deck(repo, repoCards);
+          filteredCards.push(...deck.getActiveCards());
+        }
+      }
+
+      if (filteredCards.length === 0) {
         setState('no_cards');
         return;
       }
 
-      // Initialize session
+      // Initialize session with filtered cards
       setSession({
-        cards,
+        cards: filteredCards,
         seenCardIds: new Set(),
         currentCard: null,
         currentQuiz: null,

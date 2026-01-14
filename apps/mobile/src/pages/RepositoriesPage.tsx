@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { getUserRepositories, type Repository } from '@lumio/core';
+import { getUserRepositories, getRepositoryCards, Deck, type Repository } from '@lumio/core';
 import { ChevronLeft, FolderGit2, ExternalLink, Layers, RefreshCw, Lock } from 'lucide-react';
 
 const WEB_APP_URL = 'https://lumio.toto-castaldi.com';
@@ -16,6 +16,7 @@ const WEB_APP_URL = 'https://lumio.toto-castaldi.com';
 export function RepositoriesPage() {
   const navigate = useNavigate();
   const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [cardCounts, setCardCounts] = useState<Map<string, number>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,22 @@ export function RepositoriesPage() {
       setIsLoading(true);
       const repos = await getUserRepositories();
       setRepositories(repos);
+
+      // Load card counts for each repository
+      const counts = new Map<string, number>();
+      await Promise.all(
+        repos.map(async (repo) => {
+          try {
+            const cards = await getRepositoryCards(repo.id);
+            const deck = new Deck(repo, cards);
+            counts.set(repo.id, deck.getActiveCardCount());
+          } catch (err) {
+            console.error(`Failed to load cards for ${repo.id}:`, err);
+            counts.set(repo.id, 0);
+          }
+        })
+      );
+      setCardCounts(counts);
       setError(null);
     } catch (err) {
       console.error('Failed to load repositories:', err);
@@ -124,8 +141,13 @@ export function RepositoriesPage() {
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-1.5 text-slate-600">
                         <Layers className="w-4 h-4" />
-                        <span className="font-medium">{repo.cardCount || 0}</span>
-                        <span className="text-slate-400">card</span>
+                        <span className="text-slate-500">
+                          {cardCounts.has(repo.id)
+                            ? cardCounts.get(repo.id) === 1
+                              ? '1 carta'
+                              : `${cardCounts.get(repo.id)} carte`
+                            : 'Caricamento...'}
+                        </span>
                       </div>
                     </div>
                   </CardContent>

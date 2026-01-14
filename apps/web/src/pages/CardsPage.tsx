@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getRepositoryCards, getUserRepositories, type Card, type Repository } from '@lumio/core';
+import { getRepositoryCards, getUserRepositories, Deck, type Card, type Repository } from '@lumio/core';
 import { Button } from '@/components/ui/button';
 import {
   Card as CardUI,
@@ -33,10 +33,20 @@ function getDifficultyColor(difficulty: number): string {
 
 export function CardsPage() {
   const { repositoryId } = useParams<{ repositoryId: string }>();
-  const [cards, setCards] = useState<Card[]>([]);
+  const [allCards, setAllCards] = useState<Card[]>([]);
   const [repository, setRepository] = useState<Repository | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+
+  // Create Deck instance for filtering
+  const deck = useMemo(() => {
+    if (!repository) return null;
+    return new Deck(repository, allCards);
+  }, [repository, allCards]);
+
+  // Get filtered cards from Deck
+  const cards = deck?.getActiveCards() ?? allCards;
+  const ignoredCount = deck?.getIgnoredCardCount() ?? 0;
 
   useEffect(() => {
     if (repositoryId) {
@@ -56,7 +66,7 @@ export function CardsPage() {
 
       const repo = repos.find((r) => r.id === repositoryId);
       setRepository(repo || null);
-      setCards(cardsData);
+      setAllCards(cardsData);
     } catch (err) {
       console.error('Failed to load cards:', err);
       toast.error('Errore nel caricamento delle card');
@@ -95,6 +105,11 @@ export function CardsPage() {
             <h1 className="text-2xl font-bold">{repository.name}</h1>
             <p className="text-muted-foreground">
               {cards.length} card disponibili
+              {ignoredCount > 0 && (
+                <span className="text-xs ml-2">
+                  ({ignoredCount} escluse da .lumioignore)
+                </span>
+              )}
             </p>
           </div>
           <Button variant="outline" asChild>

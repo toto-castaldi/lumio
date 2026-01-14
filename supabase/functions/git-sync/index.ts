@@ -18,10 +18,10 @@ interface Repository {
   description?: string;
   is_private: boolean;
   docora_repository_id?: string;
+  lumioignore_content?: string;
   format_version: number;
   sync_status: SyncStatus;
   sync_error_message?: string;
-  card_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -223,8 +223,7 @@ async function addRepository(
       docora_repository_id: docoraRepo.repository_id,
       format_version: 1, // Will be validated when README.md arrives
       sync_status: "pending",
-      sync_error_message: "Waiting for initial sync from Docora",
-      card_count: 0,
+      sync_error_message: "In attesa di ricevere le carte",
     })
     .select()
     .single();
@@ -285,32 +284,39 @@ async function deleteRepository(
 
 /**
  * Get statistics for user's repositories
+ * Note: Card count is the total count from DB. Frontend uses Deck class to filter by .lumioignore
  */
 async function getStats(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<{ repositoryCount: number; cardCount: number }> {
-  // Get repository count
-  const { count: repoCount, error: repoError } = await supabase
+  // Get repository count and IDs
+  const { data: repos, error: repoError } = await supabase
     .from("repositories")
-    .select("*", { count: "exact", head: true })
+    .select("id")
     .eq("user_id", userId);
 
   if (repoError) throw repoError;
 
-  // Get card count (sum of card_count from repositories)
-  const { data: repos, error: cardError } = await supabase
-    .from("repositories")
-    .select("card_count")
-    .eq("user_id", userId);
+  const repositoryCount = repos?.length || 0;
+
+  if (repositoryCount === 0) {
+    return { repositoryCount: 0, cardCount: 0 };
+  }
+
+  // Get card count directly from cards table
+  const repoIds = repos!.map(r => r.id);
+  const { count: cardCount, error: cardError } = await supabase
+    .from("cards")
+    .select("*", { count: "exact", head: true })
+    .in("repository_id", repoIds)
+    .eq("is_active", true);
 
   if (cardError) throw cardError;
 
-  const cardCount = repos?.reduce((sum, r) => sum + (r.card_count || 0), 0) || 0;
-
   return {
-    repositoryCount: repoCount || 0,
-    cardCount,
+    repositoryCount,
+    cardCount: cardCount || 0,
   };
 }
 

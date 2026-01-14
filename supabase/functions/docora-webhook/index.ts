@@ -522,6 +522,18 @@ async function handleCreate(
     return { success: true, message: "README.md processed" };
   }
 
+  // .lumioignore - store content for card filtering
+  if (fileName.toLowerCase() === ".lumioignore") {
+    await serviceClient
+      .from("repositories")
+      .update({
+        lumioignore_content: content,
+      })
+      .eq("id", repo.id);
+
+    return { success: true, message: ".lumioignore saved" };
+  }
+
   // Image files - store as asset (no card association until card arrives)
   if (isImageFile(filePath)) {
     try {
@@ -582,11 +594,6 @@ async function handleCreate(
       console.error(`[handleCreate] DB error for ${filePath}:`, insertError);
       return { success: true, message: `Card received: ${filePath}` };
     }
-
-    // Update card count and sync status
-    await serviceClient.rpc("increment_card_count", {
-      repo_id: repo.id,
-    });
 
     // Mark repository as synced (first card received = sync working)
     await serviceClient
@@ -675,6 +682,18 @@ async function handleUpdate(
     return { success: true, message: "README.md updated" };
   }
 
+  // .lumioignore - update content for card filtering
+  if (fileName.toLowerCase() === ".lumioignore") {
+    await serviceClient
+      .from("repositories")
+      .update({
+        lumioignore_content: content,
+      })
+      .eq("id", repo.id);
+
+    return { success: true, message: ".lumioignore updated" };
+  }
+
   // Image files
   if (isImageFile(filePath)) {
     try {
@@ -759,9 +778,6 @@ async function handleUpdate(
         return { success: true, message: `Card received: ${filePath}` };
       }
 
-      // Update card count and sync status
-      await serviceClient.rpc("increment_card_count", { repo_id: repo.id });
-
       // Mark repository as synced
       await serviceClient
         .from("repositories")
@@ -800,6 +816,19 @@ async function handleDelete(
   }
 
   const filePath = file.path;
+  const fileName = filePath.split("/").pop() || "";
+
+  // .lumioignore - clear content when deleted
+  if (fileName.toLowerCase() === ".lumioignore") {
+    await serviceClient
+      .from("repositories")
+      .update({
+        lumioignore_content: null,
+      })
+      .eq("id", repo.id);
+
+    return { success: true, message: ".lumioignore deleted" };
+  }
 
   // Markdown card files
   if (filePath.endsWith(".md")) {
@@ -812,8 +841,6 @@ async function handleDelete(
       .single();
 
     if (deletedCard) {
-      // Decrement card count
-      await serviceClient.rpc("decrement_card_count", { repo_id: repo.id });
       return { success: true, message: `Card deleted: ${filePath}` };
     }
 
