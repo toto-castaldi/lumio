@@ -313,35 +313,32 @@ function extractImageReferences(content: string): string[] {
 }
 
 /**
- * Upload image to Supabase Storage
+ * Upload image to Supabase Storage using original file path
+ * Storage path: {userId}/{repoId}/{originalPath}
+ * This allows stateless URL resolution at display time
  */
 async function uploadImageToStorage(
   serviceClient: ReturnType<typeof createClient>,
   userId: string,
   repoId: string,
+  originalPath: string,
   imageContent: Uint8Array,
-  mimeType: string,
-  contentHash: string
+  mimeType: string
 ): Promise<string> {
-  const ext = mimeType.split("/")[1]?.replace("svg+xml", "svg") || "bin";
-  const storagePath = `${userId}/${repoId}/${contentHash}.${ext}`;
+  // Use original path for stateless resolution
+  // e.g., "assets/biagram.png" -> "{userId}/{repoId}/assets/biagram.png"
+  const storagePath = `${userId}/${repoId}/${originalPath}`;
 
-  // Check if already exists (deduplication)
-  const { data: existing } = await serviceClient.storage
+  // Upload with upsert to handle updates
+  const { error } = await serviceClient.storage
     .from("card-assets")
-    .list(`${userId}/${repoId}`, { search: `${contentHash}.${ext}` });
+    .upload(storagePath, imageContent, {
+      contentType: mimeType,
+      upsert: true,
+    });
 
-  if (!existing || existing.length === 0) {
-    const { error } = await serviceClient.storage
-      .from("card-assets")
-      .upload(storagePath, imageContent, {
-        contentType: mimeType,
-        upsert: false,
-      });
-
-    if (error && !error.message.includes("already exists")) {
-      throw error;
-    }
+  if (error && !error.message.includes("already exists")) {
+    throw error;
   }
 
   return storagePath;
@@ -539,16 +536,15 @@ async function handleCreate(
     try {
       const binary = atob(file.content);
       const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-      const contentHash = await hashBinaryContent(bytes);
       const mimeType = getMimeType(filePath);
 
       await uploadImageToStorage(
         serviceClient,
         repo.user_id,
         repo.id,
+        filePath,
         bytes,
-        mimeType,
-        contentHash
+        mimeType
       );
 
       return { success: true, message: `Image stored: ${filePath}` };
@@ -699,16 +695,15 @@ async function handleUpdate(
     try {
       const binary = atob(file.content);
       const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-      const contentHash = await hashBinaryContent(bytes);
       const mimeType = getMimeType(filePath);
 
       await uploadImageToStorage(
         serviceClient,
         repo.user_id,
         repo.id,
+        filePath,
         bytes,
-        mimeType,
-        contentHash
+        mimeType
       );
 
       return { success: true, message: `Image updated: ${filePath}` };

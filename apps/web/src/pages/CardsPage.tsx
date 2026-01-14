@@ -173,6 +173,7 @@ export function CardsPage() {
       {/* Card Preview Dialog */}
       <CardPreviewDialog
         card={selectedCard}
+        repository={repository}
         isOpen={!!selectedCard}
         onClose={() => setSelectedCard(null)}
       />

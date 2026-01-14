@@ -7,6 +7,7 @@ import {
   validateAnswer,
   Deck,
   type Card,
+  type Repository,
   type QuizQuestion,
   type ValidationResponse,
 } from '@lumio/core';
@@ -278,6 +279,7 @@ export function StudyPage() {
   // State
   const [state, setState] = useState<StudyState>('loading');
   const [session, setSession] = useState<StudySession | null>(null);
+  const [repositoryMap, setRepositoryMap] = useState<Map<string, Repository>>(new Map());
 
   // Loading states
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
@@ -302,6 +304,7 @@ export function StudyPage() {
 
       // Filter cards per repository using Deck class
       const repoMap = new Map(repositories.map(r => [r.id, r]));
+      setRepositoryMap(repoMap);
       const filteredCards: Card[] = [];
 
       // Group cards by repository
@@ -569,6 +572,7 @@ export function StudyPage() {
       {/* Card Preview Dialog */}
       <CardPreviewDialog
         card={session?.currentCard || null}
+        repository={session?.currentCard ? repositoryMap.get(session.currentCard.repositoryId) || null : null}
         isOpen={isCardPreviewOpen}
         onClose={() => setIsCardPreviewOpen(false)}
       />

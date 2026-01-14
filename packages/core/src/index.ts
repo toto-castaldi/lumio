@@ -61,3 +61,6 @@ export {
 
 // Export Deck class for card filtering
 export { Deck } from './deck';
+
+// Export CardView class for image URL transformation
+export { CardView } from './card';
