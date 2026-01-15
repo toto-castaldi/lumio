@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Image, decode } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,8 +8,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// =============================================================================
+// IMAGE PROCESSING CONSTANTS
+// =============================================================================
+
+const MAX_IMAGE_SIZE = 1568; // Max pixels per side (Anthropic recommendation)
+const MAX_IMAGES_PER_CARD = 20;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB per image
+const IMAGE_REGEX = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+
 // Types
 type LLMProvider = "openai" | "anthropic";
+
+interface ImageData {
+  base64: string;
+  mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+}
 
 interface PlatformConfig {
   provider: LLMProvider;
@@ -150,6 +165,243 @@ function getApiKey(provider: LLMProvider): string {
 }
 
 // =============================================================================
+// IMAGE PROCESSING
+// =============================================================================
+
+/**
+ * Extract image paths from markdown content
+ * Returns array of relative paths like "assets/image.png"
+ */
+function extractImagePaths(content: string): string[] {
+  const paths: string[] = [];
+  let match;
+
+  // Reset regex lastIndex
+  IMAGE_REGEX.lastIndex = 0;
+
+  while ((match = IMAGE_REGEX.exec(content)) !== null) {
+    const imagePath = match[2];
+    // Only process relative paths (stored in our bucket)
+    if (!imagePath.startsWith("http://") && !imagePath.startsWith("https://")) {
+      paths.push(imagePath);
+    }
+  }
+
+  return paths.slice(0, MAX_IMAGES_PER_CARD);
+}
+
+/**
+ * Build full URL for image in Supabase storage
+ */
+function buildImageUrl(userId: string, repositoryId: string, imagePath: string): string {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  // Images are stored at: card-assets/{userId}/{repoId}/{path}
+  return `${supabaseUrl}/storage/v1/object/public/card-assets/${userId}/${repositoryId}/${imagePath}`;
+}
+
+/**
+ * Detect media type from image bytes (magic bytes)
+ */
+function detectMediaType(bytes: Uint8Array): ImageData["mediaType"] | null {
+  if (bytes.length < 4) return null;
+
+  // PNG: 89 50 4E 47
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return "image/jpeg";
+  }
+  // GIF: 47 49 46 38
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return "image/gif";
+  }
+  // WebP: 52 49 46 46 ... 57 45 42 50
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    if (bytes.length >= 12 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+      return "image/webp";
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resize image to max dimensions while maintaining aspect ratio
+ * Returns base64 encoded resized image
+ */
+async function resizeImage(imageBytes: Uint8Array): Promise<{ base64: string; mediaType: ImageData["mediaType"] }> {
+  // Decode image
+  const image = await decode(imageBytes);
+
+  if (!(image instanceof Image)) {
+    throw new Error("Failed to decode image");
+  }
+
+  const { width, height } = image;
+  console.log(`[Image] Original size: ${width}x${height}`);
+
+  // Check if resize is needed
+  if (width <= MAX_IMAGE_SIZE && height <= MAX_IMAGE_SIZE) {
+    // No resize needed, encode to PNG
+    const encoded = await image.encode();
+    const base64 = btoa(String.fromCharCode(...encoded));
+    console.log(`[Image] No resize needed, output size: ${encoded.length} bytes`);
+    return { base64, mediaType: "image/png" };
+  }
+
+  // Calculate new dimensions maintaining aspect ratio
+  let newWidth = width;
+  let newHeight = height;
+
+  if (width > height) {
+    newWidth = MAX_IMAGE_SIZE;
+    newHeight = Math.round((height / width) * MAX_IMAGE_SIZE);
+  } else {
+    newHeight = MAX_IMAGE_SIZE;
+    newWidth = Math.round((width / height) * MAX_IMAGE_SIZE);
+  }
+
+  console.log(`[Image] Resizing to: ${newWidth}x${newHeight}`);
+
+  // Resize image
+  const resized = image.resize(newWidth, newHeight);
+  const encoded = await resized.encode();
+  const base64 = btoa(String.fromCharCode(...encoded));
+
+  console.log(`[Image] Resized output size: ${encoded.length} bytes`);
+
+  return { base64, mediaType: "image/png" };
+}
+
+/**
+ * Fetch and process a single image from storage
+ * Returns null if image cannot be processed
+ */
+async function processImage(imageUrl: string): Promise<ImageData | null> {
+  try {
+    console.log(`[Image] Fetching: ${imageUrl}`);
+
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.error(`[Image] Failed to fetch: ${response.status}`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    console.log(`[Image] Fetched ${bytes.length} bytes`);
+
+    // Check size limit
+    if (bytes.length > MAX_IMAGE_BYTES) {
+      console.error(`[Image] Too large: ${bytes.length} bytes (max ${MAX_IMAGE_BYTES})`);
+      return null;
+    }
+
+    // Detect media type
+    const detectedType = detectMediaType(bytes);
+    if (!detectedType) {
+      console.error(`[Image] Unknown image format`);
+      return null;
+    }
+
+    console.log(`[Image] Detected type: ${detectedType}`);
+
+    // Resize image
+    const { base64, mediaType } = await resizeImage(bytes);
+
+    return { base64, mediaType };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[Image] Processing error: ${msg}`);
+    return null;
+  }
+}
+
+/**
+ * Process all images in a card's content
+ * Returns array of processed images ready for LLM API
+ */
+async function processCardImages(
+  cardContent: string,
+  userId: string,
+  repositoryId: string
+): Promise<ImageData[]> {
+  if (!userId || !repositoryId) {
+    console.log(`[Image] No userId/repositoryId provided, skipping images`);
+    return [];
+  }
+
+  const imagePaths = extractImagePaths(cardContent);
+  console.log(`[Image] Found ${imagePaths.length} images in card`);
+
+  if (imagePaths.length === 0) {
+    return [];
+  }
+
+  const images: ImageData[] = [];
+
+  for (const path of imagePaths) {
+    const url = buildImageUrl(userId, repositoryId, path);
+    const processed = await processImage(url);
+    if (processed) {
+      images.push(processed);
+    }
+  }
+
+  console.log(`[Image] Successfully processed ${images.length}/${imagePaths.length} images`);
+  return images;
+}
+
+/**
+ * Build OpenAI multimodal content array
+ */
+function buildOpenAIContent(text: string, images: ImageData[]): Array<{ type: string; text?: string; image_url?: { url: string } }> {
+  const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+
+  // Add images first (context)
+  for (const image of images) {
+    content.push({
+      type: "image_url",
+      image_url: {
+        url: `data:${image.mediaType};base64,${image.base64}`,
+      },
+    });
+  }
+
+  // Add text
+  content.push({ type: "text", text });
+
+  return content;
+}
+
+/**
+ * Build Anthropic multimodal content array
+ */
+function buildAnthropicContent(text: string, images: ImageData[]): Array<{ type: string; text?: string; source?: { type: string; media_type: string; data: string } }> {
+  const content: Array<{ type: string; text?: string; source?: { type: string; media_type: string; data: string } }> = [];
+
+  // Add images first (context)
+  for (const image of images) {
+    content.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: image.mediaType,
+        data: image.base64,
+      },
+    });
+  }
+
+  // Add text
+  content.push({ type: "text", text });
+
+  return content;
+}
+
+// =============================================================================
 // QUIZ GENERATION
 // =============================================================================
 
@@ -176,8 +428,18 @@ async function generateQuizOpenAI(
   apiKey: string,
   modelId: string,
   cardContent: string,
-  systemPrompt: string
+  systemPrompt: string,
+  images: ImageData[] = []
 ): Promise<QuizQuestion> {
+  const textContent = `Ecco il contenuto della flashcard:\n\n${cardContent}`;
+
+  // Build user message content (text-only or multimodal)
+  const userContent = images.length > 0
+    ? buildOpenAIContent(textContent, images)
+    : textContent;
+
+  console.log(`[OpenAI] Sending request with ${images.length} images`);
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -188,7 +450,7 @@ async function generateQuizOpenAI(
       model: modelId,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Ecco il contenuto della flashcard:\n\n${cardContent}` },
+        { role: "user", content: userContent },
       ],
       temperature: 0.7,
       max_tokens: 1000,
@@ -217,8 +479,18 @@ async function generateQuizAnthropic(
   apiKey: string,
   modelId: string,
   cardContent: string,
-  systemPrompt: string
+  systemPrompt: string,
+  images: ImageData[] = []
 ): Promise<QuizQuestion> {
+  const textContent = `Ecco il contenuto della flashcard:\n\n${cardContent}`;
+
+  // Build user message content (text-only or multimodal)
+  const userContent = images.length > 0
+    ? buildAnthropicContent(textContent, images)
+    : textContent;
+
+  console.log(`[Anthropic] Sending request with ${images.length} images`);
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -231,7 +503,7 @@ async function generateQuizAnthropic(
       max_tokens: 1000,
       system: systemPrompt,
       messages: [
-        { role: "user", content: `Ecco il contenuto della flashcard:\n\n${cardContent}` },
+        { role: "user", content: userContent },
       ],
     }),
   });
@@ -260,9 +532,10 @@ async function validateAnswerOpenAI(
   cardContent: string,
   question: string,
   userAnswer: string,
-  correctAnswer: string
+  correctAnswer: string,
+  images: ImageData[] = []
 ): Promise<ValidationResponse> {
-  const userMessage = `CONTENUTO DELLA CARTA:
+  const textMessage = `CONTENUTO DELLA CARTA:
 ${cardContent}
 
 DOMANDA POSTA:
@@ -272,6 +545,13 @@ RISPOSTA DELL'UTENTE: ${userAnswer}
 RISPOSTA CORRETTA: ${correctAnswer}
 
 Valida la risposta e fornisci una spiegazione dettagliata.`;
+
+  // Build user message content (text-only or multimodal)
+  const userContent = images.length > 0
+    ? buildOpenAIContent(textMessage, images)
+    : textMessage;
+
+  console.log(`[OpenAI] Validating with ${images.length} images`);
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -283,7 +563,7 @@ Valida la risposta e fornisci una spiegazione dettagliata.`;
       model: modelId,
       messages: [
         { role: "system", content: VALIDATION_SYSTEM_PROMPT },
-        { role: "user", content: userMessage },
+        { role: "user", content: userContent },
       ],
       temperature: 0.7,
       max_tokens: 1500,
@@ -314,9 +594,10 @@ async function validateAnswerAnthropic(
   cardContent: string,
   question: string,
   userAnswer: string,
-  correctAnswer: string
+  correctAnswer: string,
+  images: ImageData[] = []
 ): Promise<ValidationResponse> {
-  const userMessage = `CONTENUTO DELLA CARTA:
+  const textMessage = `CONTENUTO DELLA CARTA:
 ${cardContent}
 
 DOMANDA POSTA:
@@ -326,6 +607,13 @@ RISPOSTA DELL'UTENTE: ${userAnswer}
 RISPOSTA CORRETTA: ${correctAnswer}
 
 Valida la risposta e fornisci una spiegazione dettagliata.`;
+
+  // Build user message content (text-only or multimodal)
+  const userContent = images.length > 0
+    ? buildAnthropicContent(textMessage, images)
+    : textMessage;
+
+  console.log(`[Anthropic] Validating with ${images.length} images`);
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -339,7 +627,7 @@ Valida la risposta e fornisci una spiegazione dettagliata.`;
       max_tokens: 1500,
       system: VALIDATION_SYSTEM_PROMPT,
       messages: [
-        { role: "user", content: userMessage },
+        { role: "user", content: userContent },
       ],
     }),
   });
@@ -364,14 +652,15 @@ Valida la risposta e fornisci una spiegazione dettagliata.`;
  */
 async function handleGenerateQuiz(
   config: PlatformConfig,
-  cardContent: string
+  cardContent: string,
+  images: ImageData[] = []
 ): Promise<QuizQuestion> {
   const apiKey = getApiKey(config.provider);
 
   if (config.provider === "openai") {
-    return await generateQuizOpenAI(apiKey, config.model, cardContent, config.systemPrompt);
+    return await generateQuizOpenAI(apiKey, config.model, cardContent, config.systemPrompt, images);
   } else {
-    return await generateQuizAnthropic(apiKey, config.model, cardContent, config.systemPrompt);
+    return await generateQuizAnthropic(apiKey, config.model, cardContent, config.systemPrompt, images);
   }
 }
 
@@ -383,14 +672,15 @@ async function handleValidateAnswer(
   cardContent: string,
   question: string,
   userAnswer: string,
-  correctAnswer: string
+  correctAnswer: string,
+  images: ImageData[] = []
 ): Promise<ValidationResponse> {
   const apiKey = getApiKey(config.provider);
 
   if (config.provider === "openai") {
-    return await validateAnswerOpenAI(apiKey, config.model, cardContent, question, userAnswer, correctAnswer);
+    return await validateAnswerOpenAI(apiKey, config.model, cardContent, question, userAnswer, correctAnswer, images);
   } else {
-    return await validateAnswerAnthropic(apiKey, config.model, cardContent, question, userAnswer, correctAnswer);
+    return await validateAnswerAnthropic(apiKey, config.model, cardContent, question, userAnswer, correctAnswer, images);
   }
 }
 
@@ -434,7 +724,7 @@ serve(async (req) => {
       }
 
       case "generate_quiz": {
-        const { cardContent } = body;
+        const { cardContent, userId, repositoryId } = body;
         if (!cardContent) {
           return new Response(
             JSON.stringify({ error: "Missing cardContent" }),
@@ -445,8 +735,11 @@ serve(async (req) => {
           );
         }
 
+        // Process images from card content (if userId/repositoryId provided)
+        const images = await processCardImages(cardContent, userId || '', repositoryId || '');
+
         const config = await getPlatformConfig(supabase);
-        const quiz = await handleGenerateQuiz(config, cardContent);
+        const quiz = await handleGenerateQuiz(config, cardContent, images);
         return new Response(JSON.stringify({ success: true, quiz }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
@@ -454,7 +747,7 @@ serve(async (req) => {
       }
 
       case "validate_answer": {
-        const { cardContent, question, userAnswer, correctAnswer } = body;
+        const { cardContent, question, userAnswer, correctAnswer, userId, repositoryId } = body;
         if (!cardContent || !question || !userAnswer || !correctAnswer) {
           return new Response(
             JSON.stringify({ error: "Missing required fields for validation" }),
@@ -465,9 +758,12 @@ serve(async (req) => {
           );
         }
 
+        // Process images from card content (if userId/repositoryId provided)
+        const images = await processCardImages(cardContent, userId || '', repositoryId || '');
+
         const config = await getPlatformConfig(supabase);
         const validation = await handleValidateAnswer(
-          config, cardContent, question, userAnswer, correctAnswer
+          config, cardContent, question, userAnswer, correctAnswer, images
         );
         return new Response(JSON.stringify({ success: true, validation }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

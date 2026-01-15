@@ -285,7 +285,13 @@ export function StudyPage() {
         return;
       }
 
-      const quiz = await generateQuiz(nextCard.rawContent);
+      // Get repository info for image processing
+      const repo = repositoryMap.get(nextCard.repositoryId);
+      const quiz = await generateQuiz(
+        nextCard.rawContent,
+        repo?.userId,
+        nextCard.repositoryId
+      );
 
       setSession(prev => ({
         ...prev!,
@@ -308,11 +314,15 @@ export function StudyPage() {
     setIsValidating(true);
 
     try {
+      // Get repository info for image processing
+      const repo = repositoryMap.get(session.currentCard.repositoryId);
       const validation = await validateAnswer(
         session.currentCard.rawContent,
         session.currentQuiz.question,
         answer,
-        session.currentQuiz.correctAnswer
+        session.currentQuiz.correctAnswer,
+        repo?.userId,
+        session.currentCard.repositoryId
       );
 
       setSession(prev => ({
@@ -350,7 +360,13 @@ export function StudyPage() {
         return;
       }
 
-      const quiz = await generateQuiz(nextCard.rawContent);
+      // Get repository info for image processing
+      const repo = repositoryMap.get(nextCard.repositoryId);
+      const quiz = await generateQuiz(
+        nextCard.rawContent,
+        repo?.userId,
+        nextCard.repositoryId
+      );
 
       setSession(prev => ({
         ...prev!,
