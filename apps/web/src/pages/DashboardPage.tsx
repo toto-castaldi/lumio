@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeStats } from '@/hooks/useRealtimeStats';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,25 +18,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LogOut, Info } from 'lucide-react';
-import { APP_NAME, getVersionString, getUserStats, type UserStats } from '@lumio/core';
+import { APP_NAME, getVersionString } from '@lumio/core';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [stats, setStats] = useState<UserStats>({ repositoryCount: 0, cardCount: 0 });
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Use realtime hook for automatic stats updates
+  const { stats, isLoading: isLoadingStats } = useRealtimeStats();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
-
-  useEffect(() => {
-    getUserStats()
-      .then(setStats)
-      .catch((err) => console.error('Failed to load stats:', err))
-      .finally(() => setIsLoadingStats(false));
-  }, []);
 
   // Get initials for avatar fallback
   const getInitials = (name?: string) => {

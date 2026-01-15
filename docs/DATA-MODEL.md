@@ -22,155 +22,171 @@ Questo documento definisce lo schema del database PostgreSQL su Supabase per Lum
 ## 2. Entity Relationship Diagram
 
 ```
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│     users       │       │  user_api_keys  │       │  repositories   │
-├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ id (PK)         │──┐    │ id (PK)         │       │ id (PK)         │
-│ email           │  │    │ user_id (FK)  ◄─┼───────│ user_id (FK)    │
-│ display_name    │  │    │ provider        │       │ url             │
-│ avatar_url      │  │    │ encrypted_key   │       │ name            │
-│ created_at      │  │    │ is_valid        │       │ description     │
-│ updated_at      │  │    │ last_tested_at  │       │ is_private      │
-└─────────────────┘  │    │ created_at      │       │ access_token    │
-                     │    └─────────────────┘       │ format_version  │
-                     │                              │ last_synced_at  │
-                     │                              │ sync_status     │
-                     │                              │ created_at      │
-                     │                              └────────┬────────┘
-                     │                                       │
-                     │    ┌─────────────────┐                │
-                     │    │     cards       │                │
-                     │    ├─────────────────┤                │
-                     │    │ id (PK)         │◄───────────────┘
-                     │    │ repository_id(FK)                │
-                     │    │ file_path       │                │
-                     │    │ title           │                │
-                     │    │ content         │    ┌───────────────────┐
-                     │    │ tags            │    │   card_assets     │
-                     │    │ difficulty      │    ├───────────────────┤
-                     │    │ language        │───►│ id (PK)           │
-                     │    │ content_hash    │    │ card_id (FK)      │
-                     │    │ created_at      │    │ original_path     │
-                     │    │ updated_at      │    │ storage_path      │
-                     │    └────────┬────────┘    │ content_hash      │
-                     │             │             │ mime_type         │
-                     │             │             │ size_bytes        │
-                     │             │             │ created_at        │
-                     │             │             └───────────────────┘
-┌────────────────────┼─────────────┼────────────────────────────────────┐
-│                    │             │                                    │
-│    ┌───────────────▼─────────────▼───────────┐                       │
-│    │           user_cards                     │                       │
-│    ├──────────────────────────────────────────┤                       │
-│    │ id (PK)                                  │                       │
-│    │ user_id (FK)                             │                       │
-│    │ card_id (FK)                             │                       │
-│    │ sm2_repetitions                          │                       │
-│    │ sm2_easiness                             │                       │
-│    │ sm2_interval                             │                       │
-│    │ sm2_next_review                          │                       │
-│    │ mastery_score                            │                       │
-│    │ times_studied                            │                       │
-│    │ times_correct                            │                       │
-│    │ last_studied_at                          │                       │
-│    │ created_at                               │                       │
-│    │ updated_at                               │                       │
-│    └──────────────────┬───────────────────────┘                       │
+┌─────────────────┐                             ┌─────────────────┐
+│     users       │                             │  repositories   │
+├─────────────────┤                             ├─────────────────┤
+│ id (PK)         │─────────────────────────────│ id (PK)         │
+│ email           │                             │ user_id (FK)    │
+│ display_name    │                             │ url             │
+│ avatar_url      │                             │ name            │
+│ created_at      │                             │ description     │
+│ updated_at      │                             │ is_private      │
+└─────────────────┘                             │ docora_repo_id  │  ◄── Fase 11: Docora
+                                                │ format_version  │
+                                                │ sync_status     │
+                                                │ card_count      │
+                                                │ created_at      │
+                                                └────────┬────────┘
+                                                         │
+                      ┌─────────────────┐                │
+                      │     cards       │                │
+                      ├─────────────────┤                │
+                      │ id (PK)         │◄───────────────┘
+                      │ repository_id(FK)                │
+                      │ file_path       │                │
+                      │ title           │                │
+                      │ content         │    ┌───────────────────┐
+                      │ tags            │    │   card_assets     │
+                      │ difficulty      │    ├───────────────────┤
+                      │ language        │───►│ id (PK)           │
+                      │ content_hash    │    │ card_id (FK)      │
+                      │ created_at      │    │ original_path     │
+                      │ updated_at      │    │ storage_path      │
+                      └────────┬────────┘    │ content_hash      │
+                               │             │ mime_type         │
+                               │             │ size_bytes        │
+                               │             │ created_at        │
+                               │             └───────────────────┘
+┌──────────────────────────────┼────────────────────────────────────────┐
+│                              │                                        │
+│    ┌─────────────────────────▼───────────┐                           │
+│    │           user_cards                 │                           │
+│    ├──────────────────────────────────────┤                           │
+│    │ id (PK)                              │                           │
+│    │ user_id (FK)                         │                           │
+│    │ card_id (FK)                         │                           │
+│    │ sm2_repetitions                      │                           │
+│    │ sm2_easiness                         │                           │
+│    │ sm2_interval                         │                           │
+│    │ sm2_next_review                      │                           │
+│    │ mastery_score                        │                           │
+│    │ times_studied                        │                           │
+│    │ times_correct                        │                           │
+│    │ last_studied_at                      │                           │
+│    │ created_at                           │                           │
+│    │ updated_at                           │                           │
+│    └──────────────────┬───────────────────┘                           │
 │                       │                                               │
 │                       │                                               │
-│    ┌──────────────────▼───────────────────────┐                       │
-│    │        user_card_responses               │                       │
-│    ├──────────────────────────────────────────┤                       │
-│    │ id (PK)                                  │                       │
-│    │ user_card_id (FK)                        │                       │
-│    │ session_id (FK)                          │◄──────────┐           │
-│    │ question_generated                       │           │           │
-│    │ options_generated                        │           │           │
-│    │ user_answer                              │           │           │
-│    │ correct_answer                           │           │           │
-│    │ is_correct                               │           │           │
-│    │ response_time_ms                         │           │           │
-│    │ ai_explanation                           │           │           │
-│    │ quality_rating                           │           │           │
-│    │ llm_provider                             │           │           │
-│    │ llm_model                                │           │           │
-│    │ created_at                               │           │           │
-│    └──────────────────────────────────────────┘           │           │
-│                                                           │           │
-│    ┌──────────────────────────────────────────┐           │           │
-│    │          study_sessions                  │           │           │
-│    ├──────────────────────────────────────────┤           │           │
-│    │ id (PK)                                  │───────────┘           │
-│    │ user_id (FK)                             │◄──────────────────────┘
-│    │ goal_id (FK)                             │◄──────────┐
-│    │ started_at                               │           │
-│    │ ended_at                                 │           │
-│    │ cards_studied                            │           │
-│    │ cards_correct                            │           │
-│    │ platform                                 │           │
-│    │ created_at                               │           │
-│    └──────────────────────────────────────────┘           │
-│                                                           │
-│    ┌──────────────────────────────────────────┐           │
-│    │             goals                        │           │
-│    ├──────────────────────────────────────────┤           │
-│    │ id (PK)                                  │───────────┘
-│    │ user_id (FK)                             │
-│    │ tags                                     │
-│    │ target_mastery                           │
-│    │ deadline                                 │
-│    │ is_active                                │
-│    │ current_mastery                          │
-│    │ cards_total                              │
-│    │ cards_mastered                           │
-│    │ completed_at                             │
-│    │ created_at                               │
-│    │ updated_at                               │
-│    └──────────────────────────────────────────┘
+│    ┌──────────────────▼───────────────────┐                           │
+│    │        user_card_responses           │                           │
+│    ├──────────────────────────────────────┤                           │
+│    │ id (PK)                              │                           │
+│    │ user_card_id (FK)                    │                           │
+│    │ session_id (FK)                      │◄──────────┐               │
+│    │ question_generated                   │           │               │
+│    │ options_generated                    │           │               │
+│    │ user_answer                          │           │               │
+│    │ correct_answer                       │           │               │
+│    │ is_correct                           │           │               │
+│    │ response_time_ms                     │           │               │
+│    │ ai_explanation                       │           │               │
+│    │ quality_rating                       │           │               │
+│    │ llm_provider                         │           │               │
+│    │ llm_model                            │           │               │
+│    │ created_at                           │           │               │
+│    └──────────────────────────────────────┘           │               │
+│                                                       │               │
+│    ┌──────────────────────────────────────┐           │               │
+│    │          study_sessions              │           │               │
+│    ├──────────────────────────────────────┤           │               │
+│    │ id (PK)                              │───────────┘               │
+│    │ user_id (FK)                         │◄──────────────────────────┘
+│    │ goal_id (FK)                         │◄──────────┐
+│    │ started_at                           │           │
+│    │ ended_at                             │           │
+│    │ cards_studied                        │           │
+│    │ cards_correct                        │           │
+│    │ platform                             │           │
+│    │ created_at                           │           │
+│    └──────────────────────────────────────┘           │
+│                                                       │
+│    ┌──────────────────────────────────────┐           │
+│    │             goals                    │           │
+│    ├──────────────────────────────────────┤           │
+│    │ id (PK)                              │───────────┘
+│    │ user_id (FK)                         │
+│    │ tags                                 │
+│    │ target_mastery                       │
+│    │ deadline                             │
+│    │ is_active                            │
+│    │ current_mastery                      │
+│    │ cards_total                          │
+│    │ cards_mastered                       │
+│    │ completed_at                         │
+│    │ created_at                           │
+│    │ updated_at                           │
+│    └──────────────────────────────────────┘
 │
-│    ┌──────────────────────────────────────────┐
-│    │      user_study_preferences              │
-│    ├──────────────────────────────────────────┤
-│    │ id (PK)                                  │
-│    │ user_id (FK)                             │
-│    │ preferred_provider                       │
-│    │ preferred_model                          │
-│    │ created_at                               │
-│    │ updated_at                               │
-│    └──────────────────────────────────────────┘
+│    ┌──────────────────────────────────────┐
+│    │      notification_preferences        │
+│    ├──────────────────────────────────────┤
+│    │ id (PK)                              │
+│    │ user_id (FK)                         │
+│    │ push_enabled                         │
+│    │ reminder_time                        │
+│    │ reminder_if_not_studied              │
+│    │ notify_goal_completed                │
+│    │ notify_repo_updated                  │
+│    │ notify_deadline_warning              │
+│    │ expo_push_token                      │
+│    │ created_at                           │
+│    │ updated_at                           │
+│    └──────────────────────────────────────┘
 │
-│    ┌──────────────────────────────────────────┐
-│    │      notification_preferences            │
-│    ├──────────────────────────────────────────┤
-│    │ id (PK)                                  │
-│    │ user_id (FK)                             │
-│    │ push_enabled                             │
-│    │ reminder_time                            │
-│    │ reminder_if_not_studied                  │
-│    │ notify_goal_completed                    │
-│    │ notify_repo_updated                      │
-│    │ notify_deadline_warning                  │
-│    │ expo_push_token                          │
-│    │ created_at                               │
-│    │ updated_at                               │
-│    └──────────────────────────────────────────┘
+│    ┌──────────────────────────────────────┐
+│    │         public_decks                 │
+│    ├──────────────────────────────────────┤
+│    │ id (PK)                              │
+│    │ url                                  │
+│    │ name                                 │
+│    │ description                          │
+│    │ author                               │
+│    │ card_count                           │
+│    │ tags                                 │
+│    │ is_featured                          │
+│    │ created_at                           │
+│    │ updated_at                           │
+│    └──────────────────────────────────────┘
 │
-│    ┌──────────────────────────────────────────┐
-│    │         public_decks                     │
-│    ├──────────────────────────────────────────┤
-│    │ id (PK)                                  │
-│    │ url                                      │
-│    │ name                                     │
-│    │ description                              │
-│    │ author                                   │
-│    │ card_count                               │
-│    │ tags                                     │
-│    │ is_featured                              │
-│    │ created_at                               │
-│    │ updated_at                               │
-│    └──────────────────────────────────────────┘
+│    ┌──────────────────────────────────────┐
+│    │      webhook_chunks                  │  ◄── Fase 11: Docora
+│    ├──────────────────────────────────────┤
+│    │ id (PK)                              │
+│    │ chunk_id                             │
+│    │ repository_id (FK)                   │
+│    │ file_path                            │
+│    │ chunk_index                          │
+│    │ total_chunks                         │
+│    │ content                              │
+│    │ received_at                          │
+│    └──────────────────────────────────────┘
+│
+│    ┌──────────────────────────────────────┐
+│    │         platform_config              │  ◄── Fase 10
+│    ├──────────────────────────────────────┤
+│    │ id (PK)                              │
+│    │ key                                  │
+│    │ value                                │
+│    │ created_at                           │
+│    │ updated_at                           │
+│    └──────────────────────────────────────┘
 └───────────────────────────────────────────────────────────────────────┘
 ```
+
+> **Nota Fase 10:** Le tabelle `user_api_keys` e `user_study_preferences` sono state rimosse. Le API keys sono ora gestite centralmente come Supabase Secrets.
+
+> **Nota Fase 11:** La tabella `webhook_chunks` è usata per gestire file >1MB inviati da Docora in più chunk.
 
 ---
 
@@ -183,15 +199,14 @@ CREATE TYPE llm_provider AS ENUM ('openai', 'anthropic');
 -- Stato sync repository
 CREATE TYPE sync_status AS ENUM ('pending', 'syncing', 'synced', 'error');
 
--- Stato token repository privato (Fase 9)
-CREATE TYPE token_status AS ENUM ('valid', 'invalid', 'not_required');
-
 -- Piattaforma client
 CREATE TYPE platform AS ENUM ('web', 'mobile');
 
 -- Rating qualità domanda
 CREATE TYPE quality_rating AS ENUM ('-2', '-1', '0', '1', '2');
 ```
+
+> **Nota Fase 11:** Il tipo `token_status` è stato rimosso. I token PAT non sono più gestiti da Lumio ma da Docora.
 
 ---
 
@@ -221,38 +236,9 @@ CREATE TRIGGER set_users_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 4.2 user_api_keys
+### 4.2 repositories
 
-Chiavi API LLM degli utenti (criptate).
-
-```sql
-CREATE TABLE public.user_api_keys (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider llm_provider NOT NULL,
-    encrypted_key TEXT NOT NULL,  -- Criptato con AES-256
-    is_valid BOOLEAN DEFAULT TRUE,
-    is_preferred BOOLEAN DEFAULT FALSE,
-    last_tested_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    UNIQUE(user_id, provider)
-);
-
--- Indici
-CREATE INDEX idx_user_api_keys_user_id ON user_api_keys(user_id);
-
--- Trigger
-CREATE TRIGGER set_user_api_keys_updated_at
-    BEFORE UPDATE ON user_api_keys
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-```
-
-### 4.3 repositories
-
-Repository Git censiti dall'utente.
+Repository Git censiti dall'utente. Dalla Fase 11, la sincronizzazione è gestita da Docora tramite webhook.
 
 ```sql
 CREATE TABLE public.repositories (
@@ -262,12 +248,8 @@ CREATE TABLE public.repositories (
     name TEXT NOT NULL,  -- Estratto da URL o README
     description TEXT,
     is_private BOOLEAN DEFAULT FALSE,
-    encrypted_access_token TEXT,  -- PAT criptato con AES-256-GCM, solo per repo privati
-    token_status token_status DEFAULT 'not_required',  -- Fase 9: stato validità token
-    token_error_message TEXT,  -- Fase 9: messaggio errore se token invalido
+    docora_repository_id TEXT,  -- Fase 11: ID repository su Docora
     format_version INTEGER NOT NULL DEFAULT 1,
-    last_commit_sha TEXT,
-    last_synced_at TIMESTAMPTZ,
     sync_status sync_status DEFAULT 'pending',
     sync_error_message TEXT,
     card_count INTEGER DEFAULT 0,
@@ -280,7 +262,7 @@ CREATE TABLE public.repositories (
 -- Indici
 CREATE INDEX idx_repositories_user_id ON repositories(user_id);
 CREATE INDEX idx_repositories_sync_status ON repositories(sync_status);
-CREATE INDEX idx_repositories_token_status ON repositories(token_status);  -- Fase 9
+CREATE INDEX idx_repositories_docora_repository_id ON repositories(docora_repository_id);  -- Fase 11
 
 -- Trigger
 CREATE TRIGGER set_repositories_updated_at
@@ -289,7 +271,9 @@ CREATE TRIGGER set_repositories_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 4.4 cards
+> **Nota Fase 11:** Le colonne `encrypted_access_token`, `token_status`, `token_error_message`, `last_commit_sha`, `last_synced_at` sono state rimosse. I token PAT e la sincronizzazione sono gestiti da Docora.
+
+### 4.3 cards
 
 Card importate dai repository.
 
@@ -325,7 +309,7 @@ CREATE TRIGGER set_cards_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 4.5 card_assets
+### 4.4 card_assets
 
 Asset (immagini) scaricati dai repository e salvati in Supabase Storage.
 
@@ -353,7 +337,7 @@ CREATE INDEX idx_card_assets_storage_path ON card_assets(storage_path);
 > Il `content_hash` permette la deduplicazione: immagini identiche in card diverse usano lo stesso file.
 > Il CASCADE DELETE elimina automaticamente gli asset quando la card viene eliminata.
 
-### 4.6 user_cards
+### 4.5 user_cards
 
 Stato di studio di ogni card per ogni utente (SM-2).
 
@@ -507,33 +491,7 @@ CREATE INDEX idx_user_card_responses_is_correct ON user_card_responses(is_correc
 CREATE INDEX idx_user_card_responses_quality ON user_card_responses(quality_rating);
 ```
 
-### 4.9 user_study_preferences
-
-Preferenze di studio dell'utente (provider/modello preferiti).
-
-```sql
-CREATE TABLE public.user_study_preferences (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-    preferred_provider llm_provider,  -- 'openai' | 'anthropic'
-    preferred_model TEXT,  -- es: 'gpt-5.1', 'claude-sonnet-4-5'
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Indici
-CREATE INDEX idx_user_study_preferences_user_id ON user_study_preferences(user_id);
-
--- Trigger
-CREATE TRIGGER set_user_study_preferences_updated_at
-    BEFORE UPDATE ON user_study_preferences
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-```
-
-> **Nota Fase 5:** Questa tabella memorizza le preferenze di studio dell'utente. Quando l'utente cambia provider o modello durante una sessione di studio, le nuove preferenze vengono salvate automaticamente e caricate alla sessione successiva.
-
-### 4.10 notification_preferences
+### 4.9 notification_preferences
 
 Preferenze notifiche utente (mobile).
 
@@ -600,6 +558,59 @@ CREATE TRIGGER set_public_decks_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 ```
+
+### 4.11 webhook_chunks (Fase 11)
+
+Tabella per gestire file chunked (>1MB) inviati da Docora.
+
+```sql
+CREATE TABLE public.webhook_chunks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chunk_id TEXT NOT NULL,
+    repository_id UUID NOT NULL REFERENCES public.repositories(id) ON DELETE CASCADE,
+    file_path TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    total_chunks INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(chunk_id, chunk_index)
+);
+
+-- Indici
+CREATE INDEX idx_webhook_chunks_chunk_id ON webhook_chunks(chunk_id);
+CREATE INDEX idx_webhook_chunks_repository_id ON webhook_chunks(repository_id);
+```
+
+> **Nota Fase 11:** Docora invia file >1MB in chunk da 512KB. Lumio assembla i chunk quando sono tutti arrivati e poi processa il file completo.
+
+### 4.12 platform_config (Fase 10)
+
+Configurazione centralizzata della piattaforma (LLM provider, model, prompt).
+
+```sql
+CREATE TABLE public.platform_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key TEXT NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Valori di default
+INSERT INTO platform_config (key, value) VALUES
+    ('llm_provider', 'anthropic'),
+    ('llm_model', 'claude-3-5-haiku-latest'),
+    ('system_prompt', 'Genera una domanda a scelta multipla...');
+
+-- Trigger
+CREATE TRIGGER set_platform_config_updated_at
+    BEFORE UPDATE ON platform_config
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+> **Nota Fase 10:** Questa tabella sostituisce le tabelle `user_api_keys` e `user_study_preferences`. La configurazione è gestita centralmente dall'admin via Supabase Studio. Gli utenti non possono modificare questi valori.
 
 ---
 

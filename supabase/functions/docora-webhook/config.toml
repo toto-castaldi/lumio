@@ -1,0 +1,3 @@
+# Disable JWT verification - webhook uses HMAC signature authentication
+# Docora sends X-Docora-Signature header for authentication
+verify_jwt = false

@@ -25,12 +25,9 @@ export {
 export {
   addRepository,
   deleteRepository,
-  syncRepository,
   getUserRepositories,
   getUserStats,
   getRepositoryCards,
-  validateGitHubToken,
-  updateRepositoryToken,
 } from './supabase/repositories';
 
 // Export card assets functions
@@ -61,3 +58,9 @@ export {
   isImageUrl,
   SUPPORTED_IMAGE_EXTENSIONS,
 } from './markdown';
+
+// Export Deck class for card filtering
+export { Deck } from './deck';
+
+// Export CardView class for image URL transformation
+export { CardView } from './card';

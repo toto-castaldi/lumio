@@ -39,20 +39,21 @@ Lumio è una piattaforma multi-client (web + mobile) con backend serverless su S
 │   ┌─────────────────────────────────────────────────────────┐   │
 │   │              Edge Functions                              │   │
 │   │  • Git Sync         • LLM Proxy        • Study Planner  │   │
+│   │  • Docora Webhook   • Version                           │   │
 │   └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │   ┌─────────────────────────────────────────────────────────┐   │
 │   │              External Scheduler (n8n)                    │   │
-│   │  • Repository sync check    • Study plan recalculation  │   │
+│   │  • Study plan recalculation                             │   │
 │   └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                │                              │
                ▼                              ▼
 ┌──────────────────────────┐    ┌──────────────────────────┐
-│      Git Providers       │    │       LLM Providers      │
-│  • GitHub                │    │  • OpenAI API            │
-│  • GitLab                │    │  • Anthropic API         │
-│  • Bitbucket             │    │                          │
+│       Docora             │    │       LLM Providers      │
+│  (Repository Monitoring) │    │  • OpenAI API            │
+│  • Webhooks to Lumio     │    │  • Anthropic API         │
+│  • GitHub API Proxy      │    │                          │
 └──────────────────────────┘    └──────────────────────────┘
                │
                ▼
@@ -62,6 +63,8 @@ Lumio è una piattaforma multi-client (web + mobile) con backend serverless su S
 │  • Resend (email)        │
 └──────────────────────────┘
 ```
+
+> **Nota Fase 11:** L'architettura è stata semplificata. Docora monitora i repository GitHub e invia webhook a Lumio quando ci sono cambiamenti. Lumio non fa più polling diretto a GitHub.
 
 ---
 
@@ -319,111 +322,125 @@ Ogni environment ha:
 ### 4.2 Edge Functions
 
 #### git-sync
-Sincronizza i repository Git con il database locale. Supporta sia repository pubblici che privati (Fase 9).
+Gestisce la registrazione e de-registrazione dei repository su Docora. Dalla Fase 11, non esegue più sincronizzazione diretta con GitHub.
 
 ```
-Trigger: n8n (ogni ora, configurabile) + manuale da UI
-Input: repository_id, (opzionale) accessToken per repo privati
+Trigger: Chiamata manuale da UI (aggiunta/rimozione repository)
 Flow:
-  1. Stale Sync Recovery: reset repo stuck in 'syncing' > 5 min
-  2. Verifica se repository è privato → decripta PAT
-  3. Fetch repository metadata (ultimo commit) con auth se privato
-  4. Se cambiato → DELTA SYNC:
-     a. Fetch cards esistenti con content_hash
-     b. Per ogni file .md nel nuovo commit:
-        - Calcola hash contenuto
-        - Se UNCHANGED (stesso hash) → SKIP (no image processing!)
-        - Se MODIFIED (hash diverso) → UPDATE card + re-process images
-        - Se NEW → INSERT card + process images
-     c. Cards non più presenti → DELETE
-  5. Download immagini SOLO per cards nuove/modificate
-  6. Update repository con sync summary
-  7. Se errore auth (401/403) → set token_status = 'invalid'
+  1. add_repository: Registra repository su Docora API
+  2. delete_repository: De-registra repository da Docora API
+  3. Query: Ritorna repository, cards, statistiche
 ```
 
-**Delta Sync (Ottimizzazione Performance):**
-
-Il delta sync riduce drasticamente il tempo di sincronizzazione processando solo le card modificate.
-
-| Scenario | Prima (Full Sync) | Dopo (Delta Sync) |
-|----------|-------------------|-------------------|
-| 1 card modificata su 13 | 73 immagini scaricate | ~5 immagini scaricate |
-| Nessuna modifica | 73 immagini scaricate | 0 immagini scaricate |
-| Nuova card aggiunta | 73 immagini scaricate | ~5 immagini (solo nuova card) |
-
-**Sync Summary:**
-
-Dopo ogni sync, il campo `sync_error_message` contiene un riepilogo:
-```
-Delta: +1 ~2 -0 =10
-```
-Dove:
-- `+N` = cards aggiunte
-- `~N` = cards modificate
-- `-N` = cards eliminate
-- `=N` = cards invariate (skipped)
-
-**Stale Sync Recovery:**
-
-Per gestire timeout delle Edge Functions (limite 150s), all'inizio di ogni `check_updates`:
-1. Cerca repository con `sync_status = 'syncing'` e `updated_at` > 5 minuti fa
-2. Reset automatico a `sync_status = 'synced'`
-3. Messaggio: "Sync timed out - reset automatically"
-
-Questo garantisce che repository bloccati vengano recuperati automaticamente al prossimo ciclo n8n.
-
-**Azioni disponibili (Fase 9):**
+**Azioni disponibili (Fase 11):**
 
 | Action | Descrizione |
 |--------|-------------|
-| `import_repository` | Importa un nuovo repository (pubblico o privato) |
-| `sync_repository` | Sincronizza un repository esistente |
-| `check_updates` | Verifica aggiornamenti per tutti i repository |
-| `validate_token` | Valida un PAT GitHub per un URL (senza salvare) |
-| `update_token` | Aggiorna il PAT per un repository esistente |
+| `add_repository` | Registra un repository su Docora, salva `docora_repository_id` |
+| `delete_repository` | De-registra repository da Docora, elimina dati locali |
+| `get_repositories` | Ritorna lista repository dell'utente |
+| `get_stats` | Ritorna statistiche (repo count, card count) |
+| `get_cards` | Ritorna cards di un repository |
+| `get_all_cards` | Ritorna tutte le cards dell'utente |
 
-**Autenticazione Repository Privati (Fase 9):**
-
-Il PAT (Personal Access Token) è criptato con la stessa logica delle API keys LLM:
-- **Algoritmo:** AES-256-GCM
-- **Chiave:** `ENCRYPTION_KEY` (stessa delle API keys)
-- **Storage:** `repositories.encrypted_access_token`
-- **Status:** `repositories.token_status` (valid/invalid/not_required)
+**Flusso aggiunta repository (Fase 11):**
 
 ```
-Flusso aggiunta repo privato:
-┌─────────┐     ┌─────────────────┐     ┌─────────────┐     ┌────────────┐
-│ Client  │────▶│   git-sync      │────▶│  GitHub API │────▶│  Valida    │
-│         │     │   Edge Function │     │             │     │  accesso   │
-└─────────┘     └────────┬────────┘     └─────────────┘     └────────────┘
+┌─────────┐     ┌─────────────────┐     ┌─────────────┐
+│ Client  │────▶│   git-sync      │────▶│  Docora API │
+│         │     │   Edge Function │     │             │
+└─────────┘     └────────┬────────┘     └─────────────┘
                          │
-                         │ Se valido:
-                         │ 1. Encrypt(PAT) con ENCRYPTION_KEY
-                         │ 2. Salva in repositories.encrypted_access_token
-                         │ 3. Set token_status = 'valid'
-                         │ 4. Avvia sync
+                         │ Docora ritorna:
+                         │ 1. docora_repository_id
+                         │ 2. Inizia monitoraggio
+                         │ 3. Invia webhook su cambiamenti
                          ▼
                 ┌─────────────────┐
                 │   PostgreSQL    │
-                │   (repo + cards)│
+                │   (repo record) │
                 └─────────────────┘
 ```
 
-**Gestione Token Invalido:**
+> **Nota Fase 11:** Le azioni `sync_repository`, `check_updates`, `validate_token`, `update_token` sono state rimosse. La sincronizzazione è gestita tramite webhook da Docora.
 
-Durante il sync, se GitHub ritorna 401 (Unauthorized) o 403 (Forbidden):
-1. Set `token_status = 'invalid'`
-2. Set `token_error_message` con dettagli errore
-3. Il sync fallisce, `sync_status = 'error'`
-4. Frontend mostra badge "Token invalido" con possibilità di aggiornare
+#### docora-webhook (Fase 11)
+Riceve webhook da Docora quando ci sono cambiamenti nei repository monitorati.
 
-**Immagini nei Repository (Fase 9B - Completata):**
+```
+Trigger: Webhook POST da Docora
+Endpoints:
+  - POST /create - Nuovo file rilevato
+  - POST /update - File modificato
+  - POST /delete - File rimosso
+```
 
-Le immagini sono supportate sia per repository pubblici che privati:
-- Le immagini vengono scaricate da GitHub durante il sync e caricate su Supabase Storage
-- I path relativi (`../assets/image.png`) vengono risolti correttamente rispetto alla posizione della card
-- Tutti i formati di path sono supportati: assoluti (`/assets/`), relativi (`../assets/`), e locali (`./`)
-- Il frontend sostituisce i path originali con signed URLs di Supabase Storage
+**Autenticazione Webhook:**
+
+Docora invia headers per autenticazione HMAC-SHA256:
+- `X-Docora-App-Id`: Identificativo app
+- `X-Docora-Signature`: `sha256=<hmac>` calcolato con `DOCORA_CLIENT_AUTH_KEY`
+- `X-Docora-Timestamp`: Timestamp richiesta (anti-replay)
+
+**Payload Docora:**
+
+```json
+{
+  "repository": {
+    "repository_id": "repo_xxx",
+    "github_url": "https://github.com/owner/repo",
+    "owner": "...",
+    "name": "..."
+  },
+  "file": {
+    "path": "cards/example.md",
+    "sha": "...",
+    "size": 1234,
+    "content": "..."
+  },
+  "chunk": { "id": "...", "index": 0, "total": 3 },
+  "commit_sha": "...",
+  "timestamp": "2025-01-11T12:00:00.000Z"
+}
+```
+
+**Flusso elaborazione webhook:**
+
+```
+┌─────────┐     ┌─────────────────┐     ┌─────────────────┐
+│ Docora  │────▶│ docora-webhook  │────▶│   PostgreSQL    │
+│         │     │ Edge Function   │     │                 │
+└─────────┘     └────────┬────────┘     └─────────────────┘
+                         │
+                         │ Per ogni file:
+                         │ 1. Verifica HMAC signature
+                         │ 2. Trova repository per docora_repository_id
+                         │ 3. README.md → valida formato, aggiorna metadata
+                         │ 4. *.md (card) → parse frontmatter, insert/update
+                         │ 5. Immagini → decode base64, upload Storage
+                         │ 6. Aggiorna card_count
+                         ▼
+                ┌─────────────────┐
+                │ Supabase Storage│
+                │   (immagini)    │
+                └─────────────────┘
+```
+
+**Gestione file chunked:**
+
+Docora invia file >1MB in chunk da 512KB:
+1. Ogni chunk viene salvato in tabella `webhook_chunks`
+2. Quando tutti i chunk sono arrivati, vengono assemblati
+3. Il file completo viene processato
+4. I chunk vengono eliminati
+
+**Immagini:**
+
+Le immagini sono inviate da Docora come base64:
+- Decodifica base64
+- Calcolo hash SHA-256 per deduplicazione
+- Upload su Supabase Storage: `card-assets/{user_id}/{repo_id}/{hash}.{ext}`
+- Salvataggio mapping in tabella `card_assets`
 
 #### llm-proxy
 Gestisce la crittografia e il proxy delle API keys verso OpenAI/Anthropic.
@@ -621,12 +638,13 @@ I job schedulati sono gestiti esternamente tramite **n8n** invece di pg_cron, pe
 
 | Job | Schedule | Endpoint | Body |
 |-----|----------|----------|------|
-| `sync_repositories` | `0 * * * *` (ogni ora) | `POST /functions/v1/git-sync` | `{"action": "check_updates"}` |
 | `recalculate_study_plans` | `0 3 * * *` (ogni notte alle 3) | `POST /functions/v1/study-planner` | `{"action": "recalculate_all"}` |
 
 **Configurazione n8n:**
 - Autenticazione: `Authorization: Bearer <SERVICE_ROLE_KEY>`
 - Content-Type: `application/json`
+
+> **Nota Fase 11:** Il job `sync_repositories` è stato rimosso. La sincronizzazione dei repository è ora gestita tramite webhook da Docora in tempo reale.
 
 ### 4.4 Row Level Security (RLS)
 
@@ -1205,7 +1223,10 @@ openssl rand -base64 32
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (full access) |
 | `SENTRY_DSN` | Sentry DSN |
 | `RESEND_API_KEY` | Resend API key for emails |
-| `ENCRYPTION_KEY` | Key for encrypting user API keys |
+| `ENCRYPTION_KEY` | Key for encrypting API keys |
+| `DOCORA_API_URL` | URL Docora API (default: `https://api.docora.toto-castaldi.com`) |
+| `DOCORA_TOKEN_AUTHENTICATION` | JWT per autenticare chiamate a Docora API |
+| `DOCORA_CLIENT_AUTH_KEY` | Secret per verifica HMAC webhook |
 
 ### 11.4 GitHub Actions Secrets
 
@@ -1223,6 +1244,9 @@ openssl rand -base64 32
 | `SENTRY_DSN` | Error tracking |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `DOCORA_API_URL` | URL Docora API (Fase 11) |
+| `DOCORA_TOKEN_AUTHENTICATION` | JWT per Docora API (Fase 11) |
+| `DOCORA_CLIENT_AUTH_KEY` | Secret per webhook HMAC (Fase 11) |
 
 ### 11.5 GitHub Actions Variables
 
@@ -1284,7 +1308,7 @@ GOOGLE_CLIENT_ID="your-client-id" GOOGLE_CLIENT_SECRET="your-secret" supabase st
 supabase db push
 
 # Deploy functions locally
-supabase functions serve --env-file supabase/.env.local
+supabase functions serve --env-file supabase/.env.local --no-verify-jwt
 
 # Stop
 supabase stop

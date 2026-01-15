@@ -4,9 +4,6 @@ export type LLMProvider = 'openai' | 'anthropic';
 // Sync status for repositories
 export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'error';
 
-// Token status for private repositories (Phase 9)
-export type TokenStatus = 'valid' | 'invalid' | 'not_required';
-
 // Platform types
 export type Platform = 'web' | 'mobile';
 
@@ -45,14 +42,11 @@ export interface Repository {
   name: string;
   description?: string;
   isPrivate: boolean;
-  tokenStatus: TokenStatus;  // Phase 9: validity of access token
-  tokenErrorMessage?: string;  // Phase 9: error message if token is invalid
+  docoraRepositoryId?: string;  // Phase 11: Docora integration
+  lumioignoreContent?: string;  // Content of .lumioignore file for filtering cards
   formatVersion: number;
-  lastCommitSha?: string;
-  lastSyncedAt?: string;
   syncStatus: SyncStatus;
   syncErrorMessage?: string;
-  cardCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,14 +109,7 @@ export interface UserStats {
 export interface AddRepositoryOptions {
   url: string;
   isPrivate?: boolean;
-  accessToken?: string;  // Required if isPrivate is true
-}
-
-// Response from token validation
-export interface TokenValidationResult {
-  valid: boolean;
-  repoName?: string;
-  error?: string;
+  accessToken?: string;  // Required for private repos, passed to Docora (not stored)
 }
 
 // =============================================================================

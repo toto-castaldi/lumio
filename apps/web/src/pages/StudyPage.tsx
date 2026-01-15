@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   generateQuiz,
   getStudyCards,
+  getUserRepositories,
   validateAnswer,
+  Deck,
   type Card,
+  type Repository,
   type QuizQuestion,
   type ValidationResponse,
 } from '@lumio/core';
@@ -195,6 +198,7 @@ export function StudyPage() {
   // State
   const [state, setState] = useState<StudyState>('loading');
   const [session, setSession] = useState<StudySession | null>(null);
+  const [repositoryMap, setRepositoryMap] = useState<Map<string, Repository>>(new Map());
 
   // Loading states
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
@@ -211,16 +215,42 @@ export function StudyPage() {
 
   const loadInitialData = async () => {
     try {
-      const cards = await getStudyCards();
+      // Load repositories and cards in parallel
+      const [repositories, allCards] = await Promise.all([
+        getUserRepositories(),
+        getStudyCards(),
+      ]);
 
-      if (cards.length === 0) {
+      // Filter cards per repository using Deck class
+      const repoMap = new Map(repositories.map(r => [r.id, r]));
+      setRepositoryMap(repoMap);
+      const filteredCards: Card[] = [];
+
+      // Group cards by repository
+      const cardsByRepo = new Map<string, Card[]>();
+      for (const card of allCards) {
+        const repoCards = cardsByRepo.get(card.repositoryId) || [];
+        repoCards.push(card);
+        cardsByRepo.set(card.repositoryId, repoCards);
+      }
+
+      // Filter each group using Deck
+      for (const [repoId, repoCards] of cardsByRepo) {
+        const repo = repoMap.get(repoId);
+        if (repo) {
+          const deck = new Deck(repo, repoCards);
+          filteredCards.push(...deck.getActiveCards());
+        }
+      }
+
+      if (filteredCards.length === 0) {
         setState('no_cards');
         return;
       }
 
-      // Initialize session
+      // Initialize session with filtered cards
       setSession({
-        cards,
+        cards: filteredCards,
         seenCardIds: new Set(),
         currentCard: null,
         currentQuiz: null,
@@ -255,7 +285,13 @@ export function StudyPage() {
         return;
       }
 
-      const quiz = await generateQuiz(nextCard.rawContent);
+      // Get repository info for image processing
+      const repo = repositoryMap.get(nextCard.repositoryId);
+      const quiz = await generateQuiz(
+        nextCard.rawContent,
+        repo?.userId,
+        nextCard.repositoryId
+      );
 
       setSession(prev => ({
         ...prev!,
@@ -278,11 +314,15 @@ export function StudyPage() {
     setIsValidating(true);
 
     try {
+      // Get repository info for image processing
+      const repo = repositoryMap.get(session.currentCard.repositoryId);
       const validation = await validateAnswer(
         session.currentCard.rawContent,
         session.currentQuiz.question,
         answer,
-        session.currentQuiz.correctAnswer
+        session.currentQuiz.correctAnswer,
+        repo?.userId,
+        session.currentCard.repositoryId
       );
 
       setSession(prev => ({
@@ -320,7 +360,13 @@ export function StudyPage() {
         return;
       }
 
-      const quiz = await generateQuiz(nextCard.rawContent);
+      // Get repository info for image processing
+      const repo = repositoryMap.get(nextCard.repositoryId);
+      const quiz = await generateQuiz(
+        nextCard.rawContent,
+        repo?.userId,
+        nextCard.repositoryId
+      );
 
       setSession(prev => ({
         ...prev!,
@@ -449,6 +495,7 @@ export function StudyPage() {
         {/* Card Preview Dialog */}
         <CardPreviewDialog
           card={session?.currentCard || null}
+          repository={session?.currentCard ? repositoryMap.get(session.currentCard.repositoryId) || null : null}
           isOpen={isCardPreviewOpen}
           onClose={() => setIsCardPreviewOpen(false)}
         />

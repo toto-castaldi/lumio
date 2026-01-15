@@ -1,6 +1,6 @@
 import { getSupabaseUrl, getSupabaseAnonKey } from './client';
 import { getAccessToken } from './auth';
-import type { Repository, Card, UserStats, AddRepositoryOptions, TokenValidationResult } from '@lumio/shared';
+import type { Repository, Card, UserStats, AddRepositoryOptions } from '@lumio/shared';
 
 /**
  * Get the git-sync Edge Function URL
@@ -52,14 +52,11 @@ function mapRepository(dbRepo: Record<string, unknown>): Repository {
     name: dbRepo.name as string,
     description: dbRepo.description as string | undefined,
     isPrivate: dbRepo.is_private as boolean,
-    tokenStatus: (dbRepo.token_status as Repository['tokenStatus']) || 'not_required',
-    tokenErrorMessage: dbRepo.token_error_message as string | undefined,
+    docoraRepositoryId: dbRepo.docora_repository_id as string | undefined,
+    lumioignoreContent: dbRepo.lumioignore_content as string | undefined,
     formatVersion: dbRepo.format_version as number,
-    lastCommitSha: dbRepo.last_commit_sha as string | undefined,
-    lastSyncedAt: dbRepo.last_synced_at as string | undefined,
     syncStatus: dbRepo.sync_status as Repository['syncStatus'],
     syncErrorMessage: dbRepo.sync_error_message as string | undefined,
-    cardCount: dbRepo.card_count as number,
     createdAt: dbRepo.created_at as string,
     updatedAt: dbRepo.updated_at as string,
   };
@@ -97,24 +94,11 @@ export async function addRepository(urlOrOptions: string | AddRepositoryOptions)
 /**
  * Delete a repository
  * This will also delete all associated cards (cascade)
+ * Also unregisters the repository from Docora monitoring
  * @param repositoryId - UUID of the repository to delete
  */
 export async function deleteRepository(repositoryId: string): Promise<void> {
   await callGitSync('delete_repository', { repositoryId });
-}
-
-/**
- * Manually sync a repository
- * This will re-fetch all cards from the GitHub repository
- * @param repositoryId - UUID of the repository to sync
- */
-export async function syncRepository(repositoryId: string): Promise<Repository> {
-  const response = await callGitSync<{
-    success: boolean;
-    repository: Record<string, unknown>;
-  }>('sync_repository', { repositoryId });
-
-  return mapRepository(response.repository);
 }
 
 /**
@@ -176,48 +160,3 @@ export async function getRepositoryCards(repositoryId: string): Promise<Card[]> 
   return response.cards.map(mapCard);
 }
 
-// =============================================================================
-// PRIVATE REPOSITORY FUNCTIONS (Phase 9)
-// =============================================================================
-
-/**
- * Validate a GitHub token for a repository URL without saving it
- * Use this to verify a token before adding a private repository
- * @param url - GitHub repository URL
- * @param accessToken - GitHub Personal Access Token
- */
-export async function validateGitHubToken(
-  url: string,
-  accessToken: string
-): Promise<TokenValidationResult> {
-  const response = await callGitSync<{
-    success: boolean;
-    valid: boolean;
-    repoName?: string;
-    error?: string;
-  }>('validate_token', { url, accessToken });
-
-  return {
-    valid: response.valid,
-    repoName: response.repoName,
-    error: response.error,
-  };
-}
-
-/**
- * Update the access token for an existing private repository
- * Use this when a token has been invalidated (expired/revoked)
- * @param repositoryId - UUID of the repository
- * @param accessToken - New GitHub Personal Access Token
- */
-export async function updateRepositoryToken(
-  repositoryId: string,
-  accessToken: string
-): Promise<Repository> {
-  const response = await callGitSync<{
-    success: boolean;
-    repository: Record<string, unknown>;
-  }>('update_token', { repositoryId, accessToken });
-
-  return mapRepository(response.repository);
-}

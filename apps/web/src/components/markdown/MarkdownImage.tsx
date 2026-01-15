@@ -37,22 +37,25 @@ export function MarkdownImage({ src, alt, title, transformUrl }: MarkdownImagePr
   }
 
   if (hasError) {
+    // Use span with block display to avoid HTML nesting issues (figure/div can't be inside p)
     return (
-      <div className="my-4 flex items-center justify-center gap-2 p-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+      <span className="block my-4 flex items-center justify-center gap-2 p-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
         <ImageOff className="w-5 h-5" />
         <span className="text-sm">Immagine non disponibile</span>
-      </div>
+      </span>
     );
   }
 
+  // Use span elements with block display to avoid HTML nesting issues
+  // (figure/div can't be descendants of p, but span can)
   return (
-    <figure className="my-4">
-      <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+    <span className="block my-4">
+      <span className="block relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
         {/* Loading placeholder */}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 animate-pulse">
-            <div className="w-8 h-8 rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-transparent animate-spin" />
-          </div>
+          <span className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 animate-pulse">
+            <span className="block w-8 h-8 rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-transparent animate-spin" />
+          </span>
         )}
 
         {/* Actual image */}
@@ -68,14 +71,14 @@ export function MarkdownImage({ src, alt, title, transformUrl }: MarkdownImagePr
             isLoading ? 'opacity-0' : 'opacity-100'
           )}
         />
-      </div>
+      </span>
 
       {/* Caption from alt text */}
       {alt && (
-        <figcaption className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">
+        <span className="block mt-2 text-center text-sm text-slate-500 dark:text-slate-400">
           {alt}
-        </figcaption>
+        </span>
       )}
-    </figure>
+    </span>
   );
 }
