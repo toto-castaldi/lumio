@@ -34,10 +34,14 @@ export interface AuthUser {
   avatarUrl?: string;
 }
 
-// Repository (stored in public.repositories table)
+/**
+ * Repository condiviso tra utenti (stored in public.repositories table).
+ * Ogni URL esiste una sola volta nel sistema.
+ * Gli utenti sono collegati tramite UserRepository.
+ */
 export interface Repository {
   id: string;
-  userId: string;
+  // userId rimosso - repository ora condivisi tra utenti (vedi UserRepository)
   url: string;
   name: string;
   description?: string;
@@ -49,6 +53,17 @@ export interface Repository {
   syncErrorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Relazione many-to-many tra utenti e repository (stored in public.user_repositories table).
+ * Permette a più utenti di condividere lo stesso repository.
+ */
+export interface UserRepository {
+  id: string;
+  userId: string;
+  repositoryId: string;
+  createdAt: string;
 }
 
 // Card (stored in public.cards table)
@@ -74,7 +89,7 @@ export interface CardAsset {
   id: string;
   cardId: string;
   originalPath: string;   // Original path in markdown (e.g., /assets/img/diagram.png)
-  storagePath: string;    // Path in Supabase Storage (e.g., user_id/repo_id/hash.png)
+  storagePath: string;    // Path in Supabase Storage (e.g., repo_id/assets/img/diagram.png)
   contentHash: string;    // SHA-256 of image content for deduplication
   mimeType: string;       // e.g., image/png, image/jpeg
   sizeBytes?: number;     // File size in bytes

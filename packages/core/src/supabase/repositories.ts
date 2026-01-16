@@ -43,11 +43,12 @@ async function callGitSync<T>(
 
 /**
  * Map database repository to frontend Repository type
+ * Note: user_id rimosso - repository ora condivisi tra utenti
  */
 function mapRepository(dbRepo: Record<string, unknown>): Repository {
   return {
     id: dbRepo.id as string,
-    userId: dbRepo.user_id as string,
+    // userId rimosso - repository ora condivisi
     url: dbRepo.url as string,
     name: dbRepo.name as string,
     description: dbRepo.description as string | undefined,

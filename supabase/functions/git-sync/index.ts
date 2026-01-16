@@ -12,7 +12,7 @@ type SyncStatus = "pending" | "syncing" | "synced" | "error";
 
 interface Repository {
   id: string;
-  user_id: string;
+  // user_id rimosso - repository ora condivisi
   url: string;
   name: string;
   description?: string;
@@ -24,6 +24,13 @@ interface Repository {
   sync_error_message?: string;
   created_at: string;
   updated_at: string;
+}
+
+interface UserRepository {
+  id: string;
+  user_id: string;
+  repository_id: string;
+  created_at: string;
 }
 
 interface Card {
@@ -46,6 +53,9 @@ interface Card {
 // SUPABASE CLIENT
 // =============================================================================
 
+/**
+ * Create a Supabase client with user's auth context (for auth.getUser())
+ */
 function createUserSupabaseClient(authHeader: string) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -164,10 +174,16 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
 // =============================================================================
 
 /**
- * Add a new repository to Lumio
- * - Registers with Docora for monitoring
- * - Saves docora_repository_id for webhook correlation
- * - Cards will be synced when Docora sends webhooks
+ * Add a new repository to Lumio (Shared Repository Architecture)
+ *
+ * Se il repository esiste già nel sistema:
+ * - Crea solo il link utente-repository
+ * - L'utente vede subito tutte le card esistenti
+ *
+ * Se il repository non esiste:
+ * - Lo registra su Docora per il monitoring
+ * - Crea il repository e il link utente-repository
+ * - Le card arriveranno via webhook
  */
 async function addRepository(
   supabase: ReturnType<typeof createClient>,
@@ -181,27 +197,42 @@ async function addRepository(
   if (!parsed) {
     throw new Error("Invalid GitHub URL. Please use format: https://github.com/owner/repo");
   }
-  const { owner, repo } = parsed;
+  const { repo } = parsed;
 
   // Validate: private repos require access token
   if (isPrivate && !accessToken) {
     throw new Error("Private repositories require an access token");
   }
 
-  // Check if already exists
-  const { data: existing } = await supabase
-    .from("repositories")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("url", url)
-    .single();
+  // 1. Check if repository already exists in the system (using SECURITY DEFINER function)
+  const { data: existingRepo } = await supabase.rpc('find_repository_by_url', { p_url: url });
 
-  if (existing) {
-    throw new Error("This repository is already added to your account");
+  if (existingRepo) {
+    // Repository exists - check if user already has it
+    const { data: hasLink } = await supabase.rpc('check_user_repository_exists', {
+      p_user_id: userId,
+      p_repository_id: existingRepo.id,
+    });
+
+    if (hasLink) {
+      throw new Error("This repository is already added to your account");
+    }
+
+    // Create link for this user
+    const { error: linkError } = await supabase.rpc('insert_user_repository', {
+      p_user_id: userId,
+      p_repository_id: existingRepo.id,
+    });
+
+    if (linkError) {
+      throw new Error(`Failed to add repository: ${linkError.message}`);
+    }
+
+    // Return existing repository (user now has access to all existing cards)
+    return existingRepo;
   }
 
-  // Register with Docora for monitoring
-  // Docora will validate the repo exists and start watching it
+  // 2. Repository doesn't exist - register with Docora and create it
   let docoraRepo: DocoraRepository;
   try {
     docoraRepo = await docoraAddRepository(url, accessToken);
@@ -210,23 +241,16 @@ async function addRepository(
     throw new Error(`Failed to register with Docora: ${message}`);
   }
 
-  // Insert repository with pending status
-  // Actual card sync will happen when Docora sends webhooks
-  const { data: repoData, error: insertError } = await supabase
-    .from("repositories")
-    .insert({
-      user_id: userId,
-      url: url,
-      name: docoraRepo.name || repo,
-      description: null, // Will be set when README.md arrives via webhook
-      is_private: isPrivate,
-      docora_repository_id: docoraRepo.repository_id,
-      format_version: 1, // Will be validated when README.md arrives
-      sync_status: "pending",
-      sync_error_message: "In attesa di ricevere le carte",
-    })
-    .select()
-    .single();
+  // Insert new repository via SECURITY DEFINER function
+  const { data: newRepo, error: insertError } = await supabase.rpc('insert_repository', {
+    p_url: url,
+    p_name: docoraRepo.name || repo,
+    p_is_private: isPrivate,
+    p_docora_repository_id: docoraRepo.repository_id,
+    p_format_version: 1,
+    p_sync_status: "pending",
+    p_sync_error_message: "In attesa di ricevere le carte",
+  });
 
   if (insertError) {
     // Try to cleanup Docora registration
@@ -238,74 +262,121 @@ async function addRepository(
     throw insertError;
   }
 
-  return repoData;
+  // 3. Create link for this user
+  const { error: linkError } = await supabase.rpc('insert_user_repository', {
+    p_user_id: userId,
+    p_repository_id: newRepo.id,
+  });
+
+  if (linkError) {
+    // Cleanup: delete repository if link creation fails
+    try {
+      await docoraDeleteRepository(docoraRepo.repository_id);
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw new Error(`Failed to link repository: ${linkError.message}`);
+  }
+
+  return newRepo;
 }
 
 /**
- * Delete a repository from Lumio
- * - Unregisters from Docora monitoring
- * - Deletes all associated cards (cascade)
+ * Delete a repository from user's library (Shared Repository Architecture)
+ *
+ * - Rimuove il link utente-repository
+ * - Se nessun altro utente ha il repository, lo elimina completamente
+ * - Unregister da Docora solo se il repository viene eliminato
  */
 async function deleteRepository(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   repositoryId: string
 ): Promise<void> {
-  // Get repository (verify ownership and get docora_repository_id)
-  const { data: repo } = await supabase
-    .from("repositories")
-    .select("id, docora_repository_id")
-    .eq("id", repositoryId)
+  // 1. Verify user has this repository
+  const { data: userRepo } = await supabase
+    .from("user_repositories")
+    .select("id")
     .eq("user_id", userId)
+    .eq("repository_id", repositoryId)
     .single();
 
-  if (!repo) {
+  if (!userRepo) {
     throw new Error("Repository not found or access denied");
   }
 
-  // Unregister from Docora
-  if (repo.docora_repository_id) {
-    try {
-      await docoraDeleteRepository(repo.docora_repository_id);
-    } catch (error) {
-      // Log but don't fail - we still want to delete the local repo
-      console.warn("Failed to unregister from Docora:", error);
-    }
+  // 2. Remove user's link to repository
+  const { error: deleteError } = await supabase
+    .from("user_repositories")
+    .delete()
+    .eq("user_id", userId)
+    .eq("repository_id", repositoryId);
+
+  if (deleteError) {
+    throw new Error(`Failed to remove repository: ${deleteError.message}`);
   }
 
-  // Delete repository (cards will cascade)
-  const { error } = await supabase
-    .from("repositories")
-    .delete()
-    .eq("id", repositoryId);
+  // 3. Check if any other users have this repository
+  const { count } = await supabase
+    .from("user_repositories")
+    .select("*", { count: "exact", head: true })
+    .eq("repository_id", repositoryId);
 
-  if (error) throw error;
+  // 4. If no other users, delete repository completely
+  if (count === 0) {
+    // Get docora_repository_id for cleanup
+    const { data: repo } = await supabase
+      .from("repositories")
+      .select("docora_repository_id")
+      .eq("id", repositoryId)
+      .single();
+
+    // Unregister from Docora
+    if (repo?.docora_repository_id) {
+      try {
+        await docoraDeleteRepository(repo.docora_repository_id);
+      } catch (error) {
+        // Log but don't fail
+        console.warn("Failed to unregister from Docora:", error);
+      }
+    }
+
+    // Delete repository (cards will cascade)
+    const { error } = await supabase
+      .from("repositories")
+      .delete()
+      .eq("id", repositoryId);
+
+    if (error) {
+      console.warn("Failed to delete orphan repository:", error);
+    }
+  }
 }
 
 /**
- * Get statistics for user's repositories
+ * Get statistics for user's repositories (Shared Repository Architecture)
  * Note: Card count is the total count from DB. Frontend uses Deck class to filter by .lumioignore
  */
 async function getStats(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<{ repositoryCount: number; cardCount: number }> {
-  // Get repository count and IDs
-  const { data: repos, error: repoError } = await supabase
-    .from("repositories")
-    .select("id")
+  // Get user's repository links
+  const { data: userRepos, error: repoError } = await supabase
+    .from("user_repositories")
+    .select("repository_id")
     .eq("user_id", userId);
 
   if (repoError) throw repoError;
 
-  const repositoryCount = repos?.length || 0;
+  const repositoryCount = userRepos?.length || 0;
 
   if (repositoryCount === 0) {
     return { repositoryCount: 0, cardCount: 0 };
   }
 
-  // Get card count directly from cards table
-  const repoIds = repos!.map(r => r.id);
+  // Get card count from linked repositories
+  const repoIds = userRepos!.map(r => r.repository_id);
   const { count: cardCount, error: cardError } = await supabase
     .from("cards")
     .select("*", { count: "exact", head: true })
@@ -321,39 +392,46 @@ async function getStats(
 }
 
 /**
- * Get all repositories for user
+ * Get all repositories for user (Shared Repository Architecture)
  */
 async function getRepositories(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<Repository[]> {
+  // Join user_repositories with repositories
   const { data, error } = await supabase
-    .from("repositories")
-    .select("*")
+    .from("user_repositories")
+    .select(`
+      repository:repositories(*)
+    `)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data || [];
+
+  // Extract repositories from the join result
+  return (data || [])
+    .map(d => d.repository as Repository)
+    .filter(r => r !== null);
 }
 
 /**
- * Get cards for a specific repository
+ * Get cards for a specific repository (Shared Repository Architecture)
  */
 async function getCards(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   repositoryId: string
 ): Promise<Card[]> {
-  // First verify the repository belongs to the user
-  const { data: repo, error: repoError } = await supabase
-    .from("repositories")
+  // Verify user has access to this repository
+  const { data: userRepo, error: repoError } = await supabase
+    .from("user_repositories")
     .select("id")
-    .eq("id", repositoryId)
     .eq("user_id", userId)
+    .eq("repository_id", repositoryId)
     .single();
 
-  if (repoError || !repo) {
+  if (repoError || !userRepo) {
     throw new Error("Repository not found or access denied");
   }
 
@@ -370,23 +448,23 @@ async function getCards(
 }
 
 /**
- * Get ALL cards for a user across all their repositories
+ * Get ALL cards for a user across all their repositories (Shared Repository Architecture)
  * Used for study sessions
  */
 async function getAllCards(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<Card[]> {
-  // Get all user's repositories
-  const { data: repos, error: repoError } = await supabase
-    .from("repositories")
-    .select("id")
+  // Get all user's repository links
+  const { data: userRepos, error: repoError } = await supabase
+    .from("user_repositories")
+    .select("repository_id")
     .eq("user_id", userId);
 
   if (repoError) throw repoError;
-  if (!repos || repos.length === 0) return [];
+  if (!userRepos || userRepos.length === 0) return [];
 
-  const repoIds = repos.map(r => r.id);
+  const repoIds = userRepos.map(r => r.repository_id);
 
   // Get all active cards from user's repositories
   const { data, error } = await supabase
@@ -426,6 +504,7 @@ serve(async (req) => {
       );
     }
 
+    // Create Supabase client with user's auth context
     const supabase = createUserSupabaseClient(authHeader);
     const userId = await getUserId(supabase);
 

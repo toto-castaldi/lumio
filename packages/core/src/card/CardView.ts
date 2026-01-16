@@ -3,11 +3,11 @@
  *
  * Transforms relative image paths in card content to absolute Supabase Storage URLs.
  * This is a stateless approach - URLs are resolved at display time based on:
- * - Repository userId and id
+ * - Repository id
  * - Original image path in markdown
  *
- * Storage structure: card-assets/{userId}/{repoId}/{originalPath}
- * Example: /assets/biagram.png -> {supabaseUrl}/storage/v1/object/public/card-assets/{userId}/{repoId}/assets/biagram.png
+ * Storage structure: card-assets/{repoId}/{originalPath}
+ * Example: /assets/diagram.png -> {supabaseUrl}/storage/v1/object/public/card-assets/{repoId}/assets/diagram.png
  */
 
 import type { Card, Repository } from '@lumio/shared';
@@ -115,8 +115,8 @@ export class CardView {
       const resolvedPath = this.resolveRelativePath(path);
 
       // Construct Supabase Storage URL
-      // Format: {supabaseUrl}/storage/v1/object/public/card-assets/{userId}/{repoId}/{resolvedPath}
-      const storageUrl = `${this.supabaseUrl}/storage/v1/object/public/card-assets/${this.repository.userId}/${this.repository.id}/${resolvedPath}`;
+      // Format: {supabaseUrl}/storage/v1/object/public/card-assets/{repoId}/{resolvedPath}
+      const storageUrl = `${this.supabaseUrl}/storage/v1/object/public/card-assets/${this.repository.id}/${resolvedPath}`;
 
       return `![${alt}](${storageUrl})`;
     });

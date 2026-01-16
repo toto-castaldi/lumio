@@ -1,7 +1,7 @@
 # Lumio — Data Model
 
-**Versione:** 1.0  
-**Data:** 2025-12-28  
+**Versione:** 1.1
+**Data:** 2026-01-16
 **Status:** Draft
 
 ---
@@ -24,22 +24,21 @@ Questo documento definisce lo schema del database PostgreSQL su Supabase per Lum
 ```
 ┌─────────────────┐                             ┌─────────────────┐
 │     users       │                             │  repositories   │
-├─────────────────┤                             ├─────────────────┤
-│ id (PK)         │─────────────────────────────│ id (PK)         │
-│ email           │                             │ user_id (FK)    │
-│ display_name    │                             │ url             │
-│ avatar_url      │                             │ name            │
-│ created_at      │                             │ description     │
-│ updated_at      │                             │ is_private      │
-└─────────────────┘                             │ docora_repo_id  │  ◄── Fase 11: Docora
-                                                │ format_version  │
-                                                │ sync_status     │
-                                                │ card_count      │
+├─────────────────┤                             │   (CONDIVISI)   │
+│ id (PK)         │                             ├─────────────────┤
+│ email           │                             │ id (PK)         │
+│ display_name    │     ┌──────────────────┐    │ url (UNIQUE)    │
+│ avatar_url      │     │ user_repositories│    │ name            │
+│ created_at      │     ├──────────────────┤    │ description     │
+│ updated_at      │◄────│ user_id (FK)     │    │ is_private      │
+└─────────────────┘     │ repository_id(FK)│───►│ docora_repo_id  │  ◄── Fase 11: Docora
+                        │ created_at       │    │ format_version  │      (UNIQUE)
+                        └──────────────────┘    │ sync_status     │
                                                 │ created_at      │
                                                 └────────┬────────┘
                                                          │
                       ┌─────────────────┐                │
-                      │     cards       │                │
+                      │ cards (CONDIV.) │                │
                       ├─────────────────┤                │
                       │ id (PK)         │◄───────────────┘
                       │ repository_id(FK)                │
@@ -236,33 +235,31 @@ CREATE TRIGGER set_users_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 4.2 repositories
+### 4.2 repositories (CONDIVISI)
 
-Repository Git censiti dall'utente. Dalla Fase 11, la sincronizzazione è gestita da Docora tramite webhook.
+Repository Git condivisi tra utenti. Ogni URL esiste una sola volta nel sistema.
+Gli utenti sono collegati ai repository tramite la tabella `user_repositories`.
+Dalla Fase 11, la sincronizzazione è gestita da Docora tramite webhook.
 
 ```sql
 CREATE TABLE public.repositories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
+    -- user_id rimosso - repository ora condivisi (vedi user_repositories)
+    url TEXT NOT NULL UNIQUE,  -- Ogni URL esiste una sola volta
     name TEXT NOT NULL,  -- Estratto da URL o README
     description TEXT,
     is_private BOOLEAN DEFAULT FALSE,
-    docora_repository_id TEXT,  -- Fase 11: ID repository su Docora
+    docora_repository_id TEXT UNIQUE,  -- Fase 11: ID repository su Docora (UNIQUE)
     format_version INTEGER NOT NULL DEFAULT 1,
     sync_status sync_status DEFAULT 'pending',
     sync_error_message TEXT,
-    card_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    UNIQUE(user_id, url)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Indici
-CREATE INDEX idx_repositories_user_id ON repositories(user_id);
 CREATE INDEX idx_repositories_sync_status ON repositories(sync_status);
-CREATE INDEX idx_repositories_docora_repository_id ON repositories(docora_repository_id);  -- Fase 11
+CREATE INDEX idx_repositories_docora_repository_id ON repositories(docora_repository_id);
 
 -- Trigger
 CREATE TRIGGER set_repositories_updated_at
@@ -272,6 +269,29 @@ CREATE TRIGGER set_repositories_updated_at
 ```
 
 > **Nota Fase 11:** Le colonne `encrypted_access_token`, `token_status`, `token_error_message`, `last_commit_sha`, `last_synced_at` sono state rimosse. I token PAT e la sincronizzazione sono gestiti da Docora.
+
+> **Nota Fase 12 (Shared Repositories):** La colonna `user_id` è stata rimossa. I repository sono ora condivisi tra utenti tramite la tabella `user_repositories`. Questo permette a più utenti di accedere allo stesso repository senza duplicare cards e assets.
+
+### 4.2.1 user_repositories
+
+Relazione many-to-many tra utenti e repository condivisi.
+
+```sql
+CREATE TABLE public.user_repositories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(user_id, repository_id)
+);
+
+-- Indici
+CREATE INDEX idx_user_repositories_user_id ON user_repositories(user_id);
+CREATE INDEX idx_user_repositories_repository_id ON user_repositories(repository_id);
+```
+
+> **RLS Policies:** Gli utenti possono vedere, aggiungere e rimuovere solo le proprie iscrizioni. Service role può gestire tutto.
 
 ### 4.3 cards
 
@@ -707,6 +727,92 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
+### 5.4 SECURITY DEFINER Functions per Edge Functions
+
+Le RLS policies non funzionano correttamente con il client Supabase JS nelle Edge Functions (problema noto in ambiente locale). Usiamo funzioni `SECURITY DEFINER` per bypassare RLS in modo controllato. Queste funzioni verificano comunque l'autenticazione dell'utente prima di eseguire operazioni.
+
+```sql
+-- Inserisce un nuovo repository (bypassa RLS)
+CREATE OR REPLACE FUNCTION insert_repository(
+    p_url TEXT,
+    p_name TEXT,
+    p_is_private BOOLEAN,
+    p_docora_repository_id TEXT,
+    p_format_version INTEGER,
+    p_sync_status TEXT,
+    p_sync_error_message TEXT
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_result repositories;
+BEGIN
+    INSERT INTO repositories (url, name, is_private, docora_repository_id, format_version, sync_status, sync_error_message)
+    VALUES (p_url, p_name, p_is_private, p_docora_repository_id, p_format_version, p_sync_status::sync_status, p_sync_error_message)
+    RETURNING * INTO v_result;
+    RETURN row_to_json(v_result);
+END;
+$$;
+
+-- Inserisce link user-repository (bypassa RLS)
+CREATE OR REPLACE FUNCTION insert_user_repository(
+    p_user_id UUID,
+    p_repository_id UUID
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_result user_repositories;
+BEGIN
+    INSERT INTO user_repositories (user_id, repository_id)
+    VALUES (p_user_id, p_repository_id)
+    RETURNING * INTO v_result;
+    RETURN row_to_json(v_result);
+END;
+$$;
+
+-- Verifica se user ha già il repository
+CREATE OR REPLACE FUNCTION check_user_repository_exists(
+    p_user_id UUID,
+    p_repository_id UUID
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_repositories
+        WHERE user_id = p_user_id AND repository_id = p_repository_id
+    );
+END;
+$$;
+
+-- Trova repository per URL
+CREATE OR REPLACE FUNCTION find_repository_by_url(p_url TEXT)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_result repositories;
+BEGIN
+    SELECT * INTO v_result FROM repositories WHERE url = p_url;
+    IF FOUND THEN
+        RETURN row_to_json(v_result);
+    ELSE
+        RETURN NULL;
+    END IF;
+END;
+$$;
+```
+
+> **Nota:** Queste funzioni sono chiamate dalle Edge Functions (`git-sync`) dopo aver verificato l'autenticazione dell'utente tramite `auth.getUser()`. L'Edge Function passa esplicitamente l'`user_id` come parametro, garantendo che l'operazione sia eseguita per l'utente corretto.
+
 ---
 
 ## 6. Row Level Security (RLS)
@@ -750,50 +856,81 @@ CREATE POLICY "Users can manage own API keys"
     USING (auth.uid() = user_id);
 ```
 
-#### repositories
+#### repositories (Shared)
 
 ```sql
-CREATE POLICY "Users can manage own repositories"
+-- Utenti vedono repository a cui sono iscritti (tramite user_repositories)
+CREATE POLICY "Users can view subscribed repositories"
+    ON repositories FOR SELECT
+    USING (
+        id IN (
+            SELECT repository_id FROM user_repositories WHERE user_id = auth.uid()
+        )
+    );
+
+-- Service role può gestire tutto (per webhook e Edge Functions)
+CREATE POLICY "Service role can manage repositories"
     ON repositories FOR ALL
-    USING (auth.uid() = user_id);
+    USING ((SELECT auth.jwt() ->> 'role') = 'service_role');
 ```
 
-#### cards
+#### user_repositories
 
 ```sql
--- Le card sono visibili se l'utente ha il repository
-CREATE POLICY "Users can view cards from own repositories"
+CREATE POLICY "Users can view own subscriptions"
+    ON user_repositories FOR SELECT
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can add own subscriptions"
+    ON user_repositories FOR INSERT
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can remove own subscriptions"
+    ON user_repositories FOR DELETE
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Service role can manage user_repositories"
+    ON user_repositories FOR ALL
+    USING ((SELECT auth.jwt() ->> 'role') = 'service_role');
+```
+
+#### cards (Shared)
+
+```sql
+-- Le card sono visibili se l'utente è iscritto al repository
+CREATE POLICY "Users can view cards from subscribed repositories"
     ON cards FOR SELECT
     USING (
         repository_id IN (
-            SELECT id FROM repositories WHERE user_id = auth.uid()
+            SELECT repository_id FROM user_repositories WHERE user_id = auth.uid()
         )
     );
 
 -- Solo il sistema può inserire/modificare card (via service role)
 CREATE POLICY "Service role can manage cards"
     ON cards FOR ALL
-    USING (auth.jwt() ->> 'role' = 'service_role');
+    USING ((SELECT auth.jwt() ->> 'role') = 'service_role');
 ```
 
-#### card_assets
+#### card_assets (Shared)
 
 ```sql
--- Gli utenti possono vedere gli asset delle proprie card
-CREATE POLICY "Users can view assets of own cards"
+-- Gli utenti possono vedere gli asset dai repository a cui sono iscritti
+CREATE POLICY "Users can view assets from subscribed repositories"
     ON card_assets FOR SELECT
     USING (
         card_id IN (
             SELECT c.id FROM cards c
-            JOIN repositories r ON c.repository_id = r.id
-            WHERE r.user_id = auth.uid()
+            WHERE c.repository_id IN (
+                SELECT repository_id FROM user_repositories WHERE user_id = auth.uid()
+            )
         )
     );
 
 -- Solo il sistema può gestire gli asset (via service role)
 CREATE POLICY "Service role can manage card_assets"
     ON card_assets FOR ALL
-    USING (auth.jwt() ->> 'role' = 'service_role');
+    USING ((SELECT auth.jwt() ->> 'role') = 'service_role');
 ```
 
 #### user_cards

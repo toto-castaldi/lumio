@@ -314,20 +314,19 @@ function extractImageReferences(content: string): string[] {
 
 /**
  * Upload image to Supabase Storage using original file path
- * Storage path: {userId}/{repoId}/{originalPath}
- * This allows stateless URL resolution at display time
+ * Storage path: {repoId}/{originalPath}
+ * Repository condivisi - non più per-utente
  */
 async function uploadImageToStorage(
   serviceClient: ReturnType<typeof createClient>,
-  userId: string,
   repoId: string,
   originalPath: string,
   imageContent: Uint8Array,
   mimeType: string
 ): Promise<string> {
   // Use original path for stateless resolution
-  // e.g., "assets/biagram.png" -> "{userId}/{repoId}/assets/biagram.png"
-  const storagePath = `${userId}/${repoId}/${originalPath}`;
+  // e.g., "assets/diagram.png" -> "{repoId}/assets/diagram.png"
+  const storagePath = `${repoId}/${originalPath}`;
 
   // Upload with upsert to handle updates
   const { error } = await serviceClient.storage
@@ -418,7 +417,7 @@ async function handleChunk(
 
 interface LumioRepository {
   id: string;
-  user_id: string;
+  // user_id rimosso - repository ora condivisi
   url: string;
   name: string;
   description?: string;
@@ -427,7 +426,6 @@ interface LumioRepository {
   format_version: number;
   sync_status: string;
   sync_error_message?: string;
-  card_count: number;
 }
 
 async function findRepositoryByDocoraId(
@@ -537,7 +535,6 @@ async function handleCreate(
 
       await uploadImageToStorage(
         serviceClient,
-        repo.user_id,
         repo.id,
         filePath,
         bytes,
@@ -765,7 +762,6 @@ async function handleUpdate(
 
       await uploadImageToStorage(
         serviceClient,
-        repo.user_id,
         repo.id,
         filePath,
         bytes,
