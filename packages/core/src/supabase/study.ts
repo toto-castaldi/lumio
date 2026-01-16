@@ -122,17 +122,15 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
  * Generate a quiz question for a card using AI
  * Uses platform-configured provider, model, and system prompt
  * @param cardContent - The card content (markdown)
- * @param userId - Optional user ID for image fetching
  * @param repositoryId - Optional repository ID for image fetching
  */
 export async function generateQuiz(
   cardContent: string,
-  userId?: string,
   repositoryId?: string
 ): Promise<QuizQuestion> {
   const response = await callLlmProxy<{ success: boolean; quiz: QuizQuestion }>(
     'generate_quiz',
-    { cardContent, userId, repositoryId }
+    { cardContent, repositoryId }
   );
 
   return response.quiz;
@@ -158,7 +156,6 @@ export async function getStudyCards(): Promise<Card[]> {
  * @param question - The quiz question that was asked
  * @param userAnswer - The user's answer (A, B, C, or D)
  * @param correctAnswer - The correct answer (A, B, C, or D)
- * @param userId - Optional user ID for image fetching
  * @param repositoryId - Optional repository ID for image fetching
  */
 export async function validateAnswer(
@@ -166,7 +163,6 @@ export async function validateAnswer(
   question: string,
   userAnswer: string,
   correctAnswer: string,
-  userId?: string,
   repositoryId?: string
 ): Promise<ValidationResponse> {
   const response = await callLlmProxy<{
@@ -177,7 +173,6 @@ export async function validateAnswer(
     question,
     userAnswer,
     correctAnswer,
-    userId,
     repositoryId,
   });
 

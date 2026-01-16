@@ -285,11 +285,9 @@ export function StudyPage() {
         return;
       }
 
-      // Get repository info for image processing
-      const repo = repositoryMap.get(nextCard.repositoryId);
+      // Generate quiz for this card
       const quiz = await generateQuiz(
         nextCard.rawContent,
-        repo?.userId,
         nextCard.repositoryId
       );
 
@@ -314,14 +312,12 @@ export function StudyPage() {
     setIsValidating(true);
 
     try {
-      // Get repository info for image processing
-      const repo = repositoryMap.get(session.currentCard.repositoryId);
+      // Validate the answer
       const validation = await validateAnswer(
         session.currentCard.rawContent,
         session.currentQuiz.question,
         answer,
         session.currentQuiz.correctAnswer,
-        repo?.userId,
         session.currentCard.repositoryId
       );
 
@@ -360,11 +356,9 @@ export function StudyPage() {
         return;
       }
 
-      // Get repository info for image processing
-      const repo = repositoryMap.get(nextCard.repositoryId);
+      // Generate quiz for next card
       const quiz = await generateQuiz(
         nextCard.rawContent,
-        repo?.userId,
         nextCard.repositoryId
       );
 

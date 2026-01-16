@@ -192,11 +192,12 @@ function extractImagePaths(content: string): string[] {
 
 /**
  * Build full URL for image in Supabase storage
+ * Repository condivisi - path senza userId
  */
-function buildImageUrl(userId: string, repositoryId: string, imagePath: string): string {
+function buildImageUrl(repositoryId: string, imagePath: string): string {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  // Images are stored at: card-assets/{userId}/{repoId}/{path}
-  return `${supabaseUrl}/storage/v1/object/public/card-assets/${userId}/${repositoryId}/${imagePath}`;
+  // Images are stored at: card-assets/{repoId}/{path}
+  return `${supabaseUrl}/storage/v1/object/public/card-assets/${repositoryId}/${imagePath}`;
 }
 
 /**
@@ -323,14 +324,14 @@ async function processImage(imageUrl: string): Promise<ImageData | null> {
 /**
  * Process all images in a card's content
  * Returns array of processed images ready for LLM API
+ * Repository condivisi - usa solo repositoryId per il path
  */
 async function processCardImages(
   cardContent: string,
-  userId: string,
   repositoryId: string
 ): Promise<ImageData[]> {
-  if (!userId || !repositoryId) {
-    console.log(`[Image] No userId/repositoryId provided, skipping images`);
+  if (!repositoryId) {
+    console.log(`[Image] No repositoryId provided, skipping images`);
     return [];
   }
 
@@ -344,7 +345,7 @@ async function processCardImages(
   const images: ImageData[] = [];
 
   for (const path of imagePaths) {
-    const url = buildImageUrl(userId, repositoryId, path);
+    const url = buildImageUrl(repositoryId, path);
     const processed = await processImage(url);
     if (processed) {
       images.push(processed);
@@ -724,7 +725,7 @@ serve(async (req) => {
       }
 
       case "generate_quiz": {
-        const { cardContent, userId, repositoryId } = body;
+        const { cardContent, repositoryId } = body;
         if (!cardContent) {
           return new Response(
             JSON.stringify({ error: "Missing cardContent" }),
@@ -735,8 +736,8 @@ serve(async (req) => {
           );
         }
 
-        // Process images from card content (if userId/repositoryId provided)
-        const images = await processCardImages(cardContent, userId || '', repositoryId || '');
+        // Process images from card content (if repositoryId provided)
+        const images = await processCardImages(cardContent, repositoryId || '');
 
         const config = await getPlatformConfig(supabase);
         const quiz = await handleGenerateQuiz(config, cardContent, images);
@@ -747,7 +748,7 @@ serve(async (req) => {
       }
 
       case "validate_answer": {
-        const { cardContent, question, userAnswer, correctAnswer, userId, repositoryId } = body;
+        const { cardContent, question, userAnswer, correctAnswer, repositoryId } = body;
         if (!cardContent || !question || !userAnswer || !correctAnswer) {
           return new Response(
             JSON.stringify({ error: "Missing required fields for validation" }),
@@ -758,8 +759,8 @@ serve(async (req) => {
           );
         }
 
-        // Process images from card content (if userId/repositoryId provided)
-        const images = await processCardImages(cardContent, userId || '', repositoryId || '');
+        // Process images from card content (if repositoryId provided)
+        const images = await processCardImages(cardContent, repositoryId || '');
 
         const config = await getPlatformConfig(supabase);
         const validation = await handleValidateAnswer(

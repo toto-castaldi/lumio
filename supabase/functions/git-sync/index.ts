@@ -218,7 +218,7 @@ async function addRepository(
       throw new Error("This repository is already added to your account");
     }
 
-    // Create link for this user
+    // Create link for this uuser 
     const { error: linkError } = await supabase.rpc('insert_user_repository', {
       p_user_id: userId,
       p_repository_id: existingRepo.id,
