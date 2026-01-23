@@ -969,8 +969,8 @@
 
 ### 11.8 Disabilitare n8n Job
 
-- [ ] Disabilitare/eliminare job `sync_repositories` che chiama `check_updates`
-- [ ] Il job `recalculate_study_plans` rimane invariato
+- [x] Disabilitare/eliminare job `sync_repositories` che chiama `check_updates`
+- [x] Il job `recalculate_study_plans` rimane invariato
 
 ### Criteri di Successo Fase 11
 
