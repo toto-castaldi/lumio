@@ -166,3 +166,83 @@ export interface ValidationResponse {
   explanation: string;
   tips?: string[];
 }
+
+// =============================================================================
+// PRE-GENERATED QUESTIONS (Milestone 12 - Batch Mode)
+// =============================================================================
+
+// Option in a quiz question
+export interface QuizOption {
+  label: string; // A, B, C, D
+  text: string;
+}
+
+// Pre-generated question stored in card_questions table
+export interface CardQuestion {
+  id: string;
+  cardId: string;
+  questionText: string;
+  options: QuizOption[];
+  correctAnswer: string; // A, B, C, D
+  explanation: string;   // Pre-generated
+  llmProvider: LLMProvider;
+  llmModel: string;
+  generatedAt: string;
+  upvotes: number;
+  downvotes: number;
+  voteScore: number;
+  isActive: boolean;
+  deactivatedAt?: string;
+  deactivationReason?: 'vote_threshold' | 'manual' | 'card_updated';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Question with shuffled options for display (from get_question action)
+export interface ShuffledQuestion {
+  questionId: string;
+  question: string;
+  options: QuizOption[];  // Options already shuffled
+  correctAnswer: string;  // Label after shuffle (A, B, C, D)
+  explanation: string;    // Pre-generated explanation
+  voteScore: number;
+}
+
+// Response from get_question action
+export interface GetQuestionResponse {
+  success: boolean;
+  question: ShuffledQuestion | null;
+  fallbackRequired: boolean;
+  error?: string;
+}
+
+// Vote on a question
+export type QuestionVote = 'like' | 'dislike';
+
+// Request to vote on a question
+export interface VoteQuestionRequest {
+  questionId: string;
+  vote: QuestionVote;
+}
+
+// Response from vote_question action
+export interface VoteQuestionResponse {
+  success: boolean;
+  voteId?: string;
+  currentVoteScore?: number;
+  error?: string;
+}
+
+// User's vote on a question
+export interface QuestionUserVote {
+  id: string;
+  questionId: string;
+  userId: string;
+  voteValue: -1 | 1;
+  createdAt: string;
+}
+
+// Card with question count (for study filtering)
+export interface StudyCard extends Card {
+  questionCount: number;
+}

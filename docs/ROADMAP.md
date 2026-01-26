@@ -1012,6 +1012,130 @@
 
 ---
 
+## 12 - PRE-GENERAZIONE DOMANDE IN BATCH
+
+### Obiettivi Fase 12
+
+- Migliorare la UX dello studio pre-generando domande e spiegazioni, eliminando le chiamate LLM real-time durante lo studio
+- Eliminare il bias della risposta "B" (shuffle opzioni al momento della visualizzazione)
+- Ridurre i costi API (domande generate una volta, riutilizzate)
+- Migliorare qualità con sistema di voti (domande scadenti vengono disattivate)
+
+### Problemi Risolti
+
+| Problema | Soluzione |
+|----------|-----------|
+| UX lenta | Domande già pronte, nessuna attesa |
+| Bias risposta "B" | Shuffle opzioni al momento della visualizzazione |
+| Spreco API | Domande generate una volta, riutilizzate |
+| JSON malformato | Retry in batch, domande validate prima di salvare |
+
+### 12.1 Database Schema
+
+- [x] Creare tabella `card_questions` con:
+  - Domanda, opzioni (JSONB), risposta corretta, spiegazione
+  - Metadata generazione (provider, model, timestamp)
+  - Sistema voti (upvotes, downvotes, vote_score GENERATED)
+  - Status (is_active, deactivation_reason)
+- [x] Creare tabella `question_votes` (user_id, question_id, vote_value)
+- [x] Creare RLS policies per accesso basato su repository
+- [x] Creare trigger per aggiornamento conteggi voti
+- [x] Creare trigger per disattivazione automatica (soglia voti negativi)
+- [x] Creare RPC functions:
+  - `get_cards_needing_questions()` - per batch generation
+  - `insert_card_question()` - per inserimento sicuro
+  - `get_random_question_for_card()` - per studio
+  - `upsert_question_vote()` - per votazione
+  - `get_study_cards_with_questions()` - per filtrare card studiabili
+- [x] Aggiungere chiavi `platform_config`:
+  - `questions_per_card` (default: 4)
+  - `question_min_threshold` (default: 1)
+  - `vote_deactivation_threshold` (default: -3)
+  - `batch_retry_on_json_error` (default: 3)
+  - `batch_cards_per_run` (default: 50)
+
+### 12.2 Nuova Edge Function question-generator
+
+- [x] Creare `supabase/functions/question-generator/index.ts`
+- [x] Implementare action `generate_batch`:
+  - Carica config da platform_config
+  - Query cards con domande < target
+  - Per ogni card: genera domande con retry su JSON error
+  - Rate limiting tra chiamate (500ms)
+- [x] Implementare action `generate_for_card` (on-demand)
+- [x] Supporto immagini (stesso codice di llm-proxy)
+- [x] Aggiungere deploy in CI/CD
+
+### 12.3 Modifiche a llm-proxy
+
+- [x] Aggiungere action `get_question`:
+  - Query domande attive per card_id
+  - Seleziona random tra le top-voted
+  - Shuffle opzioni (Fisher-Yates)
+  - Calcola nuova posizione risposta corretta
+- [x] Aggiungere action `vote_question`:
+  - Upsert voto utente
+  - Ritorna nuovo vote_score
+
+### 12.4 Packages Update
+
+- [x] Aggiungere tipi in `@lumio/shared`:
+  - `QuizOption`, `CardQuestion`, `ShuffledQuestion`
+  - `GetQuestionResponse`, `VoteQuestionResponse`
+  - `QuestionVote`, `QuestionUserVote`, `StudyCard`
+- [x] Aggiungere funzioni in `@lumio/core`:
+  - `getPreGeneratedQuestion(cardId)`
+  - `voteQuestion(questionId, vote)`
+  - `getStudyCardsWithQuestions()`
+
+### 12.5 Frontend Update
+
+- [x] Modificare `StudyPage.tsx` web:
+  - Usare `getStudyCardsWithQuestions()` invece di `getStudyCards()`
+  - Usare `getPreGeneratedQuestion()` invece di `generateQuiz()`
+  - Rimuovere chiamata `validateAnswer()` (spiegazione già pre-generata)
+  - Aggiungere UI voto (like/dislike) dopo risposta
+  - Gestire caso "nessuna domanda disponibile"
+- [x] Modificare `StudyPage.tsx` mobile (stesse modifiche)
+
+### 12.6 pg_cron Configuration
+
+- [ ] Abilitare estensioni `pg_cron` e `pg_net` in Supabase Dashboard
+- [ ] Configurare job per chiamare question-generator ogni 30 minuti
+
+### Criteri di Successo Fase 12
+
+- Le domande vengono pre-generate in batch (no chiamate LLM durante studio)
+- Le opzioni vengono shuffled ad ogni visualizzazione (no bias risposta B)
+- Gli utenti possono votare le domande (like/dislike)
+- Le domande con voti molto negativi vengono disattivate automaticamente
+- Solo le card con almeno 1 domanda sono studiabili
+- Il tempo di risposta durante lo studio è <100ms
+
+### Note Fase 12
+
+- **pg_cron**: Richiede abilitazione manuale da Supabase Dashboard
+- **Retrocompatibilità**: Le funzioni generate_quiz e validate_answer rimangono per fallback
+- **Costi API**: Domande generate una volta, riutilizzate indefinitamente
+- **Qualità**: Sistema di voti permette filtering community-driven
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/20260123000001_card_questions.sql` | NUOVO |
+| `supabase/functions/question-generator/index.ts` | NUOVO |
+| `supabase/functions/llm-proxy/index.ts` | MODIFICA - get_question, vote_question |
+| `packages/shared/src/types/index.ts` | MODIFICA - Nuovi tipi |
+| `packages/core/src/supabase/study.ts` | MODIFICA - Nuove funzioni |
+| `packages/core/src/supabase/auth.ts` | MODIFICA - getUserId |
+| `packages/core/src/index.ts` | MODIFICA - Export nuove funzioni |
+| `apps/web/src/pages/StudyPage.tsx` | MODIFICA - Nuovo flusso batch |
+| `apps/mobile/src/pages/StudyPage.tsx` | MODIFICA - Nuovo flusso batch |
+| `.github/workflows/ci-deploy.yml` | MODIFICA - Deploy question-generator |
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [x] studio : possibilità di "saltare" una carta durante lo studio (web + mobile)

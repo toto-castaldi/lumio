@@ -1,10 +1,15 @@
 import { getSupabaseUrl, getSupabaseAnonKey } from './client';
-import { getAccessToken } from './auth';
+import { getAccessToken, getUserId } from './auth';
 import type {
   Card,
   QuizQuestion,
   ValidationResponse,
   PlatformConfig,
+  ShuffledQuestion,
+  GetQuestionResponse,
+  VoteQuestionResponse,
+  QuestionVote,
+  StudyCard,
 } from '@lumio/shared';
 
 /**
@@ -177,4 +182,109 @@ export async function validateAnswer(
   });
 
   return response.validation;
+}
+
+// =============================================================================
+// PRE-GENERATED QUESTIONS (Milestone 12 - Batch Mode)
+// =============================================================================
+
+/**
+ * Map database card with question count to StudyCard type
+ */
+function mapStudyCard(dbCard: Record<string, unknown>): StudyCard {
+  return {
+    id: dbCard.card_id as string,
+    repositoryId: dbCard.repository_id as string,
+    filePath: dbCard.file_path as string,
+    contentHash: '', // Not provided by RPC
+    rawContent: dbCard.raw_content as string,
+    title: dbCard.title as string,
+    content: dbCard.content as string,
+    tags: dbCard.tags as string[],
+    difficulty: dbCard.difficulty as number,
+    language: '', // Not provided by RPC
+    isActive: true,
+    createdAt: '', // Not provided by RPC
+    updatedAt: '', // Not provided by RPC
+    questionCount: Number(dbCard.question_count) || 0,
+  };
+}
+
+/**
+ * Get a pre-generated question for a card
+ * Returns a shuffled question or null if no questions available
+ * @param cardId - The card ID to get a question for
+ */
+export async function getPreGeneratedQuestion(
+  cardId: string
+): Promise<ShuffledQuestion | null> {
+  const response = await callLlmProxy<GetQuestionResponse>('get_question', {
+    cardId,
+  });
+
+  if (response.fallbackRequired || !response.question) {
+    return null;
+  }
+
+  return response.question;
+}
+
+/**
+ * Vote on a pre-generated question
+ * @param questionId - The question ID to vote on
+ * @param vote - The vote value ('like' or 'dislike')
+ */
+export async function voteQuestion(
+  questionId: string,
+  vote: QuestionVote
+): Promise<{ voteId: string; currentVoteScore: number }> {
+  const response = await callLlmProxy<VoteQuestionResponse>('vote_question', {
+    questionId,
+    vote,
+  });
+
+  if (!response.success || !response.voteId) {
+    throw new Error(response.error || 'Failed to vote');
+  }
+
+  return {
+    voteId: response.voteId,
+    currentVoteScore: response.currentVoteScore ?? 0,
+  };
+}
+
+/**
+ * Get cards that have at least one pre-generated question
+ * Only these cards are available for study in batch mode
+ */
+export async function getStudyCardsWithQuestions(): Promise<StudyCard[]> {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const userId = await getUserId();
+  if (!userId) {
+    throw new Error('User ID not found');
+  }
+
+  // Call the RPC function directly via Supabase
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_study_cards_with_questions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: getSupabaseAnonKey(),
+    },
+    body: JSON.stringify({ p_user_id: userId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get study cards');
+  }
+
+  const cards = await response.json();
+  return (cards as Record<string, unknown>[]).map(mapStudyCard);
 }

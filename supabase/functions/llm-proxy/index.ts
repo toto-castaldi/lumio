@@ -44,6 +44,20 @@ interface ValidationResponse {
   tips?: string[];
 }
 
+interface ShuffledQuestion {
+  questionId: string;
+  question: string;
+  options: { label: string; text: string }[];
+  correctAnswer: string;
+  explanation: string;
+  voteScore: number;
+}
+
+interface VoteResult {
+  voteId: string;
+  currentVoteScore: number;
+}
+
 // Default system prompt for quiz generation
 const DEFAULT_SYSTEM_PROMPT = `Sei un assistente educativo. Il tuo compito è creare una domanda a scelta multipla basata sul contenuto della flashcard fornita.
 
@@ -686,6 +700,129 @@ async function handleValidateAnswer(
 }
 
 // =============================================================================
+// PRE-GENERATED QUESTIONS (BATCH MODE)
+// =============================================================================
+
+/**
+ * Fisher-Yates shuffle for options array
+ * Returns shuffled options and the new position of the correct answer
+ */
+function shuffleOptions(
+  options: { label: string; text: string }[],
+  correctAnswer: string
+): { shuffledOptions: { label: string; text: string }[]; newCorrectAnswer: string } {
+  // Create array with original indices
+  const indexed = options.map((opt, idx) => ({ opt, originalLabel: opt.label, idx }));
+
+  // Fisher-Yates shuffle
+  for (let i = indexed.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+  }
+
+  // Assign new labels based on new positions
+  const labels = ["A", "B", "C", "D"];
+  let newCorrectAnswer = correctAnswer;
+
+  const shuffledOptions = indexed.map((item, newIdx) => {
+    const newLabel = labels[newIdx];
+    // Track where the correct answer ended up
+    if (item.originalLabel === correctAnswer) {
+      newCorrectAnswer = newLabel;
+    }
+    return {
+      label: newLabel,
+      text: item.opt.text,
+    };
+  });
+
+  return { shuffledOptions, newCorrectAnswer };
+}
+
+/**
+ * Handle get_question action - get a pre-generated question for a card
+ */
+async function handleGetQuestion(
+  supabase: ReturnType<typeof createClient>,
+  cardId: string
+): Promise<{ question: ShuffledQuestion | null; fallbackRequired: boolean }> {
+  // Use RPC function to get random question
+  const { data, error } = await supabase.rpc("get_random_question_for_card", {
+    p_card_id: cardId,
+  });
+
+  if (error) {
+    console.error(`[GetQuestion] RPC error: ${error.message}`);
+    throw new Error(`Failed to get question: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    console.log(`[GetQuestion] No questions available for card ${cardId}`);
+    return { question: null, fallbackRequired: true };
+  }
+
+  const rawQuestion = data[0];
+  console.log(`[GetQuestion] Found question ${rawQuestion.question_id} for card ${cardId}`);
+
+  // Parse options (stored as JSONB)
+  const options = typeof rawQuestion.options === "string"
+    ? JSON.parse(rawQuestion.options)
+    : rawQuestion.options;
+
+  // Shuffle options
+  const { shuffledOptions, newCorrectAnswer } = shuffleOptions(
+    options,
+    rawQuestion.correct_answer
+  );
+
+  const shuffledQuestion: ShuffledQuestion = {
+    questionId: rawQuestion.question_id,
+    question: rawQuestion.question_text,
+    options: shuffledOptions,
+    correctAnswer: newCorrectAnswer,
+    explanation: rawQuestion.explanation,
+    voteScore: rawQuestion.vote_score,
+  };
+
+  return { question: shuffledQuestion, fallbackRequired: false };
+}
+
+/**
+ * Handle vote_question action - register user vote on a question
+ */
+async function handleVoteQuestion(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  questionId: string,
+  vote: "like" | "dislike"
+): Promise<VoteResult> {
+  const voteValue = vote === "like" ? 1 : -1;
+
+  const { data, error } = await supabase.rpc("upsert_question_vote", {
+    p_question_id: questionId,
+    p_user_id: userId,
+    p_vote_value: voteValue,
+  });
+
+  if (error) {
+    console.error(`[VoteQuestion] RPC error: ${error.message}`);
+    throw new Error(`Failed to vote: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error("Vote operation returned no data");
+  }
+
+  const result = data[0];
+  console.log(`[VoteQuestion] User ${userId} voted ${vote} on question ${questionId}`);
+
+  return {
+    voteId: result.vote_id,
+    currentVoteScore: result.current_vote_score,
+  };
+}
+
+// =============================================================================
 // REQUEST HANDLER
 // =============================================================================
 
@@ -767,6 +904,45 @@ serve(async (req) => {
           config, cardContent, question, userAnswer, correctAnswer, images
         );
         return new Response(JSON.stringify({ success: true, validation }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "get_question": {
+        const { cardId } = body;
+        if (!cardId) {
+          return new Response(
+            JSON.stringify({ error: "Missing cardId" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const result = await handleGetQuestion(supabase, cardId);
+        return new Response(JSON.stringify({ success: true, ...result }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      case "vote_question": {
+        const { questionId, vote } = body;
+        if (!questionId || !vote || !["like", "dislike"].includes(vote)) {
+          return new Response(
+            JSON.stringify({ error: "Missing or invalid questionId/vote" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const userId = await getUserId(supabase);
+        const voteResult = await handleVoteQuestion(supabase, userId, questionId, vote);
+        return new Response(JSON.stringify({ success: true, ...voteResult }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
         });

@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  generateQuiz,
-  getStudyCards,
+  getPreGeneratedQuestion,
+  getStudyCardsWithQuestions,
   getUserRepositories,
-  validateAnswer,
+  voteQuestion,
   Deck,
-  type Card,
+  type StudyCard,
   type Repository,
-  type QuizQuestion,
-  type ValidationResponse,
+  type ShuffledQuestion,
+  type QuestionVote,
 } from '@lumio/core';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { CardPreviewDialog } from '@/components/CardPreviewDialog';
-import { ChevronLeft, Eye, Sparkles, Check, X, SkipForward } from 'lucide-react';
+import { ChevronLeft, Eye, Sparkles, Check, X, SkipForward, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 // =============================================================================
 // TYPES
@@ -23,11 +23,12 @@ import { ChevronLeft, Eye, Sparkles, Check, X, SkipForward } from 'lucide-react'
 type StudyState = 'loading' | 'no_cards' | 'studying' | 'completed';
 
 interface StudySession {
-  cards: Card[];
+  cards: StudyCard[];
   seenCardIds: Set<string>;
-  currentCard: Card | null;
-  currentQuiz: QuizQuestion | null;
-  validationResult: ValidationResponse | null;
+  currentCard: StudyCard | null;
+  currentQuestion: ShuffledQuestion | null;
+  userAnswer: string | null;
+  userVote: QuestionVote | null;
 }
 
 // =============================================================================
@@ -35,41 +36,47 @@ interface StudySession {
 // =============================================================================
 
 interface MobileQuizProps {
-  card: Card;
-  quiz: QuizQuestion;
-  validationResult: ValidationResponse | null;
+  card: StudyCard;
+  question: ShuffledQuestion;
+  userAnswer: string | null;
+  userVote: QuestionVote | null;
   onAnswer: (answer: string) => void;
+  onVote: (vote: QuestionVote) => void;
   onNext: () => void;
   onSkip: () => void;
   onViewCard: () => void;
-  isValidating: boolean;
   isLoadingNext: boolean;
   isSkipping: boolean;
+  isVoting: boolean;
   cardsRemaining: number;
 }
 
 function MobileQuiz({
   card,
-  quiz,
-  validationResult,
+  question,
+  userAnswer,
+  userVote,
   onAnswer,
+  onVote,
   onNext,
   onSkip,
   onViewCard,
-  isValidating,
   isLoadingNext,
   isSkipping,
+  isVoting,
   cardsRemaining,
 }: MobileQuizProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const hasAnswered = userAnswer !== null;
+  const isCorrect = userAnswer === question.correctAnswer;
 
-  // Reset when quiz changes
+  // Reset when question changes
   useEffect(() => {
     setSelectedAnswer(null);
-  }, [quiz]);
+  }, [question]);
 
   const handleSelect = (label: string) => {
-    if (validationResult || isValidating) return;
+    if (hasAnswered) return;
     setSelectedAnswer(label);
     onAnswer(label);
   };
@@ -77,19 +84,19 @@ function MobileQuiz({
   const getOptionStyle = (label: string) => {
     const baseClasses = 'relative p-4 rounded-2xl border-2 transition-all duration-200 min-h-[64px] flex items-start gap-3';
 
-    if (!validationResult) {
+    if (!hasAnswered) {
       if (selectedAnswer === label) {
         return `${baseClasses} border-primary bg-primary/5 shadow-sm`;
       }
       return `${baseClasses} border-slate-200 bg-white active:scale-[0.98] active:border-slate-300`;
     }
 
-    // After validation
-    if (label === quiz.correctAnswer) {
+    // After answer
+    if (label === question.correctAnswer) {
       return `${baseClasses} border-emerald-500 bg-emerald-50`;
     }
 
-    if (label === selectedAnswer && label !== quiz.correctAnswer) {
+    if (label === userAnswer && label !== question.correctAnswer) {
       return `${baseClasses} border-rose-400 bg-rose-50`;
     }
 
@@ -99,18 +106,18 @@ function MobileQuiz({
   const getLabelStyle = (label: string) => {
     const baseClasses = 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0';
 
-    if (!validationResult) {
+    if (!hasAnswered) {
       if (selectedAnswer === label) {
         return `${baseClasses} bg-primary text-white`;
       }
       return `${baseClasses} bg-slate-100 text-slate-600`;
     }
 
-    if (label === quiz.correctAnswer) {
+    if (label === question.correctAnswer) {
       return `${baseClasses} bg-emerald-500 text-white`;
     }
 
-    if (label === selectedAnswer && label !== quiz.correctAnswer) {
+    if (label === userAnswer && label !== question.correctAnswer) {
       return `${baseClasses} bg-rose-400 text-white`;
     }
 
@@ -125,7 +132,7 @@ function MobileQuiz({
           {cardsRemaining} rimanenti
         </span>
         <div className="flex items-center gap-2">
-          {!validationResult && !isValidating && (
+          {!hasAnswered && (
             <Button
               variant="outline"
               size="sm"
@@ -161,24 +168,24 @@ function MobileQuiz({
             <Sparkles className="w-4 h-4 text-primary" />
           </div>
           <h2 className="text-lg font-semibold text-slate-800 leading-snug pt-1">
-            {quiz.question}
+            {question.question}
           </h2>
         </div>
       </div>
 
       {/* Answer Options */}
       <div className="space-y-3">
-        {quiz.options.map(option => (
+        {question.options.map(option => (
           <button
             key={option.label}
             onClick={() => handleSelect(option.label)}
-            disabled={!!validationResult || isValidating}
+            disabled={hasAnswered}
             className={getOptionStyle(option.label)}
           >
             <span className={getLabelStyle(option.label)}>
-              {validationResult && option.label === quiz.correctAnswer ? (
+              {hasAnswered && option.label === question.correctAnswer ? (
                 <Check className="w-4 h-4" />
-              ) : validationResult && option.label === selectedAnswer && option.label !== quiz.correctAnswer ? (
+              ) : hasAnswered && option.label === userAnswer && option.label !== question.correctAnswer ? (
                 <X className="w-4 h-4" />
               ) : (
                 option.label
@@ -191,21 +198,11 @@ function MobileQuiz({
         ))}
       </div>
 
-      {/* Loading Validation */}
-      {isValidating && (
-        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center animate-pulse">
-          <div className="w-8 h-8 rounded-full bg-primary/20 mx-auto mb-3 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary animate-spin" />
-          </div>
-          <p className="text-slate-600 font-medium">Validando risposta...</p>
-        </div>
-      )}
-
-      {/* Validation Result */}
-      {validationResult && (
+      {/* Result with Pre-generated Explanation */}
+      {hasAnswered && (
         <div
           className={`p-5 rounded-2xl border-2 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
-            validationResult.isCorrect
+            isCorrect
               ? 'bg-emerald-50 border-emerald-200'
               : 'bg-rose-50 border-rose-200'
           }`}
@@ -213,10 +210,10 @@ function MobileQuiz({
           <div className="flex items-center gap-3 mb-3">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                validationResult.isCorrect ? 'bg-emerald-500' : 'bg-rose-400'
+                isCorrect ? 'bg-emerald-500' : 'bg-rose-400'
               }`}
             >
-              {validationResult.isCorrect ? (
+              {isCorrect ? (
                 <Check className="w-5 h-5 text-white" />
               ) : (
                 <X className="w-5 h-5 text-white" />
@@ -224,30 +221,45 @@ function MobileQuiz({
             </div>
             <h3
               className={`text-xl font-bold ${
-                validationResult.isCorrect ? 'text-emerald-700' : 'text-rose-700'
+                isCorrect ? 'text-emerald-700' : 'text-rose-700'
               }`}
             >
-              {validationResult.isCorrect ? 'Corretto!' : 'Sbagliato'}
+              {isCorrect ? 'Corretto!' : 'Sbagliato'}
             </h3>
           </div>
 
           <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-            {validationResult.explanation}
+            {question.explanation}
           </p>
 
-          {validationResult.tips && validationResult.tips.length > 0 && (
-            <div className="mt-4 p-4 rounded-xl bg-white/60">
-              <p className="font-semibold text-sm text-slate-600 mb-2">Suggerimenti:</p>
-              <ul className="space-y-1.5">
-                {validationResult.tips.map((tip, i) => (
-                  <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
+          {/* Vote Section */}
+          <div className="mt-4 p-4 rounded-xl bg-white/60">
+            <p className="font-medium text-sm text-slate-600 mb-3">
+              Questa domanda ti è stata utile?
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant={userVote === 'like' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => onVote('like')}
+                disabled={isVoting}
+                className="flex items-center gap-2 rounded-full"
+              >
+                <ThumbsUp className="w-4 h-4" />
+                Sì
+              </Button>
+              <Button
+                variant={userVote === 'dislike' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => onVote('dislike')}
+                disabled={isVoting}
+                className="flex items-center gap-2 rounded-full"
+              >
+                <ThumbsDown className="w-4 h-4" />
+                No
+              </Button>
             </div>
-          )}
+          </div>
 
           <Button
             onClick={onNext}
@@ -282,9 +294,9 @@ export function StudyPage() {
   const [repositoryMap, setRepositoryMap] = useState<Map<string, Repository>>(new Map());
 
   // Loading states
-  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
+  const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
 
   // Card preview dialog
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
@@ -296,20 +308,20 @@ export function StudyPage() {
 
   const loadInitialData = async () => {
     try {
-      // Load repositories and cards in parallel
-      const [repositories, allCards] = await Promise.all([
+      // Load repositories and cards with pre-generated questions in parallel
+      const [repositories, studyCards] = await Promise.all([
         getUserRepositories(),
-        getStudyCards(),
+        getStudyCardsWithQuestions(),
       ]);
 
       // Filter cards per repository using Deck class
       const repoMap = new Map(repositories.map(r => [r.id, r]));
       setRepositoryMap(repoMap);
-      const filteredCards: Card[] = [];
+      const filteredCards: StudyCard[] = [];
 
       // Group cards by repository
-      const cardsByRepo = new Map<string, Card[]>();
-      for (const card of allCards) {
+      const cardsByRepo = new Map<string, StudyCard[]>();
+      for (const card of studyCards) {
         const repoCards = cardsByRepo.get(card.repositoryId) || [];
         repoCards.push(card);
         cardsByRepo.set(card.repositoryId, repoCards);
@@ -320,7 +332,7 @@ export function StudyPage() {
         const repo = repoMap.get(repoId);
         if (repo) {
           const deck = new Deck(repo, repoCards);
-          filteredCards.push(...deck.getActiveCards());
+          filteredCards.push(...deck.getActiveCards() as StudyCard[]);
         }
       }
 
@@ -334,8 +346,9 @@ export function StudyPage() {
         cards: filteredCards,
         seenCardIds: new Set(),
         currentCard: null,
-        currentQuiz: null,
-        validationResult: null,
+        currentQuestion: null,
+        userAnswer: null,
+        userVote: null,
       });
 
       setState('studying');
@@ -346,7 +359,7 @@ export function StudyPage() {
     }
   };
 
-  const selectRandomCard = useCallback((cards: Card[], seenIds: Set<string>): Card | null => {
+  const selectRandomCard = useCallback((cards: StudyCard[], seenIds: Set<string>): StudyCard | null => {
     const unseenCards = cards.filter(c => !seenIds.has(c.id));
     if (unseenCards.length === 0) return null;
     const randomIndex = Math.floor(Math.random() * unseenCards.length);
@@ -356,7 +369,7 @@ export function StudyPage() {
   const loadNextCard = async () => {
     if (!session) return;
 
-    setIsLoadingQuiz(true);
+    setIsLoadingQuestion(true);
 
     try {
       const nextCard = selectRandomCard(session.cards, session.seenCardIds);
@@ -366,60 +379,64 @@ export function StudyPage() {
         return;
       }
 
-      // Generate quiz for this card
-      const quiz = await generateQuiz(
-        nextCard.rawContent,
-        nextCard.repositoryId
-      );
+      // Get pre-generated question for this card
+      const question = await getPreGeneratedQuestion(nextCard.id);
+
+      if (!question) {
+        // Card has no questions yet, skip it and try next
+        console.log(`Card ${nextCard.id} has no questions, skipping...`);
+        setSession(prev => ({
+          ...prev!,
+          seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
+        }));
+        // Try loading next card
+        setIsLoadingQuestion(false);
+        await loadNextCard();
+        return;
+      }
 
       setSession(prev => ({
         ...prev!,
         currentCard: nextCard,
-        currentQuiz: quiz,
-        validationResult: null,
+        currentQuestion: question,
+        userAnswer: null,
+        userVote: null,
         seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
       }));
     } catch (err) {
-      console.error('Failed to generate quiz:', err);
-      toast.error(err instanceof Error ? err.message : 'Errore nella generazione della domanda');
+      console.error('Failed to load question:', err);
+      toast.error(err instanceof Error ? err.message : 'Errore nel caricamento della domanda');
     } finally {
-      setIsLoadingQuiz(false);
+      setIsLoadingQuestion(false);
     }
   };
 
-  const handleAnswer = async (answer: string) => {
-    if (!session?.currentCard || !session?.currentQuiz) return;
+  const handleAnswer = (answer: string) => {
+    if (!session?.currentQuestion) return;
 
-    setIsValidating(true);
+    setSession(prev => ({
+      ...prev!,
+      userAnswer: answer,
+    }));
+  };
+
+  const handleVote = async (vote: QuestionVote) => {
+    if (!session?.currentQuestion) return;
+
+    setIsVoting(true);
 
     try {
-      // Validate the answer
-      const validation = await validateAnswer(
-        session.currentCard.rawContent,
-        session.currentQuiz.question,
-        answer,
-        session.currentQuiz.correctAnswer,
-        session.currentCard.repositoryId
-      );
-
+      await voteQuestion(session.currentQuestion.questionId, vote);
       setSession(prev => ({
         ...prev!,
-        validationResult: validation,
+        userVote: vote,
       }));
+      toast.success('Grazie per il feedback!');
     } catch (err) {
-      console.error('Failed to validate answer:', err);
-      const isCorrect = answer === session.currentQuiz.correctAnswer;
-      setSession(prev => ({
-        ...prev!,
-        validationResult: {
-          isCorrect,
-          explanation: isCorrect
-            ? 'Risposta corretta!'
-            : `La risposta corretta era: ${session.currentQuiz?.correctAnswer}. ${session.currentQuiz?.explanation || ''}`,
-        },
-      }));
+      console.error('Failed to vote:', err);
+      toast.error('Errore nel salvataggio del voto');
     } finally {
-      setIsValidating(false);
+      setIsVoting(false);
     }
   };
 
@@ -436,17 +453,26 @@ export function StudyPage() {
         return;
       }
 
-      // Generate quiz for next card
-      const quiz = await generateQuiz(
-        nextCard.rawContent,
-        nextCard.repositoryId
-      );
+      // Get pre-generated question for next card
+      const question = await getPreGeneratedQuestion(nextCard.id);
+
+      if (!question) {
+        // Skip card without question and try next
+        setSession(prev => ({
+          ...prev!,
+          seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
+        }));
+        setIsSkipping(false);
+        await handleSkip();
+        return;
+      }
 
       setSession(prev => ({
         ...prev!,
         currentCard: nextCard,
-        currentQuiz: quiz,
-        validationResult: null,
+        currentQuestion: question,
+        userAnswer: null,
+        userVote: null,
         seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
       }));
 
@@ -480,7 +506,7 @@ export function StudyPage() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Nessuna carta disponibile</h2>
           <p className="text-slate-500 mb-6">
-            Aggiungi un repository dalla dashboard per iniziare a studiare.
+            Le domande per le tue carte sono in preparazione. Riprova tra qualche minuto.
           </p>
           <Button onClick={() => navigate('/dashboard')} className="h-12 px-6 rounded-xl">
             Torna alla Dashboard
@@ -507,15 +533,14 @@ export function StudyPage() {
     }
 
     // Studying state
-    if (!session?.currentCard || !session?.currentQuiz) {
-      if (isLoadingQuiz) {
+    if (!session?.currentCard || !session?.currentQuestion) {
+      if (isLoadingQuestion) {
         return (
           <div className="flex-1 flex flex-col items-center justify-center px-6">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Sparkles className="w-8 h-8 text-primary animate-spin" />
             </div>
-            <p className="text-slate-600 font-medium">Generando domanda...</p>
-            <p className="text-sm text-slate-400 mt-1">L'AI sta preparando il quiz</p>
+            <p className="text-slate-600 font-medium">Caricamento domanda...</p>
           </div>
         );
       }
@@ -534,7 +559,7 @@ export function StudyPage() {
             className="h-14 px-8 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20"
           >
             <Sparkles className="w-5 h-5 mr-2" />
-            Genera domanda
+            Inizia
           </Button>
         </div>
       );
@@ -543,19 +568,30 @@ export function StudyPage() {
     return (
       <MobileQuiz
         card={session.currentCard}
-        quiz={session.currentQuiz}
-        validationResult={session.validationResult}
+        question={session.currentQuestion}
+        userAnswer={session.userAnswer}
+        userVote={session.userVote}
         onAnswer={handleAnswer}
+        onVote={handleVote}
         onNext={loadNextCard}
         onSkip={handleSkip}
         onViewCard={() => setIsCardPreviewOpen(true)}
-        isValidating={isValidating}
-        isLoadingNext={isLoadingQuiz}
+        isLoadingNext={isLoadingQuestion}
         isSkipping={isSkipping}
+        isVoting={isVoting}
         cardsRemaining={session.cards.length - session.seenCardIds.size}
       />
     );
   };
+
+  // Map StudyCard to Card type for CardPreviewDialog compatibility
+  const currentCardForPreview = session?.currentCard ? {
+    ...session.currentCard,
+    contentHash: '',
+    language: 'it',
+    createdAt: '',
+    updatedAt: '',
+  } : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white">
@@ -581,7 +617,7 @@ export function StudyPage() {
 
       {/* Card Preview Dialog */}
       <CardPreviewDialog
-        card={session?.currentCard || null}
+        card={currentCardForPreview}
         repository={session?.currentCard ? repositoryMap.get(session.currentCard.repositoryId) || null : null}
         isOpen={isCardPreviewOpen}
         onClose={() => setIsCardPreviewOpen(false)}

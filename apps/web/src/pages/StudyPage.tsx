@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  generateQuiz,
-  getStudyCards,
+  getPreGeneratedQuestion,
+  getStudyCardsWithQuestions,
   getUserRepositories,
-  validateAnswer,
+  voteQuestion,
   Deck,
-  type Card,
+  type StudyCard,
   type Repository,
-  type QuizQuestion,
-  type ValidationResponse,
+  type ShuffledQuestion,
+  type QuestionVote,
 } from '@lumio/core';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,67 +21,75 @@ import {
 } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { CardPreviewDialog } from '@/components/CardPreviewDialog';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-type StudyState = 'loading' | 'no_cards' | 'studying' | 'completed';
+type StudyState = 'loading' | 'no_cards' | 'preparing' | 'studying' | 'completed';
 
 interface StudySession {
-  cards: Card[];
+  cards: StudyCard[];
   seenCardIds: Set<string>;
-  currentCard: Card | null;
-  currentQuiz: QuizQuestion | null;
-  validationResult: ValidationResponse | null;
+  currentCard: StudyCard | null;
+  currentQuestion: ShuffledQuestion | null;
+  userAnswer: string | null;
+  userVote: QuestionVote | null;
 }
 
 // =============================================================================
-// QUIZ COMPONENT (with two-step validation)
+// QUIZ COMPONENT
 // =============================================================================
 
 interface QuizComponentProps {
-  card: Card;
-  quiz: QuizQuestion;
-  validationResult: ValidationResponse | null;
+  card: StudyCard;
+  question: ShuffledQuestion;
+  userAnswer: string | null;
+  userVote: QuestionVote | null;
   onAnswer: (answer: string) => void;
+  onVote: (vote: QuestionVote) => void;
   onNext: () => void;
   onSkip: () => void;
   onViewCard: () => void;
-  isValidating: boolean;
   isLoadingNext: boolean;
   isSkipping: boolean;
+  isVoting: boolean;
   cardsRemaining: number;
 }
 
 function QuizComponent({
   card,
-  quiz,
-  validationResult,
+  question,
+  userAnswer,
+  userVote,
   onAnswer,
+  onVote,
   onNext,
   onSkip,
   onViewCard,
-  isValidating,
   isLoadingNext,
   isSkipping,
+  isVoting,
   cardsRemaining,
 }: QuizComponentProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const hasAnswered = userAnswer !== null;
+  const isCorrect = userAnswer === question.correctAnswer;
 
-  // Reset when quiz changes
+  // Reset when question changes
   useEffect(() => {
     setSelectedAnswer(null);
-  }, [quiz]);
+  }, [question]);
 
   const handleSelect = (label: string) => {
-    if (validationResult || isValidating) return;
+    if (hasAnswered) return;
     setSelectedAnswer(label);
     onAnswer(label);
   };
 
   const getOptionStyle = (label: string) => {
-    if (!validationResult) {
+    if (!hasAnswered) {
       const baseStyle = 'border-border cursor-pointer';
       if (selectedAnswer === label) {
         return `${baseStyle} border-primary bg-primary/10`;
@@ -89,11 +97,11 @@ function QuizComponent({
       return `${baseStyle} hover:border-primary hover:bg-muted/50`;
     }
 
-    if (label === quiz.correctAnswer) {
+    if (label === question.correctAnswer) {
       return 'border-green-500 bg-green-50 dark:bg-green-950/30';
     }
 
-    if (label === selectedAnswer && label !== quiz.correctAnswer) {
+    if (label === userAnswer && label !== question.correctAnswer) {
       return 'border-red-500 bg-red-50 dark:bg-red-950/30';
     }
 
@@ -110,7 +118,7 @@ function QuizComponent({
           <span>{cardsRemaining} carte rimanenti</span>
         </div>
         <div className="flex items-center gap-2">
-          {!validationResult && !isValidating && (
+          {!hasAnswered && (
             <Button
               variant="ghost"
               size="sm"
@@ -129,10 +137,10 @@ function QuizComponent({
       {/* Question */}
       <CardUI>
         <CardHeader>
-          <CardTitle className="text-lg">{quiz.question}</CardTitle>
+          <CardTitle className="text-lg">{question.question}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {quiz.options.map(option => (
+          {question.options.map(option => (
             <div
               key={option.label}
               onClick={() => handleSelect(option.label)}
@@ -145,38 +153,47 @@ function QuizComponent({
         </CardContent>
       </CardUI>
 
-      {/* Loading validation */}
-      {isValidating && (
-        <CardUI>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Validando risposta...</p>
-          </CardContent>
-        </CardUI>
-      )}
-
-      {/* Validation Result */}
-      {validationResult && (
-        <CardUI className={validationResult.isCorrect ? 'border-green-500' : 'border-red-500'}>
+      {/* Result with Pre-generated Explanation */}
+      {hasAnswered && (
+        <CardUI className={isCorrect ? 'border-green-500' : 'border-red-500'}>
           <CardHeader className="pb-2">
-            <CardTitle className={`text-lg ${validationResult.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
-              {validationResult.isCorrect ? 'Corretto!' : 'Sbagliato!'}
+            <CardTitle className={`text-lg ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+              {isCorrect ? 'Corretto!' : 'Sbagliato!'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground whitespace-pre-wrap">
-              {validationResult.explanation}
+              {question.explanation}
             </p>
 
-            {validationResult.tips && validationResult.tips.length > 0 && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="font-medium text-sm mb-2">Suggerimenti:</p>
-                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                  {validationResult.tips.map((tip, i) => (
-                    <li key={i}>{tip}</li>
-                  ))}
-                </ul>
+            {/* Vote Section */}
+            <div className="border-t pt-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                Questa domanda ti è stata utile?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant={userVote === 'like' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => onVote('like')}
+                  disabled={isVoting}
+                  className="flex items-center gap-2"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  Sì
+                </Button>
+                <Button
+                  variant={userVote === 'dislike' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => onVote('dislike')}
+                  disabled={isVoting}
+                  className="flex items-center gap-2"
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  No
+                </Button>
               </div>
-            )}
+            </div>
 
             <Button onClick={onNext} disabled={isLoadingNext} className="w-full">
               {isLoadingNext ? 'Caricamento...' : 'Prossima carta'}
@@ -201,9 +218,9 @@ export function StudyPage() {
   const [repositoryMap, setRepositoryMap] = useState<Map<string, Repository>>(new Map());
 
   // Loading states
-  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
+  const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
 
   // Card preview dialog
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
@@ -215,20 +232,20 @@ export function StudyPage() {
 
   const loadInitialData = async () => {
     try {
-      // Load repositories and cards in parallel
-      const [repositories, allCards] = await Promise.all([
+      // Load repositories and cards with pre-generated questions in parallel
+      const [repositories, studyCards] = await Promise.all([
         getUserRepositories(),
-        getStudyCards(),
+        getStudyCardsWithQuestions(),
       ]);
 
       // Filter cards per repository using Deck class
       const repoMap = new Map(repositories.map(r => [r.id, r]));
       setRepositoryMap(repoMap);
-      const filteredCards: Card[] = [];
+      const filteredCards: StudyCard[] = [];
 
       // Group cards by repository
-      const cardsByRepo = new Map<string, Card[]>();
-      for (const card of allCards) {
+      const cardsByRepo = new Map<string, StudyCard[]>();
+      for (const card of studyCards) {
         const repoCards = cardsByRepo.get(card.repositoryId) || [];
         repoCards.push(card);
         cardsByRepo.set(card.repositoryId, repoCards);
@@ -239,7 +256,7 @@ export function StudyPage() {
         const repo = repoMap.get(repoId);
         if (repo) {
           const deck = new Deck(repo, repoCards);
-          filteredCards.push(...deck.getActiveCards());
+          filteredCards.push(...deck.getActiveCards() as StudyCard[]);
         }
       }
 
@@ -253,8 +270,9 @@ export function StudyPage() {
         cards: filteredCards,
         seenCardIds: new Set(),
         currentCard: null,
-        currentQuiz: null,
-        validationResult: null,
+        currentQuestion: null,
+        userAnswer: null,
+        userVote: null,
       });
 
       setState('studying');
@@ -265,7 +283,7 @@ export function StudyPage() {
     }
   };
 
-  const selectRandomCard = useCallback((cards: Card[], seenIds: Set<string>): Card | null => {
+  const selectRandomCard = useCallback((cards: StudyCard[], seenIds: Set<string>): StudyCard | null => {
     const unseenCards = cards.filter(c => !seenIds.has(c.id));
     if (unseenCards.length === 0) return null;
     const randomIndex = Math.floor(Math.random() * unseenCards.length);
@@ -275,7 +293,7 @@ export function StudyPage() {
   const loadNextCard = async () => {
     if (!session) return;
 
-    setIsLoadingQuiz(true);
+    setIsLoadingQuestion(true);
 
     try {
       const nextCard = selectRandomCard(session.cards, session.seenCardIds);
@@ -285,61 +303,64 @@ export function StudyPage() {
         return;
       }
 
-      // Generate quiz for this card
-      const quiz = await generateQuiz(
-        nextCard.rawContent,
-        nextCard.repositoryId
-      );
+      // Get pre-generated question for this card
+      const question = await getPreGeneratedQuestion(nextCard.id);
+
+      if (!question) {
+        // Card has no questions yet, skip it and try next
+        console.log(`Card ${nextCard.id} has no questions, skipping...`);
+        setSession(prev => ({
+          ...prev!,
+          seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
+        }));
+        // Try loading next card
+        setIsLoadingQuestion(false);
+        await loadNextCard();
+        return;
+      }
 
       setSession(prev => ({
         ...prev!,
         currentCard: nextCard,
-        currentQuiz: quiz,
-        validationResult: null,
+        currentQuestion: question,
+        userAnswer: null,
+        userVote: null,
         seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
       }));
     } catch (err) {
-      console.error('Failed to generate quiz:', err);
-      toast.error(err instanceof Error ? err.message : 'Errore nella generazione della domanda');
+      console.error('Failed to load question:', err);
+      toast.error(err instanceof Error ? err.message : 'Errore nel caricamento della domanda');
     } finally {
-      setIsLoadingQuiz(false);
+      setIsLoadingQuestion(false);
     }
   };
 
-  const handleAnswer = async (answer: string) => {
-    if (!session?.currentCard || !session?.currentQuiz) return;
+  const handleAnswer = (answer: string) => {
+    if (!session?.currentQuestion) return;
 
-    setIsValidating(true);
+    setSession(prev => ({
+      ...prev!,
+      userAnswer: answer,
+    }));
+  };
+
+  const handleVote = async (vote: QuestionVote) => {
+    if (!session?.currentQuestion) return;
+
+    setIsVoting(true);
 
     try {
-      // Validate the answer
-      const validation = await validateAnswer(
-        session.currentCard.rawContent,
-        session.currentQuiz.question,
-        answer,
-        session.currentQuiz.correctAnswer,
-        session.currentCard.repositoryId
-      );
-
+      await voteQuestion(session.currentQuestion.questionId, vote);
       setSession(prev => ({
         ...prev!,
-        validationResult: validation,
+        userVote: vote,
       }));
+      toast.success('Grazie per il feedback!');
     } catch (err) {
-      console.error('Failed to validate answer:', err);
-      // Fallback: show basic result without AI validation
-      const isCorrect = answer === session.currentQuiz.correctAnswer;
-      setSession(prev => ({
-        ...prev!,
-        validationResult: {
-          isCorrect,
-          explanation: isCorrect
-            ? 'Risposta corretta!'
-            : `La risposta corretta era: ${session.currentQuiz?.correctAnswer}. ${session.currentQuiz?.explanation || ''}`,
-        },
-      }));
+      console.error('Failed to vote:', err);
+      toast.error('Errore nel salvataggio del voto');
     } finally {
-      setIsValidating(false);
+      setIsVoting(false);
     }
   };
 
@@ -356,17 +377,26 @@ export function StudyPage() {
         return;
       }
 
-      // Generate quiz for next card
-      const quiz = await generateQuiz(
-        nextCard.rawContent,
-        nextCard.repositoryId
-      );
+      // Get pre-generated question for next card
+      const question = await getPreGeneratedQuestion(nextCard.id);
+
+      if (!question) {
+        // Skip card without question and try next
+        setSession(prev => ({
+          ...prev!,
+          seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
+        }));
+        setIsSkipping(false);
+        await handleSkip();
+        return;
+      }
 
       setSession(prev => ({
         ...prev!,
         currentCard: nextCard,
-        currentQuiz: quiz,
-        validationResult: null,
+        currentQuestion: question,
+        userAnswer: null,
+        userVote: null,
         seenCardIds: new Set([...prev!.seenCardIds, nextCard.id]),
       }));
 
@@ -395,7 +425,25 @@ export function StudyPage() {
           <CardHeader>
             <CardTitle>Nessuna carta disponibile</CardTitle>
             <CardDescription>
-              Aggiungi un repository per iniziare a studiare.
+              Le domande per le tue carte sono in preparazione. Riprova tra qualche minuto.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate('/dashboard')}>
+              Torna alla Dashboard
+            </Button>
+          </CardContent>
+        </CardUI>
+      );
+    }
+
+    if (state === 'preparing') {
+      return (
+        <CardUI>
+          <CardHeader>
+            <CardTitle>Preparazione in corso</CardTitle>
+            <CardDescription>
+              Stiamo preparando le domande per le tue carte. Riprova tra qualche minuto.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -426,12 +474,12 @@ export function StudyPage() {
     }
 
     // Studying state
-    if (!session?.currentCard || !session?.currentQuiz) {
-      if (isLoadingQuiz) {
+    if (!session?.currentCard || !session?.currentQuestion) {
+      if (isLoadingQuestion) {
         return (
           <CardUI>
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Generando domanda...</p>
+              <p className="text-muted-foreground">Caricamento domanda...</p>
             </CardContent>
           </CardUI>
         );
@@ -448,7 +496,7 @@ export function StudyPage() {
           </CardHeader>
           <CardContent>
             <Button onClick={loadNextCard} className="w-full">
-              Genera domanda
+              Inizia
             </Button>
           </CardContent>
         </CardUI>
@@ -458,19 +506,30 @@ export function StudyPage() {
     return (
       <QuizComponent
         card={session.currentCard}
-        quiz={session.currentQuiz}
-        validationResult={session.validationResult}
+        question={session.currentQuestion}
+        userAnswer={session.userAnswer}
+        userVote={session.userVote}
         onAnswer={handleAnswer}
+        onVote={handleVote}
         onNext={loadNextCard}
         onSkip={handleSkip}
         onViewCard={() => setIsCardPreviewOpen(true)}
-        isValidating={isValidating}
-        isLoadingNext={isLoadingQuiz}
+        isLoadingNext={isLoadingQuestion}
         isSkipping={isSkipping}
+        isVoting={isVoting}
         cardsRemaining={session.cards.length - session.seenCardIds.size}
       />
     );
   };
+
+  // Map StudyCard to Card type for CardPreviewDialog compatibility
+  const currentCardForPreview = session?.currentCard ? {
+    ...session.currentCard,
+    contentHash: '',
+    language: 'it',
+    createdAt: '',
+    updatedAt: '',
+  } : null;
 
   return (
     <div className="min-h-screen p-4">
@@ -488,7 +547,7 @@ export function StudyPage() {
 
         {/* Card Preview Dialog */}
         <CardPreviewDialog
-          card={session?.currentCard || null}
+          card={currentCardForPreview}
           repository={session?.currentCard ? repositoryMap.get(session.currentCard.repositoryId) || null : null}
           isOpen={isCardPreviewOpen}
           onClose={() => setIsCardPreviewOpen(false)}

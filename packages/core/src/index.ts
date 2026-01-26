@@ -19,6 +19,7 @@ export {
   getCurrentUser,
   onAuthStateChange,
   getAccessToken,
+  getUserId,
 } from './supabase/auth';
 
 // Export repository functions
@@ -45,6 +46,10 @@ export {
   generateQuiz,
   getStudyCards,
   validateAnswer,
+  // Batch mode (Milestone 12)
+  getPreGeneratedQuestion,
+  voteQuestion,
+  getStudyCardsWithQuestions,
 } from './supabase/study';
 
 // Export markdown configuration and utilities

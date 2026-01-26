@@ -120,3 +120,13 @@ export async function getAccessToken(): Promise<string | null> {
 
   return session.access_token;
 }
+
+/**
+ * Get the current user ID
+ * @returns User ID string or null if not authenticated
+ */
+export async function getUserId(): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id || null;
+}
