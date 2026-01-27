@@ -1136,6 +1136,85 @@
 
 ---
 
+## 13 - RISPETTARE .LUMIOIGNORE NEL BACKEND (Stateless)
+
+### Obiettivi Fase 13
+
+- Applicare filtro .lumioignore nel backend con stessa logica stateless del frontend
+- Evitare generazione domande per carte escluse (risparmio costi API)
+- Allineare i contatori: Dashboard e Studio mostrano lo stesso numero
+- Gestire race condition: cleanup retroattivo quando arriva .lumioignore
+
+### Problema Risolto
+
+Il file `.lumioignore` viene salvato in `repositories.lumioignore_content` ma:
+- Le carte vengono create tutte nel DB
+- Il batch job `question-generator` generava domande per TUTTE le carte
+- Solo il frontend (Deck class) applicava il filtro, creando inconsistenza
+- Race condition: Docora invia file in ordine sparso, batch può partire prima di .lumioignore
+
+### 13.1 Utility per filtro .lumioignore in Edge Functions
+
+- [x] Creare helper `createIgnoreFilter()` e `isCardIgnored()`
+- [x] Usare libreria `npm:ignore` (stessa del frontend)
+- [x] Replicare logica di `packages/core/src/deck/Deck.ts`
+
+### 13.2 Question Generator - Filtrare carte ignorate
+
+- [x] In `generateBatch()`, caricare `lumioignore_content` per ogni repository
+- [x] Filtrare carte prima di generare domande
+- [x] Aggiungere stat `skipped` per carte ignorate
+- [x] Log per debugging: "Skipped N cards due to .lumioignore"
+
+### 13.3 Docora Webhook - Cleanup retroattivo
+
+- [x] Quando arriva `.lumioignore` (create/update):
+  - Parsare i pattern con libreria `ignore`
+  - Trovare carte del repository che ora matchano i pattern
+  - Cancellare domande (`card_questions`) per quelle carte
+  - Log: "Cleaned up questions for N ignored cards"
+- [x] Quando `.lumioignore` viene eliminato:
+  - Azzerare `lumioignore_content` nel repository (già implementato)
+  - Nessun cleanup domande (carte tornano semplicemente visibili)
+
+### 13.4 Git-Sync - Stats con filtro .lumioignore
+
+- [x] Modificare `getStats()` per applicare filtro
+- [x] Caricare `lumioignore_content` insieme ai repository
+- [x] Filtrare carte in memoria prima di contare
+- [x] Dashboard mostrerà stesso numero di Studio
+
+### 13.5 Database Migration
+
+- [x] Aggiornare RPC `get_cards_needing_questions` per includere `file_path`
+
+### Criteri di Successo Fase 13
+
+- Il batch job NON genera domande per carte matchate da .lumioignore
+- Quando arriva .lumioignore, le domande per carte escluse vengono cancellate
+- Dashboard e Studio mostrano lo stesso conteggio carte
+- Nessuna modifica allo schema del database (solo RPC update)
+- La logica di filtro è identica tra frontend e backend
+
+### Note Fase 13
+
+- **Libreria**: `npm:ignore@5.3.1` via esm.sh per Deno Edge Functions
+- **Performance**: Filtro in memoria è accettabile per volumi attuali (<1000 carte/utente)
+- **Race condition**: Risolta con cleanup retroattivo nel webhook
+- **Futura ottimizzazione**: Se volumi crescono, considerare RPC con filtro lato DB
+
+### File coinvolti
+
+| File | Azione |
+|------|--------|
+| `supabase/migrations/20260127000001_add_file_path_to_rpc.sql` | NUOVO - Aggiunge file_path alla RPC |
+| `supabase/functions/question-generator/index.ts` | MODIFICA - Filtro .lumioignore |
+| `supabase/functions/docora-webhook/index.ts` | MODIFICA - Cleanup domande |
+| `supabase/functions/git-sync/index.ts` | MODIFICA - Stats con filtro |
+| `docs/ROADMAP.md` | MODIFICA - Aggiunta Milestone 13 |
+
+---
+
 ## BACKLOG - Miglioramenti Futuri
 
 - [x] studio : possibilità di "saltare" una carta durante lo studio (web + mobile)

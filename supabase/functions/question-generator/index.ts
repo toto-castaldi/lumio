@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Image, decode } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
+import ignore from "npm:ignore@5.3.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,6 +42,7 @@ interface CardToProcess {
   card_id: string;
   content: string;
   raw_content: string;
+  file_path: string;
   repository_id: string;
   current_count: number;
 }
@@ -102,6 +104,51 @@ function createServiceClient() {
       persistSession: false,
     },
   });
+}
+
+// =============================================================================
+// LUMIOIGNORE FILTERING
+// =============================================================================
+
+type IgnoreFilter = ReturnType<typeof ignore>;
+
+/**
+ * Create ignore filter from .lumioignore content
+ * Replicates the logic from packages/core/src/deck/Deck.ts
+ */
+function createIgnoreFilter(lumioignoreContent: string | null | undefined): IgnoreFilter | null {
+  if (!lumioignoreContent) {
+    return null;
+  }
+
+  try {
+    const ig = ignore();
+    // Split content by lines, filter empty lines and comments
+    const patterns = lumioignoreContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'));
+
+    if (patterns.length === 0) {
+      return null;
+    }
+
+    ig.add(patterns);
+    return ig;
+  } catch (error) {
+    console.error('[Batch] Failed to parse .lumioignore:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if a card should be ignored based on its file path
+ */
+function isCardIgnored(filePath: string, ignoreFilter: IgnoreFilter | null): boolean {
+  if (!ignoreFilter) {
+    return false;
+  }
+  return ignoreFilter.ignores(filePath);
 }
 
 // =============================================================================
@@ -532,7 +579,7 @@ async function generateBatch(
     `[Batch] Config: provider=${config.provider}, model=${config.model}, questionsPerCard=${config.questionsPerCard}`
   );
 
-  // Get cards needing questions
+  // Get cards needing questions (now includes file_path)
   const { data: cards, error } = await supabase.rpc("get_cards_needing_questions", {
     p_target_count: config.questionsPerCard,
     p_limit: config.cardsPerRun,
@@ -550,8 +597,49 @@ async function generateBatch(
 
   console.log(`[Batch] Found ${cards.length} cards needing questions`);
 
-  // Process each card
+  // =========================================================================
+  // LUMIOIGNORE FILTERING
+  // Group cards by repository, load lumioignore_content, filter ignored cards
+  // =========================================================================
+  const cardsByRepo = new Map<string, CardToProcess[]>();
   for (const card of cards as CardToProcess[]) {
+    const repoCards = cardsByRepo.get(card.repository_id) || [];
+    repoCards.push(card);
+    cardsByRepo.set(card.repository_id, repoCards);
+  }
+
+  const filteredCards: CardToProcess[] = [];
+  for (const [repoId, repoCards] of cardsByRepo) {
+    // Load lumioignore_content for this repository
+    const { data: repo } = await supabase
+      .from("repositories")
+      .select("lumioignore_content")
+      .eq("id", repoId)
+      .single();
+
+    const ignoreFilter = createIgnoreFilter(repo?.lumioignore_content);
+
+    for (const card of repoCards) {
+      if (!isCardIgnored(card.file_path, ignoreFilter)) {
+        filteredCards.push(card);
+      } else {
+        stats.skipped++;
+        console.log(`[Batch] Skipped ignored card: ${card.file_path}`);
+      }
+    }
+  }
+
+  if (filteredCards.length === 0) {
+    console.log("[Batch] All cards filtered by .lumioignore");
+    return stats;
+  }
+
+  console.log(
+    `[Batch] After .lumioignore filter: ${filteredCards.length} cards to process (${stats.skipped} skipped)`
+  );
+
+  // Process each filtered card
+  for (const card of filteredCards) {
     try {
       await processCard(supabase, config, card, stats);
     } catch (error) {
@@ -563,7 +651,7 @@ async function generateBatch(
   }
 
   console.log(
-    `[Batch] Complete. Cards: ${stats.cardsProcessed}, Questions: ${stats.questionsGenerated}, Errors: ${stats.errors}`
+    `[Batch] Complete. Cards: ${stats.cardsProcessed}, Questions: ${stats.questionsGenerated}, Errors: ${stats.errors}, Skipped: ${stats.skipped}`
   );
 
   return stats;
