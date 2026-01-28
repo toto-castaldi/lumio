@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import ignore from "npm:ignore@5.3.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,6 +48,51 @@ interface Card {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// =============================================================================
+// LUMIOIGNORE FILTERING
+// =============================================================================
+
+type IgnoreFilter = ReturnType<typeof ignore>;
+
+/**
+ * Create ignore filter from .lumioignore content
+ * Replicates the logic from packages/core/src/deck/Deck.ts
+ */
+function createIgnoreFilter(lumioignoreContent: string | null | undefined): IgnoreFilter | null {
+  if (!lumioignoreContent) {
+    return null;
+  }
+
+  try {
+    const ig = ignore();
+    // Split content by lines, filter empty lines and comments
+    const patterns = lumioignoreContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'));
+
+    if (patterns.length === 0) {
+      return null;
+    }
+
+    ig.add(patterns);
+    return ig;
+  } catch (error) {
+    console.error('[git-sync] Failed to parse .lumioignore:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if a card should be ignored based on its file path
+ */
+function isCardIgnored(filePath: string, ignoreFilter: IgnoreFilter | null): boolean {
+  if (!ignoreFilter) {
+    return false;
+  }
+  return ignoreFilter.ignores(filePath);
 }
 
 // =============================================================================
@@ -355,16 +401,19 @@ async function deleteRepository(
 
 /**
  * Get statistics for user's repositories (Shared Repository Architecture)
- * Note: Card count is the total count from DB. Frontend uses Deck class to filter by .lumioignore
+ * Card count now applies .lumioignore filter for consistency with Studio view
  */
 async function getStats(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<{ repositoryCount: number; cardCount: number }> {
-  // Get user's repository links
+  // Get user's repository links with lumioignore_content
   const { data: userRepos, error: repoError } = await supabase
     .from("user_repositories")
-    .select("repository_id")
+    .select(`
+      repository_id,
+      repository:repositories(id, lumioignore_content)
+    `)
     .eq("user_id", userId);
 
   if (repoError) throw repoError;
@@ -375,19 +424,37 @@ async function getStats(
     return { repositoryCount: 0, cardCount: 0 };
   }
 
-  // Get card count from linked repositories
+  // Build map of repository ID -> ignore filter
+  const repoIgnoreFilters = new Map<string, IgnoreFilter | null>();
+  for (const ur of userRepos!) {
+    const repo = ur.repository as { id: string; lumioignore_content: string | null } | null;
+    if (repo) {
+      repoIgnoreFilters.set(repo.id, createIgnoreFilter(repo.lumioignore_content));
+    }
+  }
+
+  // Get all cards from linked repositories
   const repoIds = userRepos!.map(r => r.repository_id);
-  const { count: cardCount, error: cardError } = await supabase
+  const { data: allCards, error: cardError } = await supabase
     .from("cards")
-    .select("*", { count: "exact", head: true })
+    .select("id, repository_id, file_path")
     .in("repository_id", repoIds)
     .eq("is_active", true);
 
   if (cardError) throw cardError;
 
+  // Filter cards by .lumioignore
+  let cardCount = 0;
+  for (const card of allCards || []) {
+    const ignoreFilter = repoIgnoreFilters.get(card.repository_id);
+    if (!isCardIgnored(card.file_path, ignoreFilter)) {
+      cardCount++;
+    }
+  }
+
   return {
     repositoryCount,
-    cardCount: cardCount || 0,
+    cardCount,
   };
 }
 

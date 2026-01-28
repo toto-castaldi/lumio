@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import ignore from "npm:ignore@5.3.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,6 +110,108 @@ async function verifyHmacSignature(
   console.log("[verifyHmac] Computed sig:", computedSignature.substring(0, 30) + "...");
   console.log("[verifyHmac] Match:", signature === computedSignature);
   return signature === computedSignature;
+}
+
+// =============================================================================
+// LUMIOIGNORE FILTERING & CLEANUP
+// =============================================================================
+
+type IgnoreFilter = ReturnType<typeof ignore>;
+
+/**
+ * Create ignore filter from .lumioignore content
+ * Replicates the logic from packages/core/src/deck/Deck.ts
+ */
+function createIgnoreFilter(lumioignoreContent: string | null | undefined): IgnoreFilter | null {
+  if (!lumioignoreContent) {
+    return null;
+  }
+
+  try {
+    const ig = ignore();
+    // Split content by lines, filter empty lines and comments
+    const patterns = lumioignoreContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'));
+
+    if (patterns.length === 0) {
+      return null;
+    }
+
+    ig.add(patterns);
+    return ig;
+  } catch (error) {
+    console.error('[Webhook] Failed to parse .lumioignore:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if a card should be ignored based on its file path
+ */
+function isCardIgnored(filePath: string, ignoreFilter: IgnoreFilter | null): boolean {
+  if (!ignoreFilter) {
+    return false;
+  }
+  return ignoreFilter.ignores(filePath);
+}
+
+/**
+ * Cleanup questions for cards that are now ignored by .lumioignore
+ * This handles the race condition where cards are created before .lumioignore arrives
+ */
+async function cleanupIgnoredCardQuestions(
+  serviceClient: ReturnType<typeof createClient>,
+  repositoryId: string,
+  lumioignoreContent: string
+): Promise<void> {
+  const ignoreFilter = createIgnoreFilter(lumioignoreContent);
+  if (!ignoreFilter) {
+    console.log("[Webhook] No valid patterns in .lumioignore, skipping cleanup");
+    return;
+  }
+
+  // Load all cards from this repository
+  const { data: cards, error: cardsError } = await serviceClient
+    .from("cards")
+    .select("id, file_path")
+    .eq("repository_id", repositoryId)
+    .eq("is_active", true);
+
+  if (cardsError) {
+    console.error("[Webhook] Failed to load cards for cleanup:", cardsError.message);
+    return;
+  }
+
+  if (!cards || cards.length === 0) {
+    console.log("[Webhook] No cards to check for cleanup");
+    return;
+  }
+
+  // Find cards that are now ignored
+  const ignoredCardIds = cards
+    .filter(card => isCardIgnored(card.file_path, ignoreFilter))
+    .map(card => card.id);
+
+  if (ignoredCardIds.length === 0) {
+    console.log("[Webhook] No cards matched by .lumioignore patterns");
+    return;
+  }
+
+  console.log(`[Webhook] Found ${ignoredCardIds.length} cards matching .lumioignore patterns`);
+
+  // Delete questions for these cards
+  const { error: deleteError, count } = await serviceClient
+    .from("card_questions")
+    .delete()
+    .in("card_id", ignoredCardIds);
+
+  if (deleteError) {
+    console.error("[Webhook] Failed to cleanup ignored card questions:", deleteError.message);
+  } else {
+    console.log(`[Webhook] Cleaned up ${count || 0} questions for ignored cards`);
+  }
 }
 
 // =============================================================================
@@ -604,8 +707,9 @@ async function handleCreate(
     return { success: true, message: "README.md processed" };
   }
 
-  // .lumioignore - store content for card filtering
+  // .lumioignore - store content for card filtering and cleanup orphan questions
   if (fileName.toLowerCase() === ".lumioignore") {
+    // 1. Save the content
     await serviceClient
       .from("repositories")
       .update({
@@ -613,7 +717,10 @@ async function handleCreate(
       })
       .eq("id", repo.id);
 
-    return { success: true, message: ".lumioignore saved" };
+    // 2. Cleanup questions for cards that are now ignored (handles race condition)
+    await cleanupIgnoredCardQuestions(serviceClient, repo.id, content);
+
+    return { success: true, message: ".lumioignore saved and cleanup completed" };
   }
 
   // Markdown card files
@@ -741,8 +848,9 @@ async function handleUpdate(
     return { success: true, message: "README.md updated" };
   }
 
-  // .lumioignore - update content for card filtering
+  // .lumioignore - update content for card filtering and cleanup orphan questions
   if (fileName.toLowerCase() === ".lumioignore") {
+    // 1. Update the content
     await serviceClient
       .from("repositories")
       .update({
@@ -750,7 +858,10 @@ async function handleUpdate(
       })
       .eq("id", repo.id);
 
-    return { success: true, message: ".lumioignore updated" };
+    // 2. Cleanup questions for cards that are now ignored
+    await cleanupIgnoredCardQuestions(serviceClient, repo.id, content);
+
+    return { success: true, message: ".lumioignore updated and cleanup completed" };
   }
 
   // Image files
