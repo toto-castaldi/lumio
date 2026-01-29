@@ -94,7 +94,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Feature | Reason |
 |---------|--------|
 | Creazione/modifica card in-app | Focus su consumo, non produzione. Content via Git. |
-| Social features | Complessità, non core per v1 |
+| Social features | Complessita, non core per v1 |
 | Spaced repetition algorithm | Non implementato neanche in PWA, defer |
 | Voice input | Valore incerto, richiede user research |
 | Focus timer / Pomodoro | Feature creep, non essenziale |
@@ -150,4 +150,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-29 after initial definition*
+*Last updated: 2026-01-29 after roadmap creation*
