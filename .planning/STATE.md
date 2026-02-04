@@ -53,8 +53,9 @@ Recent decisions affecting current work:
 - **AUTH-03:** Cancelled sign-in returns silently (no error toast) per CONTEXT discretion
 - **AUTH-04:** signOut does not require confirmation (immediate action per CONTEXT)
 - **NAV-02:** AppNavigator directly renders navigator components (no conditional routes)
-- **NAV-03:** MainNavigator uses View wrapper with absolute FAB overlay
+- **NAV-03:** Study button integrated in DashboardScreen (FAB overlay removed for better UX)
 - **NAV-04:** Icons-only tab bar (tabBarShowLabel: false)
+- **PKG-01:** Android package name is `com.toto_castaldi.lumio` (underscore required, hyphens not allowed)
 
 ### Pending Todos
 

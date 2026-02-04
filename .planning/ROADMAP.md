@@ -51,7 +51,7 @@ Plans:
 Plans:
 - [ ] 02-01-PLAN.md — Install dependencies, configure Expo plugin, migrate Supabase to SecureStore
 - [ ] 02-02-PLAN.md — Create AuthContext with Google Sign-In integration and OfflineBanner
-- [ ] 02-03-PLAN.md — Create navigation structure (AppNavigator, AuthNavigator, MainNavigator) with FAB
+- [x] 02-03-PLAN.md — Create navigation structure (AppNavigator, AuthNavigator, MainNavigator) with Study button
 - [ ] 02-04-PLAN.md — Create screen components (LoginScreen, SettingsScreen with logout, placeholders)
 
 ### Phase 3: Core Screens
@@ -121,8 +121,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Planned | - |
-| 2. Auth & Navigation | 0/4 | Planned | - |
+| 1. Foundation | 2/2 | ✅ Complete | 2026-02-04 |
+| 2. Auth & Navigation | 4/4 | ✅ Complete | 2026-02-04 |
 | 3. Core Screens | 0/TBD | Not started | - |
 | 4. Study & Cards | 0/TBD | Not started | - |
 | 5. Distribution & Cleanup | 0/TBD | Not started | - |

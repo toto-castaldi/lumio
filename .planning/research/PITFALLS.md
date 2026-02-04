@@ -114,7 +114,7 @@ Android deep linking requires precise configuration in `AndroidManifest.xml` and
 **How to avoid:**
 1. **Configure `AndroidManifest.xml`** correctly:
    - Set `launchMode="singleTask"` on MainActivity
-   - Add intent-filter for your scheme (e.g., `com.lumio.app://`)
+   - Add intent-filter for your scheme (e.g., `com.toto_castaldi.lumio://`)
    - Add intent-filter for Universal Links (your domain)
 
 2. **Set up `assetlinks.json`** on your domain:
@@ -123,7 +123,7 @@ Android deep linking requires precise configuration in `AndroidManifest.xml` and
    - Use Google's validator to verify
 
 3. **Configure Supabase URL settings**:
-   - Add `com.lumio.app://auth/callback` as redirect URL
+   - Add `com.toto_castaldi.lumio://auth/callback` as redirect URL
    - Add `https://lumio.toto-castaldi.com/auth/callback` as fallback
 
 4. **Use Expo AuthSession** (if using Expo) — handles much of this automatically

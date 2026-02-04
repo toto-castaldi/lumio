@@ -210,7 +210,7 @@ All structural components are in place and correctly wired:
 
 1. Set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in `apps/android/.env.local`
 2. Source: Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs → Web client ID
-3. Create Android OAuth client if not exists (requires SHA-1 from `./gradlew signingReport` and package name `com.lumio.app`)
+3. Create Android OAuth client if not exists (requires SHA-1 from `./gradlew signingReport` and package name `com.toto_castaldi.lumio`)
 
 Without these credentials, Google Sign-In will fail silently (warning logged by configureGoogleSignIn).
 
