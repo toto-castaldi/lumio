@@ -75,10 +75,12 @@ Nuove funzionalità da implementare:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| React Native over Flutter | Riuso competenze React, ecosistema familiare | — Pending |
-| Android-first | Dispositivo principale dello sviluppatore | — Pending |
+| React Native over Flutter | Riuso competenze React, ecosistema familiare | ✓ Confirmed |
+| Expo managed workflow | Semplifica build/deploy, buon supporto community | ✓ Confirmed |
+| react-navigation over expo-router | expo-router incompatibile con pnpm monorepo (errore String→Boolean) | ✓ Confirmed |
+| Android-first | Dispositivo principale dello sviluppatore | ✓ Confirmed |
 | APK diretto vs Play Store | Velocità rilascio, nessuna review | — Pending |
 | Unificare codebase | Semplificazione, meno overhead packages | — Pending |
 
 ---
-*Last updated: 2026-01-29 after initialization*
+*Last updated: 2026-02-04 after navigation decision*

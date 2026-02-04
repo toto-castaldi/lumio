@@ -29,10 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Supabase client connects and can query the database
   3. NativeWind styles render correctly (Tailwind classes work)
   4. Decision made on @lumio/core reuse vs unification
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Create Expo project with dependencies and NativeWind build tooling
+- [ ] 01-02-PLAN.md — Implement LargeSecureStore and Supabase integration
+- [ ] 01-03-PLAN.md — Create navigation structure and verify all success criteria
 
 ### Phase 2: Auth & Navigation
 **Goal**: Users can log in with Google and navigate between tabs
@@ -116,7 +118,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/3 | Planned | - |
 | 2. Auth & Navigation | 0/TBD | Not started | - |
 | 3. Core Screens | 0/TBD | Not started | - |
 | 4. Study & Cards | 0/TBD | Not started | - |
@@ -124,3 +126,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 ---
 *Roadmap created: 2026-01-29*
+*Phase 1 planned: 2026-02-03*

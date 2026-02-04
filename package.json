@@ -2,6 +2,11 @@
   "name": "lumio",
   "private": true,
   "version": "1.0.1",
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0"
+    }
+  },
   "scripts": {
     "dev:web": "pnpm --filter @lumio/web dev",
     "dev:mobile": "pnpm --filter @lumio/mobile dev",
