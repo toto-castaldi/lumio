@@ -1,17 +1,21 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ConnectionTest } from './components/ConnectionTest';
 
 const Tab = createBottomTabNavigator();
 
 function DashboardScreen() {
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Dashboard</Text>
-      <Text style={styles.subtitle}>Welcome to Lumio</Text>
-    </View>
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Dashboard</Text>
+        <Text style={styles.subtitle}>Welcome to Lumio</Text>
+      </View>
+      <ConnectionTest />
+    </ScrollView>
   );
 }
 
@@ -56,6 +60,16 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  header: {
+    padding: 16,
+  },
   screen: {
     flex: 1,
     justifyContent: 'center',
