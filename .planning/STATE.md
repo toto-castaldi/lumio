@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 1 - Foundation
+**Current focus:** Phase 2 - Auth & Navigation
 
 ## Current Position
 
-Phase: 1 of 5 (Foundation)
-Plan: 3 of 3 complete
-Status: ✅ COMPLETE
-Last activity: 2026-02-04 — Phase 1 complete (Supabase connected)
+Phase: 2 of 5 (Auth & Navigation)
+Plan: 2 of 4 complete
+Status: In progress
+Last activity: 2026-02-04 — Completed 02-02-PLAN.md (AuthContext and OfflineBanner)
 
-Progress: [██████████] 100% (3/3 plans in Phase 1)
+Progress: [█████░░░░░] 50% (2/4 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 3.5 min
-- Total execution time: 7 min
+- Total plans completed: 4
+- Average duration: 3 min
+- Total execution time: 12 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 7 min | 3.5 min |
+| 02-auth-navigation | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4 min), 01-02 (3 min)
+- Last 5 plans: 01-01 (4 min), 01-02 (3 min), 02-01 (3 min), 02-02 (2 min)
 - Trend: Improving
 
 *Updated after each plan completion*
@@ -47,6 +48,10 @@ Recent decisions affecting current work:
 - **Package naming:** @lumio/android for workspace consistency
 - **Secure storage:** LargeSecureStore pattern (AES-256 keys in SecureStore, encrypted data in AsyncStorage)
 - **Env validation:** Fail-fast at module load if Supabase credentials missing
+- **AUTH-01:** SecureStore adapter replaces AsyncStorage for encrypted Supabase auth token storage
+- **AUTH-02:** Google Sign-In uses webClientId (not Android client ID) for Supabase signInWithIdToken compatibility
+- **AUTH-03:** Cancelled sign-in returns silently (no error toast) per CONTEXT discretion
+- **AUTH-04:** signOut does not require confirmation (immediate action per CONTEXT)
 
 ### Pending Todos
 
@@ -59,8 +64,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Phase 1 complete - ready for Phase 2 (Authentication)
+Last session: 2026-02-04T17:05:27Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
 
 ---
