@@ -46,15 +46,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>('loading');
 
   useEffect(() => {
+    console.log('[Auth] Initializing auth...');
+
     // Configure Google Sign-In SDK
     configureGoogleSignIn();
 
     // Restore persisted session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      setState(existingSession ? 'ready' : 'logged_out');
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session: existingSession }, error }) => {
+        if (error) {
+          console.error('[Auth] getSession error:', error);
+        }
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
+        setState(existingSession ? 'ready' : 'logged_out');
+      })
+      .catch((err) => {
+        console.error('[Auth] getSession failed:', err);
+        // Even on error, transition to logged_out so the app is usable
+        setState('logged_out');
+      });
 
     // Subscribe to auth state changes
     const {

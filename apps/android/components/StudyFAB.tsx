@@ -28,8 +28,8 @@ export function StudyFAB() {
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 70,
-    alignSelf: 'center',
+    bottom: 80,
+    right: 20,
     width: 56,
     height: 56,
     borderRadius: 28,

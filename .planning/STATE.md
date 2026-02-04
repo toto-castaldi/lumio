@@ -52,6 +52,9 @@ Recent decisions affecting current work:
 - **AUTH-02:** Google Sign-In uses webClientId (not Android client ID) for Supabase signInWithIdToken compatibility
 - **AUTH-03:** Cancelled sign-in returns silently (no error toast) per CONTEXT discretion
 - **AUTH-04:** signOut does not require confirmation (immediate action per CONTEXT)
+- **NAV-02:** AppNavigator directly renders navigator components (no conditional routes)
+- **NAV-03:** MainNavigator uses View wrapper with absolute FAB overlay
+- **NAV-04:** Icons-only tab bar (tabBarShowLabel: false)
 
 ### Pending Todos
 
@@ -64,10 +67,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T17:10:27Z
-Stopped at: Completed 02-04-PLAN.md (Phase 2 complete)
+Last session: 2026-02-04T17:11:07Z
+Stopped at: Completed 02-03-PLAN.md (Navigation structure with auth routing)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-04T17:11:07Z*

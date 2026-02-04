@@ -46,10 +46,13 @@ Plans:
   3. User can log out and return to login screen
   4. Bottom tab navigation shows Dashboard, Repository, Settings tabs
   5. OAuth callback works on both cold start and warm start scenarios
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — Install dependencies, configure Expo plugin, migrate Supabase to SecureStore
+- [ ] 02-02-PLAN.md — Create AuthContext with Google Sign-In integration and OfflineBanner
+- [ ] 02-03-PLAN.md — Create navigation structure (AppNavigator, AuthNavigator, MainNavigator) with FAB
+- [ ] 02-04-PLAN.md — Create screen components (LoginScreen, SettingsScreen with logout, placeholders)
 
 ### Phase 3: Core Screens
 **Goal**: Users can view their statistics and manage repositories
@@ -119,7 +122,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/3 | Planned | - |
-| 2. Auth & Navigation | 0/TBD | Not started | - |
+| 2. Auth & Navigation | 0/4 | Planned | - |
 | 3. Core Screens | 0/TBD | Not started | - |
 | 4. Study & Cards | 0/TBD | Not started | - |
 | 5. Distribution & Cleanup | 0/TBD | Not started | - |

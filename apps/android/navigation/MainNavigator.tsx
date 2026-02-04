@@ -1,17 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { StudyFAB } from '../components/StudyFAB';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ReposScreen } from '../screens/ReposScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export type MainTabParamList = {
   Dashboard: undefined;
@@ -30,8 +22,7 @@ type TabIconName = 'home' | 'home-outline' | 'folder' | 'folder-outline' | 'sett
  */
 export function MainNavigator() {
   return (
-    <View style={styles.container}>
-      <Tab.Navigator
+    <Tab.Navigator
         screenOptions={{
           tabBarShowLabel: false,
           tabBarActiveTintColor: '#3B82F6',
@@ -81,8 +72,6 @@ export function MainNavigator() {
             ),
           }}
         />
-      </Tab.Navigator>
-      <StudyFAB />
-    </View>
+    </Tab.Navigator>
   );
 }
