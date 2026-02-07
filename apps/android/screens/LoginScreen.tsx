@@ -8,6 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../hooks/useTheme';
 
 // Check if Google Sign-In is configured
 const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -24,9 +25,11 @@ console.log('[LoginScreen] isGoogleConfigured:', isGoogleConfigured);
  * - Google Sign-In button
  *
  * Handles loading and error states during sign-in process.
+ * All colors (except Google brand blue) are theme-aware for dark mode support.
  */
 export function LoginScreen() {
   const { signInWithGoogle } = useAuth();
+  const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,20 +48,24 @@ export function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         {/* Logo placeholder - will be replaced with actual logo */}
-        <Text style={styles.logo}>Lumio</Text>
+        <Text style={[styles.logo, { color: colors.primary }]}>Lumio</Text>
 
         {/* Tagline */}
-        <Text style={styles.tagline}>Your flashcards, supercharged</Text>
+        <Text style={[styles.tagline, { color: colors.textSecondary }]}>
+          Your flashcards, supercharged
+        </Text>
 
         {/* Error message */}
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
+        )}
 
         {/* Google Sign-In button or loading indicator */}
         {isLoading ? (
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color={colors.primary} />
         ) : (
           <TouchableOpacity
             style={styles.googleButton}
@@ -76,7 +83,7 @@ export function LoginScreen() {
         )}
 
         {!isGoogleConfigured && (
-          <Text style={styles.configWarning}>
+          <Text style={[styles.configWarning, { color: colors.danger }]}>
             Google Sign-In not configured.{'\n'}
             Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
           </Text>
@@ -89,7 +96,6 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -100,21 +106,19 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#3B82F6',
     marginBottom: 8,
   },
   tagline: {
     fontSize: 16,
-    color: '#6B7280',
     marginBottom: 48,
     textAlign: 'center',
   },
   error: {
-    color: '#ef4444',
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
   },
+  // Google brand colors are kept as-is per brand guidelines
   googleButton: {
     backgroundColor: '#4285F4',
     borderRadius: 4,
@@ -148,7 +152,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   configWarning: {
-    color: '#f97316',
     fontSize: 12,
     marginTop: 12,
     textAlign: 'center',

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { useTheme } from '../hooks/useTheme';
 
 /**
  * OfflineBanner displays a warning banner when the device loses network connection.
  * Renders inline - parent component decides placement.
+ * Uses theme-aware danger color for background, white text for contrast.
  */
 export function OfflineBanner() {
+  const { colors } = useTheme();
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
@@ -27,7 +30,7 @@ export function OfflineBanner() {
   }
 
   return (
-    <View style={styles.banner}>
+    <View style={[styles.banner, { backgroundColor: colors.danger }]}>
       <Text style={styles.text}>No internet connection</Text>
     </View>
   );
@@ -35,7 +38,6 @@ export function OfflineBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: '#f97316',
     padding: 8,
     alignItems: 'center',
   },
