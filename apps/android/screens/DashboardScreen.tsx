@@ -1,68 +1,214 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { getUserStats, getSupabaseClient } from '@lumio/core';
+import { useTheme } from '../hooks/useTheme';
+import { MainTabParamList } from '../navigation/MainNavigator';
+import { StatCard } from '../components/StatCard';
+import { EmptyState } from '../components/EmptyState';
 
 /**
- * DashboardScreen with prominent Study button.
- * Full content will be implemented in Phase 3.
+ * Format a date string into relative time (e.g., "2 hours ago")
+ * or 'Not yet' if null.
+ */
+function formatLastStudied(dateString: string | null): string {
+  if (!dateString) return 'Not yet';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString();
+}
+
+/**
+ * DashboardScreen is the app's home screen.
+ * Shows study statistics (repo count, card count, last studied),
+ * a prominent Study CTA, pull-to-refresh, and an empty state when no repos exist.
  */
 export function DashboardScreen() {
+  const { colors, isDark } = useTheme();
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+
+  const [repoCount, setRepoCount] = useState(0);
+  const [cardCount, setCardCount] = useState(0);
+  const [lastStudied, setLastStudied] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      // Fetch repo and card counts via @lumio/core API
+      const stats = await getUserStats();
+      setRepoCount(stats.repositoryCount);
+      setCardCount(stats.cardCount);
+
+      // Fetch last studied timestamp via direct query
+      const { data: sessions } = await getSupabaseClient()
+        .from('study_sessions')
+        .select('started_at')
+        .order('started_at', { ascending: false })
+        .limit(1);
+
+      if (sessions && sessions.length > 0) {
+        setLastStudied(sessions[0].started_at as string);
+      } else {
+        setLastStudied(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats().finally(() => setIsLoading(false));
+  }, [fetchStats]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchStats();
+    setIsRefreshing(false);
+  }, [fetchStats]);
+
   const handleStudyPress = () => {
     console.log('Study pressed - will navigate to Study screen in Phase 4');
   };
 
+  const isStudyDisabled = isLoading || cardCount === 0;
+
+  // Empty state: no repos found after loading completes
+  if (!isLoading && repoCount === 0) {
+    return (
+      <ScrollView
+        style={[styles.scrollView, { backgroundColor: colors.background }]}
+        contentContainerStyle={styles.emptyScrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
+        <EmptyState
+          icon="folder-open-outline"
+          title="No Repositories Yet"
+          subtitle="Add a repository to start studying. Your flashcards will appear here once a repo is synced."
+          actionLabel="Go to Repositories"
+          onAction={() => navigation.navigate('Repos')}
+        />
+      </ScrollView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Dashboard</Text>
-        <Text style={styles.subtitle}>Coming in Phase 3</Text>
+    <ScrollView
+      style={[styles.scrollView, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+      }
+    >
+      {/* Stat cards row */}
+      <View style={styles.statRow}>
+        <StatCard
+          icon="folder-outline"
+          iconColor={colors.primary}
+          iconBgColor={colors.primaryLight}
+          label="Repositories"
+          value={repoCount}
+          isLoading={isLoading}
+        />
+        <StatCard
+          icon="documents-outline"
+          iconColor="#8B5CF6"
+          iconBgColor={isDark ? '#2e1065' : '#EDE9FE'}
+          label="Cards"
+          value={cardCount}
+          isLoading={isLoading}
+        />
       </View>
 
+      {/* Last studied card */}
+      <View style={styles.lastStudiedRow}>
+        <StatCard
+          icon="time-outline"
+          iconColor="#F59E0B"
+          iconBgColor={isDark ? '#78350f' : '#FEF3C7'}
+          label="Last Studied"
+          value={formatLastStudied(lastStudied)}
+          isLoading={isLoading}
+        />
+      </View>
+
+      {/* Study CTA button */}
       <TouchableOpacity
-        style={styles.studyButton}
+        style={[
+          styles.studyButton,
+          {
+            backgroundColor: isStudyDisabled ? colors.border : colors.primary,
+            opacity: isStudyDisabled ? 0.5 : 1,
+          },
+        ]}
         onPress={handleStudyPress}
         activeOpacity={0.8}
+        disabled={isStudyDisabled}
       >
-        <Ionicons name="play" size={24} color="#ffffff" />
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Ionicons name="play" size={24} color="#ffffff" />
+        )}
         <Text style={styles.studyButtonText}>Start Study Session</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  scrollContent: {
+    paddingBottom: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
+  emptyScrollContent: {
+    flexGrow: 1,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginTop: 8,
+  statRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  lastStudiedRow: {
+    paddingHorizontal: 16,
+    marginTop: 12,
   },
   studyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: 16,
+    marginTop: 24,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 10,
-    // Android elevation
     elevation: 4,
-    // iOS shadow
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
