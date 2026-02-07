@@ -15,14 +15,13 @@ interface AddRepoFormProps {
   isAdding: boolean;
   showPatPrompt?: boolean;
   onCancel?: () => void;
-  onUrlChange?: (url: string) => void;
 }
 
 /**
  * Form to add a repository by URL.
  * When showPatPrompt is true, displays an additional PAT input for private repos.
  */
-export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel, onUrlChange }: AddRepoFormProps) {
+export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel }: AddRepoFormProps) {
   const { colors } = useTheme();
   const [url, setUrl] = useState('');
   const [pat, setPat] = useState('');
@@ -48,12 +47,16 @@ export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel, 
     if (!validateUrl(trimmedUrl)) return;
 
     const accessToken = showPatPrompt && pat.trim() ? pat.trim() : undefined;
-    await onAdd(trimmedUrl, accessToken);
-
-    // Clear form on success (parent controls isAdding state)
-    setUrl('');
-    setPat('');
-    setUrlError(null);
+    try {
+      await onAdd(trimmedUrl, accessToken);
+      // Only clear form on success (no exception thrown)
+      setUrl('');
+      setPat('');
+      setUrlError(null);
+    } catch {
+      // Parent handles the error (toast, showPatPrompt, etc.)
+      // Keep URL in the field so user doesn't have to retype it
+    }
   };
 
   return (
@@ -74,29 +77,30 @@ export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel, 
           onChangeText={(text) => {
             setUrl(text);
             if (urlError) setUrlError(null);
-            onUrlChange?.(text);
           }}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
-          editable={!isAdding}
+          editable={!isAdding && !showPatPrompt}
         />
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            { backgroundColor: colors.primary },
-            isAdding && styles.addButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isAdding}
-          activeOpacity={0.7}
-        >
-          {isAdding ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Ionicons name="add" size={24} color="#ffffff" />
-          )}
-        </TouchableOpacity>
+        {!showPatPrompt && (
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              { backgroundColor: colors.primary },
+              isAdding && styles.addButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={isAdding}
+            activeOpacity={0.7}
+          >
+            {isAdding ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Ionicons name="add" size={24} color="#ffffff" />
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {urlError && (

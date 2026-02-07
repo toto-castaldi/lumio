@@ -98,6 +98,8 @@ export function ReposScreen() {
             text2: message,
           });
         }
+        // Re-throw so the form knows not to clear the URL
+        throw error;
       } finally {
         setIsAdding(false);
       }
@@ -160,7 +162,6 @@ export function ReposScreen() {
         isAdding={isAdding}
         showPatPrompt={showPatPrompt}
         onCancel={() => setShowPatPrompt(false)}
-        onUrlChange={() => setShowPatPrompt(false)}
       />
       <FlatList
         data={repositories}
