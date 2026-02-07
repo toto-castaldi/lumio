@@ -112,11 +112,11 @@ export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel, 
           </Text>
           <TextInput
             style={[
-              styles.input,
+              styles.patInput,
               {
-                backgroundColor: colors.background,
+                backgroundColor: colors.surface,
                 color: colors.text,
-                borderColor: colors.border,
+                borderColor: colors.primary,
               },
             ]}
             placeholder="ghp_xxxxxxxxxxxx"
@@ -192,6 +192,13 @@ const styles = StyleSheet.create({
   patLabel: {
     fontSize: 13,
     marginBottom: 8,
+  },
+  patInput: {
+    height: 48,
+    borderWidth: 2,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
   },
   patButtonRow: {
     flexDirection: 'row',
