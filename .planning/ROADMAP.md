@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation** - Expo SDK 54 project with Supabase client and NativeWind
 - [ ] **Phase 2: Auth & Navigation** - Google OAuth and protected routes with tab navigation
-- [ ] **Phase 3: Core Screens** - Dashboard statistics and repository management
+- [x] **Phase 3: Core Screens** - Dashboard statistics and repository management
 - [ ] **Phase 4: Study & Cards** - Quiz flow with markdown/LaTeX rendering
 - [ ] **Phase 5: Distribution & Cleanup** - APK build, landing page, legacy removal
 
@@ -66,11 +66,13 @@ Plans:
   5. User can add a public repository via URL
   6. User can add a private repository with PAT
   7. User can remove a repository after confirmation dialog
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [x] 03-01-PLAN.md — Install dependencies, @lumio/core integration, theme system, App.tsx root setup
+- [x] 03-02-PLAN.md — Dashboard screen with stat cards, study CTA, pull-to-refresh
+- [x] 03-03-PLAN.md — Repository screen with list, add form, swipe-to-delete, toast notifications
+- [x] 03-04-PLAN.md — Settings dark mode toggle, apply theme to LoginScreen and OfflineBanner
 
 ### Phase 4: Study & Cards
 **Goal**: Users can study with pre-generated quiz questions and view card content
@@ -123,7 +125,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | ✅ Complete | 2026-02-04 |
 | 2. Auth & Navigation | 4/4 | ✅ Complete | 2026-02-04 |
-| 3. Core Screens | 0/TBD | Not started | - |
+| 3. Core Screens | 4/4 | ✅ Complete | 2026-02-07 |
 | 4. Study & Cards | 0/TBD | Not started | - |
 | 5. Distribution & Cleanup | 0/TBD | Not started | - |
 
