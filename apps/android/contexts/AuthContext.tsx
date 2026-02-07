@@ -8,7 +8,8 @@ import React, {
 } from 'react';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '@lumio/core';
+import '../lib/supabase'; // Side-effect import to ensure @lumio/core initialization
 import { configureGoogleSignIn, statusCodes } from '../lib/auth';
 
 /**
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     configureGoogleSignIn();
 
     // Restore persisted session
-    supabase.auth.getSession()
+    getSupabaseClient().auth.getSession()
       .then(({ data: { session: existingSession }, error }) => {
         if (error) {
           console.error('[Auth] getSession error:', error);
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = getSupabaseClient().auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setState(newSession ? 'ready' : 'logged_out');
@@ -92,7 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Check for successful sign-in with id token
       if (response.type === 'success' && response.data.idToken) {
         // Exchange Google ID token for Supabase session
-        const { error } = await supabase.auth.signInWithIdToken({
+        const { error } = await getSupabaseClient().auth.signInWithIdToken({
           provider: 'google',
           token: response.data.idToken,
         });
@@ -127,7 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await GoogleSignin.signOut();
 
     // Sign out from Supabase
-    await supabase.auth.signOut();
+    await getSupabaseClient().auth.signOut();
   }, []);
 
   const value: AuthContextType = {

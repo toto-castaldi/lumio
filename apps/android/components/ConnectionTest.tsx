@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '@lumio/core';
+import '../lib/supabase'; // Side-effect import to ensure @lumio/core initialization
 
 type ConnectionStatus = 'loading' | 'connected' | 'error';
 
@@ -21,7 +22,7 @@ export function ConnectionTest() {
     async function testConnection() {
       const startTime = Date.now();
       try {
-        const { error: sessionError } = await supabase.auth.getSession();
+        const { error: sessionError } = await getSupabaseClient().auth.getSession();
 
         if (sessionError) {
           throw sessionError;

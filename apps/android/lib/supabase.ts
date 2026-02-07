@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseClient, getSupabaseClient, type StorageAdapter } from '@lumio/core';
 import * as SecureStore from 'expo-secure-store';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -14,8 +14,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 /**
  * SecureStore adapter for Supabase auth storage.
  * Uses encrypted storage for sensitive auth tokens on Android.
+ * Implements @lumio/core StorageAdapter interface.
  */
-const SecureStoreAdapter = {
+const SecureStoreAdapter: StorageAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     return SecureStore.getItemAsync(key);
   },
@@ -27,11 +28,10 @@ const SecureStoreAdapter = {
   },
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: SecureStoreAdapter,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
+// Initialize @lumio/core singleton with SecureStore adapter
+createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  storage: SecureStoreAdapter,
 });
+
+// Re-export getSupabaseClient for convenience
+export { getSupabaseClient };

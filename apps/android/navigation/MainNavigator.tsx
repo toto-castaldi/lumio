@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../hooks/useTheme';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ReposScreen } from '../screens/ReposScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -21,13 +22,19 @@ type TabIconName = 'home' | 'home-outline' | 'folder' | 'folder-outline' | 'sett
  * - StudyFAB overlay positioned above tab bar
  */
 export function MainNavigator() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
         screenOptions={{
           tabBarShowLabel: false,
-          tabBarActiveTintColor: '#3B82F6',
-          tabBarInactiveTintColor: '#6B7280',
-          headerStyle: { backgroundColor: '#3B82F6' },
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textSecondary,
+          tabBarStyle: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+          },
+          headerStyle: { backgroundColor: colors.primary },
           headerTintColor: '#ffffff',
           headerShown: true,
         }}

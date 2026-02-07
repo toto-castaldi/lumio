@@ -13,6 +13,8 @@ config.watchFolders = [monorepoRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules'),
+  // Workspace transitive deps (e.g. @lumio/shared via @lumio/core)
+  path.resolve(monorepoRoot, 'packages/core/node_modules'),
 ];
 
 // Ensure proper resolution of workspace packages
