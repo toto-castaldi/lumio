@@ -11,9 +11,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getUserStats, getSupabaseClient } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
 import { MainTabParamList } from '../navigation/MainNavigator';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { StatCard } from '../components/StatCard';
 import { EmptyState } from '../components/EmptyState';
 
@@ -46,7 +49,12 @@ function formatLastStudied(dateString: string | null): string {
  */
 export function DashboardScreen() {
   const { colors, isDark } = useTheme();
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const navigation = useNavigation<
+    CompositeNavigationProp<
+      BottomTabNavigationProp<MainTabParamList>,
+      NativeStackNavigationProp<RootStackParamList>
+    >
+  >();
 
   const [repoCount, setRepoCount] = useState(0);
   const [cardCount, setCardCount] = useState(0);
@@ -89,7 +97,7 @@ export function DashboardScreen() {
   }, [fetchStats]);
 
   const handleStudyPress = () => {
-    console.log('Study pressed - will navigate to Study screen in Phase 4');
+    navigation.navigate('Study');
   };
 
   const isStudyDisabled = isLoading || cardCount === 0;

@@ -1,17 +1,72 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 
 /**
+ * Root stack param list for modal screens (Study, StudySummary)
+ * that appear over the main tab navigator.
+ */
+export type RootStackParamList = {
+  Main: undefined;
+  Study: undefined;
+  StudySummary: {
+    totalCards: number;
+    correctCount: number;
+    incorrectCount: number;
+    skippedCount: number;
+    timeSpentSeconds: number;
+  };
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/**
+ * Placeholder for StudyScreen until Task 2 wires the real component.
+ */
+function StudyScreenPlaceholder() {
+  return (
+    <View style={placeholderStyles.container}>
+      <Text style={placeholderStyles.text}>Study Screen</Text>
+    </View>
+  );
+}
+
+/**
+ * Placeholder for StudySummaryScreen until plan 04 creates it.
+ */
+function StudySummaryPlaceholder() {
+  return (
+    <View style={placeholderStyles.container}>
+      <Text style={placeholderStyles.text}>Study Summary</Text>
+    </View>
+  );
+}
+
+const placeholderStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  text: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+});
+
+/**
  * AppNavigator is the root navigator that switches between auth and main flows
  * based on the current authentication state.
  *
- * States:
- * - 'loading': Shows centered ActivityIndicator while checking session
- * - 'logged_out': Shows AuthNavigator (login flow)
- * - 'ready': Shows MainNavigator (main app with tabs)
+ * When authenticated, renders a root native-stack navigator wrapping:
+ * - Main: The tab navigator (MainNavigator)
+ * - Study: Full-screen modal study session
+ * - StudySummary: End-of-session results (card presentation)
  */
 export function AppNavigator() {
   const { state } = useAuth();
@@ -30,8 +85,22 @@ export function AppNavigator() {
     return <AuthNavigator />;
   }
 
-  // Show main app when authenticated
-  return <MainNavigator />;
+  // Show main app when authenticated, wrapped in root stack for modal screens
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Main" component={MainNavigator} />
+      <Stack.Screen
+        name="Study"
+        component={StudyScreenPlaceholder}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="StudySummary"
+        component={StudySummaryPlaceholder}
+        options={{ presentation: 'card' }}
+      />
+    </Stack.Navigator>
+  );
 }
 
 const styles = StyleSheet.create({
