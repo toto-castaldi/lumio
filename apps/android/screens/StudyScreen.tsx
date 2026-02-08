@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '../hooks/useTheme';
 import { useStudySession } from '../hooks/useStudySession';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { QuizCard } from '../components/study/QuizCard';
+import { ProgressBar } from '../components/study/ProgressBar';
 
 type StudyNavProp = NativeStackNavigationProp<RootStackParamList, 'Study'>;
 
@@ -24,8 +28,15 @@ type StudyNavProp = NativeStackNavigationProp<RootStackParamList, 'Study'>;
  * - loading: Cards are being fetched from the backend
  * - no_cards: No study cards available (questions being prepared)
  * - studying (no question yet): Ready state with "Start" button
- * - studying (with question): Quiz UI placeholder (Plan 02)
- * - completed: Session complete placeholder (Plan 04)
+ * - studying (with question): Full quiz UI with answer options, haptics, explanation, vote
+ * - completed: Session complete (Plan 04 will add StudySummary navigation)
+ *
+ * Features:
+ * - Swipe left = next card (after answering)
+ * - Swipe right = review previous answered card
+ * - Skip button removes card from session
+ * - Back/close button shows quit confirmation during active study
+ * - Progress bar tracks session completion
  */
 export function StudyScreen() {
   const { colors } = useTheme();
@@ -33,15 +44,155 @@ export function StudyScreen() {
   const {
     session,
     isLoadingQuestion,
+    isVoting,
+    handleAnswer,
+    handleVote,
     handleNext,
     handleSkip,
+    handleGoToCard,
     isSkipping,
     cardsRemaining,
+    progress,
   } = useStudySession();
 
-  // -------------------------------------------------------------------------
+  // Track whether we're reviewing a previously answered card
+  const [isReviewing, setIsReviewing] = useState(false);
+  // Store the "live" index (the furthest card the user has reached)
+  const liveIndexRef = useRef(-1);
+
+  // Keep liveIndex in sync with session progression
+  useEffect(() => {
+    if (
+      session.state === 'studying' &&
+      session.currentCard &&
+      session.currentQuestion &&
+      !isReviewing
+    ) {
+      liveIndexRef.current = session.currentIndex;
+    }
+  }, [session.currentIndex, session.state, session.currentCard, session.currentQuestion, isReviewing]);
+
+  // ---------------------------------------------------------------------------
+  // Quit confirmation on back press
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Only block if actively studying
+      if (session.state !== 'studying') return;
+
+      e.preventDefault();
+
+      Alert.alert(
+        'End Session?',
+        'Your progress will be saved.',
+        [
+          { text: 'Continue Studying', style: 'cancel' },
+          {
+            text: 'End Session',
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, session.state]);
+
+  // ---------------------------------------------------------------------------
+  // Navigation helpers
+  // ---------------------------------------------------------------------------
+  const canGoNext = session.userAnswer !== null && !isReviewing;
+  const canGoBack = session.answeredCards.length > 0;
+  const isLastCard = cardsRemaining === 0;
+
+  const goToNextCard = () => {
+    if (!canGoNext) return;
+    setIsReviewing(false);
+    handleNext();
+  };
+
+  const goToPreviousCard = () => {
+    if (!canGoBack) return;
+
+    if (isReviewing) {
+      // Find the current review position
+      const currentReviewIndex = session.answeredCards.findIndex(
+        (a) => a.card.id === session.currentCard?.id,
+      );
+      if (currentReviewIndex > 0) {
+        setIsReviewing(true);
+        handleGoToCard(currentReviewIndex - 1);
+      }
+    } else {
+      // Go to most recent answered card
+      setIsReviewing(true);
+      handleGoToCard(session.answeredCards.length - 1);
+    }
+  };
+
+  const returnFromReview = () => {
+    if (!isReviewing) return;
+
+    // Check if there's a next review card
+    const currentReviewIndex = session.answeredCards.findIndex(
+      (a) => a.card.id === session.currentCard?.id,
+    );
+
+    if (currentReviewIndex < session.answeredCards.length - 1) {
+      // Go to next reviewed card
+      handleGoToCard(currentReviewIndex + 1);
+    } else {
+      // Return to the live card (reload current question)
+      setIsReviewing(false);
+      // handleGoToCard to the live index triggers restore of the live card
+      // We need to call handleNext to re-load a fresh question if live card was already answered
+      handleNext();
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Swipe gestures
+  // ---------------------------------------------------------------------------
+  const flingLeft = Gesture.Fling()
+    .direction(Directions.LEFT)
+    .onEnd(() => {
+      if (isReviewing) {
+        returnFromReview();
+      } else if (canGoNext) {
+        goToNextCard();
+      }
+    });
+
+  const flingRight = Gesture.Fling()
+    .direction(Directions.RIGHT)
+    .onEnd(() => {
+      goToPreviousCard();
+    });
+
+  const swipeGesture = Gesture.Simultaneous(flingLeft, flingRight);
+
+  // ---------------------------------------------------------------------------
+  // Skip handler with toast
+  // ---------------------------------------------------------------------------
+  const onSkip = async () => {
+    await handleSkip();
+    Toast.show({
+      type: 'info',
+      text1: 'Card skipped',
+      visibilityTime: 1500,
+    });
+  };
+
+  // ---------------------------------------------------------------------------
   // Header
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  const showSkip =
+    session.state === 'studying' &&
+    session.currentQuestion &&
+    session.userAnswer === null &&
+    !isReviewing;
+
   const renderHeader = () => (
     <View style={[headerStyles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <TouchableOpacity
@@ -52,12 +203,14 @@ export function StudyScreen() {
         <Ionicons name="close" size={24} color={colors.text} />
       </TouchableOpacity>
 
-      <Text style={[headerStyles.title, { color: colors.text }]}>Study</Text>
+      <Text style={[headerStyles.title, { color: colors.text }]}>
+        {isReviewing ? 'Review' : 'Study'}
+      </Text>
 
-      {session.state === 'studying' && session.currentQuestion && session.userAnswer === null ? (
+      {showSkip ? (
         <TouchableOpacity
           style={headerStyles.skipButton}
-          onPress={handleSkip}
+          onPress={onSkip}
           disabled={isSkipping}
           activeOpacity={0.7}
         >
@@ -71,9 +224,9 @@ export function StudyScreen() {
     </View>
   );
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Loading state
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   const renderLoading = () => (
     <View style={contentStyles.centered}>
       <ActivityIndicator size="large" color={colors.primary} />
@@ -83,9 +236,9 @@ export function StudyScreen() {
     </View>
   );
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // No cards state
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   const renderNoCards = () => (
     <View style={contentStyles.centered}>
       <View style={[contentStyles.iconCircle, { backgroundColor: colors.primaryLight }]}>
@@ -107,9 +260,9 @@ export function StudyScreen() {
     </View>
   );
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Ready to study state (studying but no question loaded yet)
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   const renderReady = () => (
     <View style={contentStyles.centered}>
       <View style={[contentStyles.iconCircle, { backgroundColor: colors.primaryLight }]}>
@@ -139,9 +292,9 @@ export function StudyScreen() {
     </View>
   );
 
-  // -------------------------------------------------------------------------
-  // Studying state with question (placeholder for Plan 02 quiz UI)
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Studying state with question — full quiz UI
+  // ---------------------------------------------------------------------------
   const renderStudying = () => {
     if (isLoadingQuestion) {
       return (
@@ -154,48 +307,75 @@ export function StudyScreen() {
       );
     }
 
+    if (!session.currentCard || !session.currentQuestion) {
+      return renderReady();
+    }
+
     return (
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={contentStyles.studyingContent}
-      >
-        {/* Cards remaining badge */}
-        <View style={[contentStyles.badge, { backgroundColor: colors.border }]}>
-          <Text style={[contentStyles.badgeText, { color: colors.textSecondary }]}>
-            {cardsRemaining} remaining
-          </Text>
-        </View>
+      <View style={{ flex: 1 }}>
+        <GestureDetector gesture={swipeGesture}>
+          <View style={{ flex: 1 }}>
+            <QuizCard
+              card={session.currentCard}
+              question={session.currentQuestion}
+              userAnswer={session.userAnswer}
+              userVote={session.userVote}
+              onAnswer={handleAnswer}
+              onVote={handleVote}
+              isVoting={isVoting}
+            />
+          </View>
+        </GestureDetector>
 
-        {/* Card title */}
-        {session.currentCard && (
-          <Text style={[contentStyles.cardTitle, { color: colors.text }]}>
-            {session.currentCard.title}
-          </Text>
-        )}
-
-        {/* Question */}
-        {session.currentQuestion && (
-          <View style={[contentStyles.questionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[contentStyles.questionText, { color: colors.text }]}>
-              {session.currentQuestion.question}
-            </Text>
+        {/* Bottom action: Next Card button (shown after answering, hidden during review) */}
+        {session.userAnswer !== null && !isReviewing && (
+          <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={[bottomStyles.nextButton, { backgroundColor: colors.primary }]}
+              onPress={goToNextCard}
+              disabled={isLoadingQuestion}
+              activeOpacity={0.8}
+            >
+              {isLoadingQuestion ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Text style={bottomStyles.nextButtonText}>
+                    {isLastCard ? 'Finish' : 'Next Card'}
+                  </Text>
+                  <Ionicons
+                    name={isLastCard ? 'checkmark' : 'arrow-forward'}
+                    size={20}
+                    color="#ffffff"
+                  />
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* Placeholder for quiz UI */}
-        <View style={[contentStyles.placeholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Ionicons name="construct-outline" size={24} color={colors.textSecondary} />
-          <Text style={[contentStyles.placeholderText, { color: colors.textSecondary }]}>
-            Quiz UI coming in Plan 02
-          </Text>
-        </View>
-      </ScrollView>
+        {/* Review navigation hint */}
+        {isReviewing && (
+          <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={[bottomStyles.reviewButton, { borderColor: colors.primary }]}
+              onPress={returnFromReview}
+              activeOpacity={0.8}
+            >
+              <Text style={[bottomStyles.reviewButtonText, { color: colors.primary }]}>
+                Back to Current Card
+              </Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     );
   };
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Completed state (placeholder for StudySummary navigation in plan 04)
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   const renderCompleted = () => (
     <View style={contentStyles.centered}>
       <View style={[contentStyles.iconCircle, { backgroundColor: '#d1fae5' }]}>
@@ -217,9 +397,9 @@ export function StudyScreen() {
     </View>
   );
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Render based on session state
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   const renderContent = () => {
     switch (session.state) {
       case 'loading':
@@ -227,10 +407,6 @@ export function StudyScreen() {
       case 'no_cards':
         return renderNoCards();
       case 'studying':
-        // If no current question loaded yet, show ready state
-        if (!session.currentCard || !session.currentQuestion) {
-          return renderReady();
-        }
         return renderStudying();
       case 'completed':
         return renderCompleted();
@@ -239,9 +415,23 @@ export function StudyScreen() {
     }
   };
 
+  // Show progress bar when studying (has a current card or has answered cards)
+  const showProgress =
+    session.state === 'studying' &&
+    (session.currentCard !== null || session.answeredCards.length > 0);
+
+  const answeredCount = session.answeredCards.length + (session.userAnswer !== null && !isReviewing ? 1 : 0);
+
   return (
     <SafeAreaView style={[screenStyles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
+      {showProgress && (
+        <ProgressBar
+          progress={progress}
+          current={answeredCount}
+          total={session.cards.length}
+        />
+      )}
       <View style={screenStyles.content}>
         {renderContent()}
       </View>
@@ -345,46 +535,42 @@ const contentStyles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
-  studyingContent: {
+});
+
+const bottomStyles = StyleSheet.create({
+  container: {
     padding: 16,
-    gap: 16,
+    borderTopWidth: 1,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  badgeText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  questionCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  questionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 26,
-  },
-  placeholder: {
+  nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+    paddingVertical: 16,
+    borderRadius: 14,
+    gap: 8,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  nextButtonText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 2,
     gap: 8,
   },
-  placeholderText: {
-    fontSize: 15,
-    fontWeight: '500',
+  reviewButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
