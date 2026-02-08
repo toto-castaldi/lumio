@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
+import { StudyScreen } from '../screens/StudyScreen';
 
 /**
  * Root stack param list for modal screens (Study, StudySummary)
@@ -22,17 +23,6 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-/**
- * Placeholder for StudyScreen until Task 2 wires the real component.
- */
-function StudyScreenPlaceholder() {
-  return (
-    <View style={placeholderStyles.container}>
-      <Text style={placeholderStyles.text}>Study Screen</Text>
-    </View>
-  );
-}
 
 /**
  * Placeholder for StudySummaryScreen until plan 04 creates it.
@@ -91,7 +81,7 @@ export function AppNavigator() {
       <Stack.Screen name="Main" component={MainNavigator} />
       <Stack.Screen
         name="Study"
-        component={StudyScreenPlaceholder}
+        component={StudyScreen}
         options={{ presentation: 'card' }}
       />
       <Stack.Screen
