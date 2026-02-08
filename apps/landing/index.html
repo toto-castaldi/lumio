@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumio</title>
+  <meta name="description" content="Study smarter with AI-powered flashcards. Your content lives in Git, questions are generated automatically.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <a href="/" class="logo">Lumio</a>
+      <button id="lang-toggle" class="lang-toggle" aria-label="Switch language">IT</button>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1>
+        <span lang="en">Study smarter with <em>AI-powered</em> flashcards</span>
+        <span lang="it">Studia in modo intelligente con flashcard generate dall'<em>AI</em></span>
+      </h1>
+      <p class="subtitle">
+        <span lang="en">Your study material lives in Git repositories. Lumio generates quizzes automatically and tracks your progress with spaced repetition.</span>
+        <span lang="it">Il tuo materiale di studio vive nei repository Git. Lumio genera quiz automaticamente e traccia i tuoi progressi con la ripetizione spaziata.</span>
+      </p>
+      <a href="https://github.com/toto-castaldi/lumio/releases/latest/download/lumio.apk" class="btn-download">
+        <span lang="en">Download APK</span>
+        <span lang="it">Scarica APK</span>
+      </a>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+      <h2>
+        <span lang="en">Why Lumio?</span>
+        <span lang="it">Perché Lumio?</span>
+      </h2>
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="icon">📂</div>
+          <h3>
+            <span lang="en">Git-powered content</span>
+            <span lang="it">Contenuti da Git</span>
+          </h3>
+          <p>
+            <span lang="en">Your study material lives in Git repositories. Write Markdown, push, and Lumio takes care of the rest.</span>
+            <span lang="it">Il tuo materiale di studio vive nei repository Git. Scrivi in Markdown, fai push e Lumio si occupa del resto.</span>
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon">🤖</div>
+          <h3>
+            <span lang="en">AI-generated quizzes</span>
+            <span lang="it">Quiz generati dall'AI</span>
+          </h3>
+          <p>
+            <span lang="en">Questions generated automatically from your content. No manual card creation needed.</span>
+            <span lang="it">Domande generate automaticamente dal tuo contenuto. Non serve creare card manualmente.</span>
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon">📈</div>
+          <h3>
+            <span lang="en">Smart study sessions</span>
+            <span lang="it">Sessioni di studio intelligenti</span>
+          </h3>
+          <p>
+            <span lang="en">Track your progress with spaced repetition. Study what matters, when it matters.</span>
+            <span lang="it">Traccia i tuoi progressi con la ripetizione spaziata. Studia ciò che conta, quando conta.</span>
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Screenshots -->
+    <section class="screenshots">
+      <h2>
+        <span lang="en">See it in action</span>
+        <span lang="it">Guardalo in azione</span>
+      </h2>
+      <div class="screenshots-row">
+        <div class="screenshot-placeholder">
+          <img src="screenshots/dashboard.png"
+               alt="Lumio dashboard showing study repositories and progress"
+               onerror="this.style.display='none'"
+               onload="this.parentElement.classList.add('has-image')">
+        </div>
+        <div class="screenshot-placeholder">
+          <img src="screenshots/study.png"
+               alt="Lumio study session with flashcard and quiz"
+               onerror="this.style.display='none'"
+               onload="this.parentElement.classList.add('has-image')">
+        </div>
+        <div class="screenshot-placeholder">
+          <img src="screenshots/quiz.png"
+               alt="Lumio quiz with multiple choice answers"
+               onerror="this.style.display='none'"
+               onload="this.parentElement.classList.add('has-image')">
+        </div>
+      </div>
+    </section>
+
+    <!-- Download CTA -->
+    <section class="download-cta">
+      <h2>
+        <span lang="en">Ready to study smarter?</span>
+        <span lang="it">Pronto a studiare meglio?</span>
+      </h2>
+      <a href="https://github.com/toto-castaldi/lumio/releases/latest/download/lumio.apk" class="btn-download">
+        <span lang="en">Download Lumio</span>
+        <span lang="it">Scarica Lumio</span>
+      </a>
+      <p class="note">
+        <span lang="en">Android only. Requires Android 7.0+</span>
+        <span lang="it">Solo Android. Richiede Android 7.0+</span>
+      </p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>
+        <span lang="en">Made by <a href="https://github.com/toto-castaldi">toto-castaldi</a> · <a href="https://github.com/toto-castaldi/lumio">GitHub</a></span>
+        <span lang="it">Creato da <a href="https://github.com/toto-castaldi">toto-castaldi</a> · <a href="https://github.com/toto-castaldi/lumio">GitHub</a></span>
+      </p>
+    </footer>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
