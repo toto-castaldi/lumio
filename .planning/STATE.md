@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 4 - Study & Cards (In Progress)
+**Current focus:** Phase 5 - Distribution & Cleanup (In progress)
 
 ## Current Position
 
-Phase: 4 of 5 (Study & Cards)
-Plan: 3 of 4 complete (01, 02, 03 done)
+Phase: 5 of 5 (Distribution & Cleanup)
+Plan: 1 of 4 complete (02 done)
 Status: In progress
-Last activity: 2026-02-08 — Completed 04-03-PLAN.md (Card content WebView renderer)
+Last activity: 2026-02-08 — Completed 05-02-PLAN.md (Bilingual landing page, nginx static config)
 
-Progress: [██████████████████░░] 90% (14/15 plans through Phase 4.3)
+Progress: [████████████████████████████████░░░░░░░░] 84% (16/19 plans total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 3.1 min
-- Total execution time: 43 min
+- Total plans completed: 16
+- Average duration: 3.6 min
+- Total execution time: 60 min
 
 **By Phase:**
 
@@ -30,11 +30,12 @@ Progress: [██████████████████░░] 90% (14
 | 01-foundation | 2 | 7 min | 3.5 min |
 | 02-auth-navigation | 4 | 11 min | 2.75 min |
 | 03-core-screens | 5 | 16 min | 3.2 min |
-| 04-study-cards | 3 | 9 min | 3.0 min |
+| 04-study-cards | 4 | 24 min | 6.0 min |
+| 05-distribution-cleanup | 1 | 2 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (2 min), 03-04 (3 min), 03-05 (3 min), 04-01 (4 min), 04-03 (2 min)
-- Trend: Stable at ~2-4 min per plan
+- Last 5 plans: 03-05 (3 min), 04-01 (4 min), 04-03 (2 min), 04-04 (15 min), 05-02 (2 min)
+- Trend: 05-02 fast (static files, no build step)
 
 *Updated after each plan completion*
 
@@ -71,6 +72,11 @@ Recent decisions affecting current work:
 - **QUIZ-02:** Review mode uses separate isReviewing state with explicit "Back to Current Card" button
 - **RENDER-01:** CDN-loaded libraries (marked.js, KaTeX, highlight.js) in WebView for card content rendering -- native RN text components cannot handle LaTeX + code blocks
 - **RENDER-02:** postMessage-based dynamic height reporting with 100ms delay for WebView rendering settlement
+- **NAV-06:** Prev/Next buttons (50/50 width) replace swipe gestures — swipe conflicted with ScrollView inside QuizCard
+- **RENDER-03:** No pinch-to-zoom on card images — card preview modal is read-only, no image zoom
+- **RENDER-04:** CardPreviewModal uses bottom-sheet style (80% height, rounded corners, backdrop tap to close) instead of fullscreen
+- **LANDING-01:** Pure CSS language toggle using html[lang] attribute selectors instead of JS DOM manipulation
+- **LANDING-02:** Screenshot placeholders use CSS ::after pseudo-element with onerror/onload for graceful degradation
 
 ### Pending Todos
 
@@ -84,9 +90,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 04-03-PLAN.md (Card content WebView renderer)
-Resume file: .planning/phases/04-study-cards/04-04-PLAN.md
+Stopped at: Completed 05-02 (Landing Page) — bilingual landing page + nginx config done
+Resume file: .planning/phases/05-distribution-cleanup/05-01-PLAN.md (or next incomplete plan)
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-08 (04-03)*
+*Last updated: 2026-02-08 (05-02 — Landing page complete)*
