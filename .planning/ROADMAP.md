@@ -12,11 +12,11 @@ Migration from dual PWA apps to a single native Android application. The journey
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Expo SDK 54 project with Supabase client and NativeWind
-- [ ] **Phase 2: Auth & Navigation** - Google OAuth and protected routes with tab navigation
+- [x] **Phase 1: Foundation** - Expo SDK 54 project with Supabase client and NativeWind
+- [x] **Phase 2: Auth & Navigation** - Google OAuth and protected routes with tab navigation
 - [x] **Phase 3: Core Screens** - Dashboard statistics and repository management
 - [x] **Phase 4: Study & Cards** - Quiz flow with markdown/LaTeX rendering
-- [ ] **Phase 5: Distribution & Cleanup** - APK build, landing page, legacy removal
+- [x] **Phase 5: Distribution & Cleanup** - APK build, landing page, legacy removal
 
 ## Phase Details
 
@@ -114,10 +114,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Release signing config, dynamic versioning, keystore setup
-- [ ] 05-02-PLAN.md — Bilingual landing page with purple/amber branding and nginx config
-- [ ] 05-03-PLAN.md — CI/CD overhaul: build-apk + deploy-landing, remove web/mobile jobs
-- [ ] 05-04-PLAN.md — Remove apps/web and apps/mobile, clean up root package.json
+- [x] 05-01-PLAN.md — Release signing config, dynamic versioning, keystore setup
+- [x] 05-02-PLAN.md — Bilingual landing page with purple/amber branding and nginx config
+- [x] 05-03-PLAN.md — CI/CD overhaul: build-apk + deploy-landing, remove web/mobile jobs
+- [x] 05-04-PLAN.md — Remove apps/web and apps/mobile, clean up root package.json
 
 ## Progress
 
@@ -130,7 +130,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Auth & Navigation | 4/4 | ✅ Complete | 2026-02-04 |
 | 3. Core Screens | 4/4 | ✅ Complete | 2026-02-07 |
 | 4. Study & Cards | 4/4 | ✅ Complete | 2026-02-08 |
-| 5. Distribution & Cleanup | 0/4 | Not started | - |
+| 5. Distribution & Cleanup | 4/4 | ✅ Complete | 2026-02-08 |
 
 ---
 *Roadmap created: 2026-01-29*
