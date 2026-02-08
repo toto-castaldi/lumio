@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Foundation** - Expo SDK 54 project with Supabase client and NativeWind
 - [ ] **Phase 2: Auth & Navigation** - Google OAuth and protected routes with tab navigation
 - [x] **Phase 3: Core Screens** - Dashboard statistics and repository management
-- [ ] **Phase 4: Study & Cards** - Quiz flow with markdown/LaTeX rendering
+- [x] **Phase 4: Study & Cards** - Quiz flow with markdown/LaTeX rendering
 - [ ] **Phase 5: Distribution & Cleanup** - APK build, landing page, legacy removal
 
 ## Phase Details
@@ -84,7 +84,7 @@ Plans:
   3. User sees explanation after answering
   4. User can vote on question quality (like/dislike)
   5. User can skip cards during study
-  6. Swipe gestures navigate between cards
+  6. Prev/Next buttons navigate between cards (swipe replaced due to ScrollView conflict)
   7. Haptic feedback triggers on answer (correct/incorrect)
   8. Progress bar shows session completion status
   9. Card content renders markdown (headings, lists, bold, italic, links)
@@ -97,25 +97,27 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Install deps, restructure navigation (RootStack), create useStudySession hook and StudyScreen skeleton
 - [x] 04-02-PLAN.md — Quiz interaction UI (QuizCard, AnswerOption, ExplanationPanel, haptics, swipe, skip, progress, quit confirmation)
-- [x] 04-03-PLAN.md — Card content WebView renderer (markdown, LaTeX, code highlighting, images, pinch-to-zoom)
-- [ ] 04-04-PLAN.md — StudySummaryScreen, complete flow wiring, native rebuild, device verification
+- [x] 04-03-PLAN.md — Card content WebView renderer (markdown, LaTeX, code highlighting, images)
+- [x] 04-04-PLAN.md — StudySummaryScreen, complete flow wiring, native rebuild, device verification
 
 ### Phase 5: Distribution & Cleanup
 **Goal**: APK available for download and legacy PWA code removed
 **Depends on**: Phase 4
 **Requirements**: DIST-01, DIST-02, DIST-03, DIST-04, CLEAN-01, CLEAN-02
 **Success Criteria** (what must be TRUE):
-  1. APK builds successfully via EAS Build
+  1. APK builds successfully via local Gradle build in GitHub Actions
   2. Landing page is live at lumio.toto-castaldi.com
   3. APK download link works from landing page
   4. Landing page shows product description and screenshots
   5. apps/web directory is removed from codebase
   6. apps/mobile (PWA) directory is removed from codebase
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — Release signing config, dynamic versioning, keystore setup
+- [ ] 05-02-PLAN.md — Bilingual landing page with purple/amber branding and nginx config
+- [ ] 05-03-PLAN.md — CI/CD overhaul: build-apk + deploy-landing, remove web/mobile jobs
+- [ ] 05-04-PLAN.md — Remove apps/web and apps/mobile, clean up root package.json
 
 ## Progress
 
@@ -127,10 +129,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 2/2 | ✅ Complete | 2026-02-04 |
 | 2. Auth & Navigation | 4/4 | ✅ Complete | 2026-02-04 |
 | 3. Core Screens | 4/4 | ✅ Complete | 2026-02-07 |
-| 4. Study & Cards | 3/4 | In progress | - |
-| 5. Distribution & Cleanup | 0/TBD | Not started | - |
+| 4. Study & Cards | 4/4 | ✅ Complete | 2026-02-08 |
+| 5. Distribution & Cleanup | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
 *Phase 1 planned: 2026-02-03*
 *Phase 4 planned: 2026-02-08*
+*Phase 5 planned: 2026-02-08*
