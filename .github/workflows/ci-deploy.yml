@@ -123,11 +123,23 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-  build-web:
+  build-apk:
     runs-on: ubuntu-latest
-    needs: lint-and-typecheck
+    needs: [lint-and-typecheck, auto-release]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success' && needs.auto-release.outputs.released == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull latest changes
+        run: git pull origin main
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - uses: pnpm/action-setup@v4
 
@@ -136,39 +148,14 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Build web app
-        run: pnpm build:web
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'http://localhost:54321' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'placeholder' }}
-          BUILD_NUMBER: ${{ github.run_number }}
-          COMMIT_SHA: ${{ github.sha }}
-          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - name: Cache Gradle
+        uses: actions/cache@v4
         with:
-          name: web-dist
-          path: apps/web/dist
-
-  build-mobile:
-    runs-on: ubuntu-latest
-    needs: lint-and-typecheck
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('apps/android/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -176,142 +163,37 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
-      - name: Build mobile PWA
-        run: pnpm build:mobile
+      - name: Expo prebuild
+        working-directory: apps/android
+        run: npx expo prebuild --platform android --clean
         env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'http://localhost:54321' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'placeholder' }}
-          BUILD_NUMBER: ${{ github.run_number }}
-          COMMIT_SHA: ${{ github.sha }}
-          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > apps/android/android/app/release.keystore
+
+      - name: Build release APK
+        working-directory: apps/android/android
+        run: ./gradlew app:assembleRelease -PversionCode=${{ github.run_number }} -PversionName=${{ needs.auto-release.outputs.new_version }}
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Rename APK
+        run: cp apps/android/android/app/build/outputs/apk/release/app-release.apk lumio.apk
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: mobile-dist
-          path: apps/mobile/dist
+          tag_name: v${{ needs.auto-release.outputs.new_version }}
+          files: lumio.apk
 
   # ============================================
   # Deploy Jobs - Only on push to main
   # ============================================
-
-  deploy-web:
-    runs-on: ubuntu-latest
-    needs: [build-web, auto-release]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-web.result == 'success'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Pull latest changes
-        run: git pull origin main
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Show version being deployed
-        run: |
-          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
-          echo "Deploying version: $VERSION"
-
-      - name: Build web app
-        run: pnpm build:web
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          BUILD_NUMBER: ${{ github.run_number }}
-          COMMIT_SHA: ${{ github.sha }}
-          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
-
-      - name: Deploy to DigitalOcean
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: 'apps/web/dist/*'
-          target: '/var/www/lumio'
-          strip_components: 3
-
-      - name: Reload Nginx
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: sudo systemctl reload nginx
-
-  deploy-mobile:
-    runs-on: ubuntu-latest
-    needs: [build-mobile, auto-release]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-mobile.result == 'success'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Pull latest changes
-        run: git pull origin main
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      - name: Show version being deployed
-        run: |
-          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
-          echo "Deploying version: $VERSION"
-
-      - name: Build mobile PWA
-        run: pnpm build:mobile
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          BUILD_NUMBER: ${{ github.run_number }}
-          COMMIT_SHA: ${{ github.sha }}
-          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
-
-      - name: Deploy to DigitalOcean
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: 'apps/mobile/dist/*'
-          target: '/var/www/lumio-mobile'
-          strip_components: 3
-
-      - name: Reload Nginx
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: sudo systemctl reload nginx
 
   deploy-migrations:
     runs-on: ubuntu-latest
