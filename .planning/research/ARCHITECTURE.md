@@ -1,444 +1,675 @@
-# Architecture Research: React Native Android App
+# Architecture Patterns
 
-**Domain:** React Native mobile application (Android-only)
-**Researched:** 2026-01-29
-**Confidence:** HIGH (verified with official docs and current best practices)
+**Domain:** Feature integration into existing React Native / Expo Android app
+**Researched:** 2026-02-08
 
-## Standard Architecture
+## Overview
 
-### System Overview
+This document specifies how four features -- i18n (IT/EN toggle), logo integration, configurable cards-per-session, and the bottom-sheet preview bugfix -- integrate into the existing Lumio Android app architecture. Each feature is analyzed for: what new components/files are needed, what existing files are modified, data flow changes, and integration points.
 
-```
-+------------------------------------------------------------------+
-|                       REACT NATIVE APP                            |
-|------------------------------------------------------------------|
-|                         SCREENS                                   |
-|  +----------+  +----------+  +----------+  +----------+          |
-|  |  Login   |  |Dashboard |  |  Repos   |  |  Study   |          |
-|  +----+-----+  +----+-----+  +----+-----+  +----+-----+          |
-|       |             |             |             |                 |
-|-------+-------------+-------------+-------------+-----------------|
-|                       NAVIGATION                                  |
-|  +----------------------------------------------------------+    |
-|  |              Expo Router (file-based)                     |    |
-|  +----------------------------------------------------------+    |
-|------------------------------------------------------------------|
-|                       STATE LAYER                                 |
-|  +------------------+  +--------------------+                     |
-|  | TanStack Query   |  |     Zustand        |                     |
-|  | (server state)   |  |  (client state)    |                     |
-|  +--------+---------+  +---------+----------+                     |
-|           |                      |                                |
-|------------------------------------------------------------------|
-|                       API LAYER                                   |
-|  +----------------------------------------------------------+    |
-|  |                 @lumio/core (shared)                      |    |
-|  |   - createSupabaseClient()                                |    |
-|  |   - signInWithGoogle(), signOut()                         |    |
-|  |   - getUserRepositories(), getStudyCards()                |    |
-|  |   - generateQuiz(), validateAnswer()                      |    |
-|  +----------------------------------------------------------+    |
-+------------------------------------------------------------------+
-           |                    |                    |
-           v                    v                    v
-+-------------------+  +------------------+  +------------------+
-|   Supabase Auth   |  | Supabase DB/RLS  |  |  Edge Functions  |
-|   (Google OAuth)  |  |   (PostgreSQL)   |  |   (LLM proxy)    |
-+-------------------+  +------------------+  +------------------+
-```
+The existing app uses: React Context (AuthContext, ThemeContext), AsyncStorage for preferences, react-navigation (not expo-router), WebView-based card rendering, and a custom bottom-sheet Modal. No Redux, Zustand, or TanStack Query.
 
-### Component Responsibilities
+---
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Screens | UI + user interactions | React components in `app/` directory |
-| Navigation | Route management, deep links | Expo Router (file-based routing) |
-| TanStack Query | Server data fetching, caching | `useQuery`, `useMutation` hooks |
-| Zustand | Client-only state (UI state, preferences) | Small stores for specific concerns |
-| @lumio/core | Supabase client, business logic | Shared package (already exists) |
-| Auth Context | Session management, auth state | React Context wrapping Supabase auth |
+## Feature 1: Internationalization (i18n) -- IT/EN Toggle
 
-## Recommended Project Structure
+### Recommended Architecture
+
+Use `i18next` + `react-i18next` + `expo-localization` because this is the dominant pattern in the React Native / Expo ecosystem. `expo-localization` detects the device locale; `i18next` manages translation strings and language switching; `react-i18next` provides the `useTranslation` hook for components.
+
+**Confidence:** HIGH -- this is the standard approach across Expo starter kits, official Expo docs, and community guides.
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `apps/android/i18n/index.ts` | i18next initialization, language detector, fallback config |
+| `apps/android/i18n/locales/en.json` | English translation strings |
+| `apps/android/i18n/locales/it.json` | Italian translation strings |
+
+### New Context: LanguageProvider (NOT needed)
+
+Do NOT create a LanguageContext. `react-i18next` already provides `I18nextProvider` and the `useTranslation()` hook, which internally manage reactive language state. Adding a custom context would be redundant.
+
+### Provider Placement
+
+No wrapper component needed if using the `initReactI18next` plugin (which registers i18next as a React module internally). The initialization file is imported as a side-effect in `App.tsx`, the same pattern already used for Supabase:
 
 ```
-apps/native/                       # New React Native app
-├── app/                           # Expo Router screens (file-based routing)
-│   ├── _layout.tsx               # Root layout (providers, auth wrapper)
-│   ├── index.tsx                 # Home redirect
-│   ├── login.tsx                 # Login screen
-│   ├── (auth)/                   # Auth group (protected routes)
-│   │   ├── _layout.tsx           # Protected layout wrapper
-│   │   ├── dashboard.tsx         # Dashboard screen
-│   │   ├── repositories.tsx      # Repositories list
-│   │   ├── study.tsx             # Study session
-│   │   └── card/[id].tsx         # Card preview (dynamic route)
-│   └── auth/
-│       └── callback.tsx          # OAuth callback handler
-│
-├── src/
-│   ├── components/               # Shared UI components
-│   │   ├── ui/                   # Base UI atoms (Button, Card, etc.)
-│   │   ├── CardPreview.tsx       # Card markdown rendering
-│   │   ├── QuizQuestion.tsx      # Quiz UI component
-│   │   └── StatsCard.tsx         # Statistics display
-│   │
-│   ├── hooks/                    # Custom hooks
-│   │   ├── useAuth.ts            # Auth state hook
-│   │   ├── useRepositories.ts    # TanStack Query wrapper
-│   │   ├── useStudySession.ts    # Study flow state
-│   │   └── useQuiz.ts            # Quiz generation/validation
-│   │
-│   ├── stores/                   # Zustand stores (client state)
-│   │   ├── uiStore.ts            # UI preferences, theme
-│   │   └── studyStore.ts         # Current study session state
-│   │
-│   ├── providers/                # React context providers
-│   │   ├── AuthProvider.tsx      # Auth context
-│   │   └── QueryProvider.tsx     # TanStack Query setup
-│   │
-│   ├── lib/                      # Utilities
-│   │   ├── supabase.ts           # Supabase client init (uses @lumio/core)
-│   │   └── storage.ts            # AsyncStorage adapter
-│   │
-│   └── types/                    # App-specific types
-│       └── navigation.ts         # Route type definitions
-│
-├── assets/                       # Images, fonts
-├── app.json                      # Expo config
-├── babel.config.js               # Babel + NativeWind
-├── tailwind.config.js            # Tailwind configuration
-├── nativewind-env.d.ts           # NativeWind TypeScript support
-├── metro.config.js               # Metro bundler config
-└── package.json
+App.tsx
+  import './i18n';          <-- NEW side-effect import (must be before component tree)
+  import './lib/supabase';  <-- existing side-effect import
+  GestureHandlerRootView
+    SafeAreaProvider
+      AuthProvider           <-- LoginScreen can already use useTranslation()
+        ThemeProvider
+          NavigationContainer
+            ...
 ```
 
-### Structure Rationale
+### Data Flow
 
-- **app/:** Expo Router convention. File names become routes automatically. Groups with `()` allow shared layouts without affecting URL.
-- **src/components/:** Reusable UI components. Atomic design lite - ui/ for primitives, feature components at root.
-- **src/hooks/:** Custom hooks that encapsulate TanStack Query calls and business logic. One hook per feature area.
-- **src/stores/:** Zustand stores for client-only state. Keep minimal - most state should be in TanStack Query.
-- **src/providers/:** Context providers. Auth wraps entire app, Query provider at root.
-- **src/lib/:** Framework setup and utilities. Supabase initialization happens here.
+```
+1. App boot -> i18n/index.ts initializes i18next with initReactI18next plugin
+2. expo-localization detects device locale
+3. AsyncStorage checked for persisted language override (@lumio/language)
+4. If override exists, use it; else use device locale (fallback: 'en')
+5. User changes language in SettingsScreen -> i18n.changeLanguage('it')
+6. i18next notifies react-i18next subscribers
+7. All components using useTranslation() re-render with new strings
+8. Selected language persisted to AsyncStorage
+```
 
-## Architectural Patterns
+### Integration Points -- Modified Files
 
-### Pattern 1: File-Based Routing with Expo Router
+| File | Change |
+|------|--------|
+| `App.tsx` | Add `import './i18n'` as first import (side-effect init) |
+| `screens/SettingsScreen.tsx` | Add "Language" section with IT/EN radio buttons (same UI pattern as existing theme toggle). Replace all 9 hardcoded strings with `t('key')`. |
+| `screens/LoginScreen.tsx` | Replace `"Your flashcards, supercharged"`, `"Sign in with Google"`, config warning with `t()` calls |
+| `screens/DashboardScreen.tsx` | Replace `"Repositories"`, `"Cards"`, `"Last Studied"`, `"Start Study Session"`, `"No Repositories Yet"`, subtitle, `"Go to Repositories"`, time-ago strings with `t()` |
+| `screens/ReposScreen.tsx` | Replace toast messages (`"Failed to load repositories"`, `"Repository added"`, `"Repository deleted"`, etc.), Alert titles/messages, button labels |
+| `screens/StudyScreen.tsx` | Replace `"Study"`, `"Review"`, `"Skip"`, `"Skipping..."`, `"Next Card"`, `"Finish"`, `"Loading cards..."`, `"Loading question..."`, `"No cards available"`, `"Ready to study"`, `"cards available"`, `"Start"`, `"Session Complete"`, `"Back to Dashboard"`, `"Prev Card"`, `"Back to Current Card"`, `"End Session?"`, `"Your progress will be saved."`, `"Continue Studying"`, `"Card skipped"` |
+| `screens/StudySummaryScreen.tsx` | Replace `"Session Complete!"`, `"Score"`, `"Correct"`, `"Incorrect"`, `"Skipped"`, `"Time"`, `"Return to Dashboard"` |
+| `components/AddRepoForm.tsx` | Replace `"Repository URL is required"`, `"Enter a valid GitHub repository URL"`, `"Cancel"`, `"Submit with Token"`, PAT label, placeholder |
+| `components/study/ExplanationPanel.tsx` | Replace any hardcoded labels |
+| `navigation/MainNavigator.tsx` | Replace `title: 'Repositories'` with translated string |
 
-**What:** Routes are defined by file system structure in `app/` directory.
-**When to use:** Default for all Expo projects. Automatically provides deep linking.
-**Trade-offs:** Less flexible than programmatic routing, but much simpler setup.
+### Translation Key Structure
 
-**Example:**
-```typescript
-// app/(auth)/_layout.tsx - Protected route wrapper
-import { Redirect, Slot } from 'expo-router';
-import { useAuth } from '@/hooks/useAuth';
-
-export default function AuthLayout() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) return <LoadingScreen />;
-  if (!user) return <Redirect href="/login" />;
-
-  return <Slot />;
+```json
+{
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading..."
+  },
+  "login": {
+    "tagline": "Your flashcards, supercharged",
+    "signInGoogle": "Sign in with Google",
+    "googleNotConfigured": "Google Sign-In not configured.\nSet EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID"
+  },
+  "dashboard": {
+    "repositories": "Repositories",
+    "cards": "Cards",
+    "lastStudied": "Last Studied",
+    "notYet": "Not yet",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "startStudy": "Start Study Session",
+    "noReposTitle": "No Repositories Yet",
+    "noReposSubtitle": "Add a repository to start studying. Your flashcards will appear here once a repo is synced.",
+    "goToRepos": "Go to Repositories"
+  },
+  "settings": {
+    "signedInAs": "Signed in as",
+    "appearance": "Appearance",
+    "language": "Language",
+    "study": "Study",
+    "cardsPerSession": "Cards per session",
+    "allCards": "All",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "italian": "Italiano",
+    "english": "English",
+    "logout": "Log out"
+  },
+  "study": {
+    "title": "Study",
+    "review": "Review",
+    "skip": "Skip",
+    "skipping": "Skipping...",
+    "nextCard": "Next Card",
+    "prevCard": "Prev Card",
+    "finish": "Finish",
+    "start": "Start",
+    "loadingCards": "Loading cards...",
+    "loadingQuestion": "Loading question...",
+    "noCards": "No cards available",
+    "noCardsSubtitle": "Questions are being prepared. Try again in a few minutes.",
+    "readyTitle": "Ready to study",
+    "cardsAvailable": "{{count}} cards available",
+    "sessionComplete": "Session Complete",
+    "backToDashboard": "Back to Dashboard",
+    "backToCurrent": "Back to Current Card",
+    "endSession": "End Session?",
+    "progressSaved": "Your progress will be saved.",
+    "continueStudying": "Continue Studying",
+    "cardSkipped": "Card skipped"
+  },
+  "summary": {
+    "title": "Session Complete!",
+    "score": "Score",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "skipped": "Skipped",
+    "time": "Time",
+    "returnDashboard": "Return to Dashboard"
+  },
+  "repos": {
+    "title": "Repositories",
+    "urlRequired": "Repository URL is required",
+    "invalidUrl": "Enter a valid GitHub repository URL",
+    "submitWithToken": "Submit with Token",
+    "patLabel": "This repository appears to be private. Enter a Personal Access Token:",
+    "addSuccess": "Repository added",
+    "addSuccessDetail": "Syncing cards from repository...",
+    "addFailed": "Failed to add repository",
+    "loadFailed": "Failed to load repositories",
+    "deleteTitle": "Delete Repository",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? All associated cards will also be removed.",
+    "deleteSuccess": "Repository deleted",
+    "deleteSuccessDetail": "\"{{name}}\" has been removed.",
+    "deleteFailed": "Failed to delete repository",
+    "privateRepo": "Private repository?",
+    "privateRepoDetail": "Enter a Personal Access Token to add this repo.",
+    "emptyTitle": "No repositories yet",
+    "emptySubtitle": "Add a GitHub repository URL above to start importing study cards."
+  }
 }
 ```
 
-### Pattern 2: TanStack Query for Server State
+### Persistence Strategy
 
-**What:** All API calls go through TanStack Query hooks. Handles caching, refetching, loading/error states.
-**When to use:** Any data that comes from Supabase (repositories, cards, stats, quiz).
-**Trade-offs:** Additional abstraction layer, but eliminates manual cache management.
+Use the same `AsyncStorage` pattern as theme preference, integrated into the i18next language detector plugin:
 
-**Example:**
 ```typescript
-// src/hooks/useRepositories.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUserRepositories, addRepository, deleteRepository } from '@lumio/core';
+// In i18n/index.ts
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocales } from 'expo-localization';
+import en from './locales/en.json';
+import it from './locales/it.json';
 
-export function useRepositories() {
-  return useQuery({
-    queryKey: ['repositories'],
-    queryFn: getUserRepositories,
+const LANGUAGE_STORAGE_KEY = '@lumio/language';
+
+const languageDetector = {
+  type: 'languageDetector' as const,
+  async: true,
+  detect: async (callback: (lng: string) => void) => {
+    const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored) return callback(stored);
+    const locale = getLocales()[0]?.languageCode || 'en';
+    callback(locale === 'it' ? 'it' : 'en'); // Only support it/en
+  },
+  cacheUserLanguage: async (lng: string) => {
+    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
+  },
+};
+
+i18n
+  .use(languageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: { en: { translation: en }, it: { translation: it } },
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
   });
+
+export default i18n;
+```
+
+### Dependencies to Install
+
+```bash
+pnpm --filter @lumio/android add i18next react-i18next expo-localization
+```
+
+`expo-localization` is compatible with Expo SDK 54. No native rebuild required.
+
+### Anti-Patterns to Avoid
+
+- Do NOT create a separate `useLanguage()` hook wrapping `useTranslation()` -- it adds unnecessary indirection.
+- Do NOT put translation files in `packages/shared` -- they are UI-specific.
+- Do NOT use string concatenation for dynamic translations -- use i18next interpolation syntax: `t('repos.deleteConfirm', { name })`.
+
+---
+
+## Feature 2: Logo Integration
+
+### Recommended Architecture
+
+Convert SVG logo to a React Native component using `SvgXml` from `react-native-svg`. The project already uses Expo SDK 54 which bundles `react-native-svg`. Render the logo inline as a React component rather than as a PNG image.
+
+**Confidence:** HIGH -- `react-native-svg` is included with Expo SDK 54.
+
+### Approach: SvgXml Component (NOT svg-transformer)
+
+Use `SvgXml` from `react-native-svg` because:
+1. The SVGs are simple (1.3KB each) -- inlining as string constants is trivial
+2. Avoids Metro config changes (`react-native-svg-transformer` requires modifying `metro.config.js`)
+3. No dev client rebuild needed
+4. The logo is only used in 1-2 places (LoginScreen, possibly header)
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `apps/android/components/LumioLogo.tsx` | SVG logo component with configurable `size` prop |
+
+### Component Design
+
+```typescript
+// components/LumioLogo.tsx
+import React from 'react';
+import { SvgXml } from 'react-native-svg';
+
+// Inline logo.svg content (without the signature line for in-app use)
+const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <path d="M 200 200 L 200 100 A 100 100 0 0 1 286.6 250 Z" fill="#FFA726"/>
+  <path d="M 200 200 L 286.6 250 A 100 100 0 0 1 113.4 250 Z" fill="#FF7061"/>
+  <path d="M 200 200 L 113.4 250 A 100 100 0 0 1 200 100 Z" fill="#9C68D4"/>
+  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FFA726" transform="translate(200, 200) rotate(-90)"/>
+  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FF7061" transform="translate(200, 200) rotate(30)"/>
+  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#9C68D4" transform="translate(200, 200) rotate(150)"/>
+</svg>`;
+
+interface LumioLogoProps {
+  size?: number;
 }
 
-export function useAddRepository() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (url: string) => addRepository(url),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['repositories'] });
-    },
-  });
+export function LumioLogo({ size = 120 }: LumioLogoProps) {
+  return <SvgXml xml={logoSvg} width={size} height={size} />;
 }
 ```
 
-### Pattern 3: Zustand for Client State
+### Integration Points -- Modified Files
 
-**What:** Lightweight store for UI-only state that needs to persist across screens.
-**When to use:** Theme preference, study session progress, UI toggles. NOT for server data.
-**Trade-offs:** Very simple API, but easy to overuse. Keep stores small and focused.
+| File | Change |
+|------|--------|
+| `screens/LoginScreen.tsx` | Replace `<Text style={styles.logo}>Lumio</Text>` (line 54) with `<LumioLogo size={120} />`. Keep "Lumio" as a separate text element below the logo icon (now translatable). |
 
-**Example:**
-```typescript
-// src/stores/studyStore.ts
-import { create } from 'zustand';
+### Data Flow
 
-interface StudyState {
-  currentCardIndex: number;
-  selectedAnswer: string | null;
-  setSelectedAnswer: (answer: string | null) => void;
-  nextCard: () => void;
-  reset: () => void;
-}
+None -- pure presentational component with no state or side effects.
 
-export const useStudyStore = create<StudyState>((set) => ({
-  currentCardIndex: 0,
-  selectedAnswer: null,
-  setSelectedAnswer: (answer) => set({ selectedAnswer: answer }),
-  nextCard: () => set((state) => ({
-    currentCardIndex: state.currentCardIndex + 1,
-    selectedAnswer: null
-  })),
-  reset: () => set({ currentCardIndex: 0, selectedAnswer: null }),
-}));
+### Dependencies
+
+`react-native-svg` ships with Expo SDK 54. If not in direct dependencies, add explicitly:
+```bash
+pnpm --filter @lumio/android add react-native-svg
 ```
 
-### Pattern 4: Auth Context with Supabase
+---
 
-**What:** React Context that wraps Supabase auth, provides user state and auth methods.
-**When to use:** App-wide auth state. Use @lumio/core functions internally.
-**Trade-offs:** Context re-renders all consumers on change, but auth changes are rare.
+## Feature 3: Configurable Cards-per-Session
 
-**Example:**
+### Recommended Architecture
+
+Add a `cardsPerSession` setting following the same AsyncStorage pattern as theme preference (`lib/theme.ts`). The `useStudySession` hook reads this value to limit cards loaded.
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `apps/android/lib/studySettings.ts` | Load/save study preferences (cards per session) from AsyncStorage |
+
+### Settings Data Model
+
 ```typescript
-// src/providers/AuthProvider.tsx
-import { createContext, useContext, useEffect, useState } from 'react';
-import {
-  createSupabaseClient,
-  onAuthStateChange,
-  signInWithGoogle as coreSignIn,
-  signOut as coreSignOut,
-  type AuthUser
-} from '@lumio/core';
+// lib/studySettings.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const STUDY_SETTINGS_KEY = '@lumio/study-settings';
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export type CardsPerSession = 5 | 10 | 15 | 20 | 0; // 0 = all
 
-  useEffect(() => {
-    // Initialize Supabase with AsyncStorage
-    createSupabaseClient(
-      process.env.EXPO_PUBLIC_SUPABASE_URL!,
-      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-      { storage: AsyncStorage }
-    );
+export interface StudySettings {
+  cardsPerSession: CardsPerSession;
+}
 
-    // Subscribe to auth changes
-    const { data: { subscription } } = onAuthStateChange(setUser);
-    setIsLoading(false);
+const DEFAULT_SETTINGS: StudySettings = {
+  cardsPerSession: 10,
+};
 
-    return () => subscription.unsubscribe();
-  }, []);
+export async function loadStudySettings(): Promise<StudySettings> {
+  try {
+    const stored = await AsyncStorage.getItem(STUDY_SETTINGS_KEY);
+    if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+    return DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
 
-  return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
+export async function saveStudySettings(settings: Partial<StudySettings>): Promise<void> {
+  const current = await loadStudySettings();
+  const merged = { ...current, ...settings };
+  await AsyncStorage.setItem(STUDY_SETTINGS_KEY, JSON.stringify(merged));
 }
 ```
 
-## Data Flow
+### Integration Points -- Modified Files
 
-### Request Flow
+| File | Change | Details |
+|------|--------|---------|
+| `hooks/useStudySession.ts` | Accept `maxCards` parameter | Signature: `useStudySession(maxCards: number = 0)`. In `loadInitialData`, after filtering with Deck, shuffle and slice to `maxCards` if > 0. |
+| `screens/StudyScreen.tsx` | Load settings on mount, pass to hook | `useState` for `maxCards`, load via `loadStudySettings()` in `useEffect`, pass to `useStudySession(maxCards)`. |
+| `screens/SettingsScreen.tsx` | Add "Study" section | Radio buttons for 5/10/15/20/All, same UI pattern as theme radio buttons. |
 
-```
-[User taps "Study"]
-    |
-    v
-[StudyScreen] --> useStudyCards() hook
-    |
-    v
-[TanStack Query] --> getStudyCards() from @lumio/core
-    |
-    v
-[@lumio/core] --> Supabase client
-    |
-    v
-[Supabase] --> PostgreSQL + RLS
-    |
-    v
-[Response] --> TanStack Query cache
-    |
-    v
-[Re-render] <-- useStudyCards() returns data
-```
-
-### State Management
+### Data Flow
 
 ```
-+----------------+     +-----------------+     +----------------+
-| Server State   |     | Client State    |     | Local State    |
-| (TanStack)     |     | (Zustand)       |     | (useState)     |
-+----------------+     +-----------------+     +----------------+
-| - Repositories |     | - Current card  |     | - Form inputs  |
-| - Cards        |     |   index         |     | - Modal open   |
-| - User stats   |     | - Selected      |     | - Loading UI   |
-| - Quiz data    |     |   answer        |     |                |
-| - API keys     |     | - Theme pref    |     |                |
-+----------------+     +-----------------+     +----------------+
-        |                      |                      |
-        +----------------------+----------------------+
-                               |
-                         [Components]
+1. SettingsScreen: User selects cards-per-session -> saveStudySettings()
+2. StudyScreen mount -> loadStudySettings() -> get cardsPerSession
+3. Pass to useStudySession(cardsPerSession)
+4. useStudySession.loadInitialData():
+   a. Fetch all available cards
+   b. Filter with Deck (.lumioignore)
+   c. Shuffle the filtered array (Fisher-Yates)
+   d. Slice to cardsPerSession (if > 0)
+   e. Set session state with sliced cards
+5. Progress bar and completion based on sliced count
 ```
 
-### Key Data Flows
+### Hook Modification Detail
 
-1. **Authentication Flow:** User taps login -> Expo AuthSession opens Google OAuth -> callback URL handled by Expo Router -> Supabase session stored in AsyncStorage -> AuthContext updates -> protected routes become accessible.
+Key change to `useStudySession.ts`:
 
-2. **Study Session Flow:** User taps "Study" -> TanStack Query fetches cards -> Zustand store tracks current card index -> quiz generated via Edge Function -> answer validated -> SM-2 algorithm updates card schedule -> TanStack cache invalidated.
+```typescript
+// BEFORE (line 60):
+export function useStudySession(): UseStudySessionReturn {
 
-3. **Repository Sync:** Cards are synced via Docora webhooks (server-side). Client only reads. TanStack Query handles cache invalidation on focus/reconnect.
+// AFTER:
+export function useStudySession(maxCards: number = 0): UseStudySessionReturn {
+  // ... inside loadInitialData, after filteredCards is populated ...
 
-## Build Order (Dependencies)
+  // NEW: Limit cards if maxCards > 0
+  let sessionCards = filteredCards;
+  if (maxCards > 0 && filteredCards.length > maxCards) {
+    // Fisher-Yates shuffle then take first N
+    const shuffled = [...filteredCards];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    sessionCards = shuffled.slice(0, maxCards);
+  }
 
-### Phase 1: Foundation (must be first)
-1. **Expo project setup** - `npx create-expo-app` with TypeScript
-2. **Monorepo integration** - Add to pnpm workspace, configure path aliases
-3. **@lumio/core dependency** - Verify shared package works with React Native
-4. **NativeWind setup** - Tailwind CSS for React Native styling
-
-### Phase 2: Core Infrastructure
-5. **AsyncStorage adapter** - For Supabase session persistence
-6. **Supabase client initialization** - Using @lumio/core with AsyncStorage
-7. **TanStack Query provider** - Query client setup
-8. **Auth provider** - Context wrapping Supabase auth
-
-### Phase 3: Navigation
-9. **Expo Router setup** - File-based routing structure
-10. **Protected routes** - Auth layout wrapper
-11. **OAuth callback handling** - Deep link for Google OAuth
-
-### Phase 4: Screens
-12. **Login screen** - Google OAuth button
-13. **Dashboard screen** - Stats + study button
-14. **Repositories screen** - List view
-15. **Study screen** - Quiz flow
-16. **Card preview** - Markdown rendering
-
-### Dependency Graph
-
-```
-[Expo Project]
-      |
-      v
-[Monorepo Integration] --> [@lumio/core available]
-      |
-      v
-[NativeWind] --> [Styling available]
-      |
-      v
-[AsyncStorage + Supabase Client]
-      |
-      +---> [Auth Provider]
-      |           |
-      v           v
-[TanStack Query] [Expo Router]
-      |           |
-      +-----+-----+
-            |
-            v
-      [Screens can be built]
+  // Use sessionCards instead of filteredCards in setSession
 ```
 
-## Scaling Considerations
+### Why NOT a Context
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Single user | Current architecture is sufficient. AsyncStorage for sessions. |
-| 100+ cards | Consider pagination in card list, lazy loading in study. |
-| Offline use | Add TanStack Query persistence, sync queue for study progress. |
-| Multiple repos | Already supported via current Supabase schema. |
+Cards-per-session is read once at session start. It does not need to be reactive during a session. Using AsyncStorage directly (same as theme preference in `lib/theme.ts`) keeps the architecture simple and consistent.
 
-### Scaling Priorities
+---
 
-1. **First bottleneck:** Markdown rendering performance with many cards. Mitigation: virtualized list (FlashList), memoized rendering.
-2. **Second bottleneck:** Initial load time with large card sets. Mitigation: pagination, prefetching next cards.
+## Feature 4: Bottom-Sheet Card Preview Bugfix
 
-## Anti-Patterns
+### Root Cause Analysis
 
-### Anti-Pattern 1: Mixing Server and Client State
+The bug: content appears cut off at the top (first lines missing) in CardPreviewModal.
 
-**What people do:** Store fetched data in Zustand instead of TanStack Query.
-**Why it's wrong:** Lose automatic caching, refetching, and cache invalidation. Manual sync bugs.
-**Do this instead:** TanStack Query for ALL server data. Zustand only for client-only state (UI preferences, session progress).
+**Architecture of the affected component chain:**
 
-### Anti-Pattern 2: Direct Supabase Calls in Components
+```
+CardPreviewModal (Modal transparent, slide animation)
+  Pressable (backdrop, tap-to-close)
+  View (bottom sheet, position: absolute, bottom: 0, maxHeight: 80%)
+    View (drag handle: paddingTop: 10, paddingBottom: 4)
+    View (header: paddingVertical: 12, borderBottomWidth: 1)
+    ScrollView (flex: 1)
+      CardContentView (WebView, scrollEnabled: false, dynamic height via postMessage)
+```
 
-**What people do:** Import Supabase client directly in screen components.
-**Why it's wrong:** Bypasses @lumio/core abstractions, duplicates logic, harder to test.
-**Do this instead:** Always use @lumio/core functions. Wrap them in custom hooks for React integration.
+**The problem has two causes:**
 
-### Anti-Pattern 3: Giant Context Providers
+**Cause 1: Race condition in height measurement.** The WebView's JavaScript measures `document.documentElement.scrollHeight` after a 100ms `setTimeout` (line 223-228 of `cardHtml.ts`). But CDN resources (KaTeX CSS/fonts, highlight.js theme CSS, marked.js) may not have loaded in 100ms. The height is measured before content is fully rendered, resulting in an underestimated height. When resources finish loading and content expands, the WebView's actual content is taller than `webViewHeight`, but `scrollEnabled=false` prevents internal scrolling. The parent ScrollView may have already scrolled or laid out based on the incorrect smaller height.
 
-**What people do:** Put everything (auth, theme, study state, etc.) in one context.
-**Why it's wrong:** Any state change re-renders entire app. Performance degradation.
-**Do this instead:** Separate contexts by concern. Use Zustand for high-frequency updates. TanStack Query for server state.
+**Cause 2: Initial height flash and ScrollView layout shift.** `CardContentView` starts with `webViewHeight = 300` (line 36 of CardContentView.tsx). When the actual height arrives (could be 600+), the ScrollView's content suddenly grows. On Android, this can cause the ScrollView to maintain its current scroll offset rather than resetting to top, making the beginning of content appear "cut off" above the visible area.
 
-### Anti-Pattern 4: Inline Styles Instead of NativeWind
+### Recommended Fix Architecture
 
-**What people do:** Use `style={{ marginTop: 10 }}` or StyleSheet.create everywhere.
-**Why it's wrong:** Inconsistent with existing Tailwind codebase, harder to maintain.
-**Do this instead:** Use NativeWind className props. Same Tailwind classes as web/PWA.
+**Three-part fix:**
 
-## Integration Points
+#### Part A: Improve height measurement timing and reliability (cardHtml.ts)
 
-### External Services
+Replace the single `setTimeout(reportHeight, 100)` with a multi-report strategy:
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Supabase Auth | AsyncStorage + PKCE flow | Google OAuth via Expo AuthSession |
-| Supabase DB | @lumio/core functions | Same API as PWA |
-| Edge Functions | @lumio/core functions | Quiz generation, validation |
-| Sentry | @sentry/react-native | Separate DSN from web |
+```javascript
+function reportHeight() {
+  var height = Math.max(
+    document.body.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.scrollHeight
+  );
+  if (height > 0 && window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(
+      JSON.stringify({ type: 'height', value: height })
+    );
+  }
+}
 
-### Internal Boundaries
+// Report after initial render
+setTimeout(reportHeight, 150);
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Screens <-> Hooks | React hooks | One hook per feature |
-| Hooks <-> @lumio/core | Function calls | Shared business logic |
-| @lumio/core <-> Supabase | Supabase JS client | AsyncStorage for persistence |
-| Screens <-> Stores | Zustand hooks | Client state only |
+// Report after fonts/CSS load (KaTeX web fonts)
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(function() {
+    setTimeout(reportHeight, 50);
+  });
+}
 
-### Reusable from Existing Codebase
+// Report when all CDN resources finish loading
+window.addEventListener('load', function() {
+  setTimeout(reportHeight, 100);
+});
 
-| Module | Reusability | Notes |
-|--------|-------------|-------|
-| @lumio/core | 100% | All Supabase functions work as-is |
-| @lumio/shared | 100% | Types, constants fully compatible |
-| Tailwind config | ~90% | Same design tokens, minor RN adjustments |
-| Auth flow logic | 80% | Same pattern, different OAuth handler |
-| Component logic | 60% | Same patterns, different UI primitives |
-| UI components | 0% | Must rebuild with React Native components |
+// Watch for DOM mutations (KaTeX rendering inserts new elements)
+var observer = new MutationObserver(function() {
+  setTimeout(reportHeight, 50);
+});
+observer.observe(document.getElementById('content'), {
+  childList: true, subtree: true
+});
+// Auto-disconnect after 5 seconds to prevent leaks
+setTimeout(function() { observer.disconnect(); }, 5000);
+```
+
+#### Part B: Fix initial opacity flash (CardContentView.tsx)
+
+Show the WebView only after the first valid height is received:
+
+```typescript
+const [webViewHeight, setWebViewHeight] = useState(300);
+const [isReady, setIsReady] = useState(false); // NEW
+
+const handleMessage = useCallback((event: WebViewMessageEvent) => {
+  try {
+    const data = JSON.parse(event.nativeEvent.data);
+    if (data.type === 'height' && typeof data.value === 'number' && data.value > 0) {
+      setWebViewHeight(data.value);
+      if (!isReady) setIsReady(true); // NEW: reveal on first measurement
+    }
+  } catch { /* ignore */ }
+}, [isReady]);
+
+// Style change: opacity 0 until ready
+<WebView
+  style={[{ height: webViewHeight, opacity: isReady ? 0.99 : 0 }, style]}
+  ...
+/>
+```
+
+#### Part C: Reset ScrollView position on card change (CardPreviewModal.tsx)
+
+```typescript
+const scrollViewRef = useRef<ScrollView>(null);
+
+// Reset scroll position when card changes
+useEffect(() => {
+  if (visible && card) {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }
+}, [visible, card]);
+
+// Add ref and contentContainerStyle fix
+<ScrollView
+  ref={scrollViewRef}
+  style={styles.scrollView}
+  contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} // flexGrow fix
+  showsVerticalScrollIndicator={true}
+>
+```
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `lib/cardHtml.ts` | Replace single `setTimeout(reportHeight, 100)` at line 223-228 with multi-report strategy (MutationObserver + fonts.ready + window.load) |
+| `components/study/CardContentView.tsx` | Add `isReady` state, start with `opacity: 0`, reveal after first height message |
+| `components/study/CardPreviewModal.tsx` | Add `useRef` on ScrollView, reset scroll on card change, add `flexGrow: 1` to `contentContainerStyle` |
+
+### Data Flow (Fixed)
+
+```
+1. Modal opens, card prop set
+2. CardContentView renders WebView with opacity: 0, initial height: 300
+3. WebView loads HTML, CDN resources begin loading
+4. MutationObserver fires as marked.js/KaTeX renders -> reportHeight()
+5. First valid height received -> setWebViewHeight(actualHeight), opacity -> 0.99
+6. ScrollView.scrollTo({ y: 0 }) resets position
+7. document.fonts.ready fires (KaTeX fonts) -> reportHeight() updates height
+8. window.load fires -> final reportHeight() confirms final height
+9. Each height update keeps ScrollView at y: 0 via effect
+```
+
+---
+
+## Complete Change Map
+
+### New Files (4)
+
+| File | Feature | Lines (est.) |
+|------|---------|-------------|
+| `apps/android/i18n/index.ts` | i18n | ~40 |
+| `apps/android/i18n/locales/en.json` | i18n | ~80 |
+| `apps/android/i18n/locales/it.json` | i18n | ~80 |
+| `apps/android/components/LumioLogo.tsx` | Logo | ~25 |
+| `apps/android/lib/studySettings.ts` | Study settings | ~35 |
+
+### Modified Files (13)
+
+| File | Feature(s) | Nature of Change |
+|------|-----------|------------------|
+| `App.tsx` | i18n | Add 1 import line |
+| `screens/SettingsScreen.tsx` | i18n, study settings | Add language section, study section, replace strings with `t()` |
+| `screens/LoginScreen.tsx` | i18n, logo | Replace text logo with SVG component, replace strings with `t()` |
+| `screens/DashboardScreen.tsx` | i18n | Replace ~12 strings with `t()` |
+| `screens/ReposScreen.tsx` | i18n | Replace ~14 strings with `t()` |
+| `screens/StudyScreen.tsx` | i18n, study settings | Replace ~18 strings with `t()`, load settings on mount |
+| `screens/StudySummaryScreen.tsx` | i18n | Replace ~7 strings with `t()` |
+| `components/AddRepoForm.tsx` | i18n | Replace ~6 strings with `t()` |
+| `navigation/MainNavigator.tsx` | i18n | Replace tab header title |
+| `hooks/useStudySession.ts` | Study settings | Add `maxCards` parameter, shuffle + slice logic |
+| `lib/cardHtml.ts` | Bugfix | Replace height measurement with multi-report strategy |
+| `components/study/CardContentView.tsx` | Bugfix | Add `isReady` state, opacity transition |
+| `components/study/CardPreviewModal.tsx` | Bugfix | Add ScrollView ref, scroll reset, flexGrow fix |
+
+---
+
+## Build Order (Dependency-Based)
+
+The features have minimal interdependencies. Build order optimizes for: fix bugs first, then add infrastructure, then i18n last (touches the most files).
+
+### Phase 1: Bottom-sheet bugfix (0 dependencies on other features)
+
+1. `lib/cardHtml.ts` -- multi-report height strategy
+2. `components/study/CardContentView.tsx` -- opacity transition
+3. `components/study/CardPreviewModal.tsx` -- ScrollView fixes
+
+**Rationale:** Bugfix improving existing functionality. No new files (only modifications), no new dependencies. Smallest blast radius. Delivers user-visible improvement immediately.
+
+### Phase 2: Logo integration (0 dependencies)
+
+1. Verify `react-native-svg` availability (or add to dependencies)
+2. Create `components/LumioLogo.tsx`
+3. Modify `screens/LoginScreen.tsx` to use LumioLogo
+
+**Rationale:** Single new component, single modified screen. Quick win. Should be done before i18n modifies LoginScreen.
+
+### Phase 3: Configurable cards-per-session (0 dependencies)
+
+1. Create `lib/studySettings.ts`
+2. Modify `hooks/useStudySession.ts` to accept `maxCards`
+3. Modify `screens/StudyScreen.tsx` to load settings and pass to hook
+4. Modify `screens/SettingsScreen.tsx` to add study section
+
+**Rationale:** Introduces settings infrastructure. Building this before i18n means SettingsScreen gets its new sections first, then i18n simply translates the final strings.
+
+### Phase 4: i18n (logically last -- touches all screens)
+
+1. Install `i18next`, `react-i18next`, `expo-localization`
+2. Create `i18n/index.ts`, `i18n/locales/en.json`, `i18n/locales/it.json`
+3. Add `import './i18n'` to `App.tsx`
+4. Modify ALL screens and components with `t()` calls
+5. Add language section to `SettingsScreen.tsx`
+
+**Rationale:** Touches every screen and most components. Doing it last means all other modifications (logo, settings, bugfix) are already in place, avoiding merge conflicts and double-editing.
+
+### Phase 5: Dynamic version display (trivial, independent)
+
+1. Modify `screens/SettingsScreen.tsx`: replace hardcoded `"Lumio v1.0.0"` with `getVersionString()` from `@lumio/shared`
+
+**Rationale:** Single-line change, can be folded into any phase.
+
+---
+
+## Patterns to Follow
+
+### Pattern 1: Side-Effect Module Initialization
+
+**What:** Import a module purely for its side effects (initialization code runs on import).
+**When:** Global singletons that must be initialized before any component renders.
+**Already used at:** `App.tsx` line 1: `import './lib/supabase';`
+**Apply to:** i18n initialization: `import './i18n';`
+
+### Pattern 2: AsyncStorage Load/Save Functions
+
+**What:** Standalone `load` and `save` async functions for preferences, co-located in a lib file.
+**When:** Simple key-value settings read once on mount (not reactive across the app).
+**Already used at:** `lib/theme.ts` with `loadThemePreference()` / `saveThemePreference()`
+**Apply to:** `lib/studySettings.ts` with `loadStudySettings()` / `saveStudySettings()`
+
+### Pattern 3: Radio Button Setting Group
+
+**What:** Array of option objects rendered as `TouchableOpacity` rows with checkmark indicator.
+**When:** Adding a new setting with finite options.
+**Already used at:** `SettingsScreen.tsx` lines 20-24 (`themeOptions`) and lines 64-93.
+**Apply to:** Language options (IT/EN) and cards-per-session options (5/10/15/20/All).
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Creating a New Context for Each Feature
+
+**What:** Adding LocaleContext, StudySettingsContext, etc.
+**Why bad:** The app already has 2 contexts (Auth, Theme). i18next provides its own reactive state. Study settings are read once per session. Adding contexts causes unnecessary re-renders.
+**Instead:** Side-effect import for i18n. AsyncStorage read-on-mount for study settings.
+
+### Anti-Pattern 2: SVG Transformer for 1-2 Logo Files
+
+**What:** Adding `react-native-svg-transformer` and modifying Metro config.
+**Why bad:** Requires Metro config changes, potential monorepo resolution issues, all for 1.3KB of SVG.
+**Instead:** Use `SvgXml` from `react-native-svg` with inline SVG string constant.
+
+### Anti-Pattern 3: Flat Translation Key Namespace
+
+**What:** `{ loginTagline: "...", dashboardCards: "...", settingsLogout: "..." }`
+**Why bad:** Ambiguous keys, no namespace isolation, hard to find/maintain.
+**Instead:** Nested namespaces matching screen names: `login.tagline`, `dashboard.cards`, `settings.logout`.
+
+---
 
 ## Sources
 
-- [Expo Router Introduction](https://docs.expo.dev/router/introduction/) - File-based routing documentation
-- [React Native Project Structure - Expo Starter](https://starter.obytes.com/getting-started/project-structure/) - Recommended folder organization
-- [React State Management in 2025](https://www.developerway.com/posts/react-state-management-2025) - TanStack Query + Zustand patterns
-- [Supabase Auth with React Native](https://supabase.com/docs/guides/auth/quickstarts/react-native) - Official integration guide
-- [NativeWind Documentation](https://www.nativewind.dev/) - Tailwind CSS for React Native
-- [Expo vs Bare React Native](https://www.godeltech.com/blog/expo-vs-bare-react-native-in-2025/) - Framework comparison
-
----
-*Architecture research for: React Native Android App (Lumio)*
-*Researched: 2026-01-29*
+- [Expo Localization docs](https://docs.expo.dev/versions/latest/sdk/localization/) -- HIGH confidence
+- [React Native / Expo Starter i18n guide](https://starter.obytes.com/guides/internationalization/) -- MEDIUM confidence
+- [Phrase: React Native i18n with Expo and i18next](https://phrase.com/blog/posts/react-native-i18n-with-expo-and-i18next-part-1/) -- MEDIUM confidence
+- [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715) -- HIGH confidence (direct issue report with confirmed workaround)
+- [react-native-svg Expo docs](https://docs.expo.dev/versions/latest/sdk/svg/) -- HIGH confidence
+- Codebase analysis of all 6 screens, 8 components, 3 hooks, 2 contexts, 4 lib files, navigation structure -- HIGH confidence

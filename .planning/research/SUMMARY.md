@@ -1,235 +1,191 @@
 # Project Research Summary
 
-**Project:** Lumio Native Android App
-**Domain:** React Native mobile application (PWA-to-native migration)
-**Researched:** 2026-01-29
+**Project:** Lumio Android v1.2 - i18n, Branding, Configurable Sessions, Bug Fixes
+**Domain:** React Native/Expo mobile app enhancement - internationalization retrofit, UI polish, user settings
+**Researched:** 2026-02-09
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Lumio's migration from PWA to native Android is a well-trodden path with established patterns. The recommended approach uses **Expo SDK 54** with the New Architecture, providing managed workflows that eliminate native toolchain complexity while supporting all required features: Google OAuth, Supabase integration, markdown/LaTeX rendering, and direct APK distribution via EAS Build.
+This phase enhances an existing React Native flashcard study app with internationalization (Italian/English toggle), branding polish (SVG logo integration), configurable study session lengths, a critical bottom-sheet scroll bugfix, and dynamic version display. The app is built on Expo SDK 54 with React Native 0.81 in a monorepo architecture, using AsyncStorage for preferences and a custom WebView-based card renderer.
 
-The core challenge is not technical feasibility—all required components exist and integrate well—but rather avoiding common PWA-to-native migration pitfalls. The most critical risks are: (1) performance degradation from web-style patterns (ScrollView instead of FlatList, inline markdown rendering), (2) OAuth deep linking failures on Android 13+ requiring precise manifest configuration, and (3) Supabase client incompatibilities requiring React Native polyfills. All are preventable with upfront architectural decisions.
+The recommended approach is conservative: use Expo's officially endorsed i18n solution (expo-localization + i18n-js), avoid adding new native dependencies where possible (convert SVG to PNG for logo, fix WebView bugs with configuration rather than library replacement), and extend existing patterns (AsyncStorage + Context for settings, matching the theme preference pattern). The most significant work is the i18n retrofit affecting 82+ strings across 16 files, which requires systematic extraction to avoid partial translation issues.
 
-The research reveals a clear path to feature parity plus native enhancements within 5-6 weeks of focused development. The existing `@lumio/core` package provides 100% reusable business logic, making this primarily a UI reimplementation with native performance optimizations rather than a ground-up rebuild.
+The key risk is the bottom-sheet WebView height calculation bug, which is caused by CDN resource loading timing — KaTeX and highlight.js CSS/fonts may not be loaded within the current 100ms timeout, producing incorrect height measurements. The fix requires event-driven height reporting (ResizeObserver + resource load events) rather than time-based guessing. Secondary risks include incomplete i18n string extraction and SVG-to-component integration complexity if using react-native-svg (mitigated by converting to PNG instead).
 
 ## Key Findings
 
 ### Recommended Stack
 
-Expo SDK 54 with New Architecture provides the optimal balance of developer experience and native quality. Use **Expo Router** for file-based navigation (matching Next.js conventions), **NativeWind 4** for Tailwind CSS compatibility with existing design system, and **TanStack Query + Zustand** (same as PWA) for state management. This maintains familiar patterns while leveraging true native components.
+The research validates adding only 3 new dependencies: `expo-localization` (device locale detection), `i18n-js` (translation engine), and optionally `react-native-svg` IF using inline SVG components. However, the PNG conversion approach for the logo eliminates the native rebuild requirement.
 
 **Core technologies:**
-- **Expo SDK 54** (React Native 0.81, React 19.1) — Managed workflow eliminates Android SDK maintenance, EAS Build handles APK distribution without local toolchains
-- **Expo Router 4.x** — File-based routing with automatic deep linking, same developer experience as Next.js in existing web app
-- **NativeWind 4** — Tailwind CSS for React Native, enables design system reuse across web/PWA/native without CSS-in-JS learning curve
-- **TanStack Query 5 + Zustand 5** — Same state management as PWA, 80% less boilerplate than manual caching solutions
-- **react-native-markdown-display** — Native markdown rendering (not WebView), 100% CommonMark compatible with custom renderer support
-- **@react-native-google-signin/google-signin** — Official Google OAuth for React Native, works with Supabase auth via idToken flow
-- **EAS Build** — Cloud-based APK generation, handles signing and distribution without managing keystore locally
+- **expo-localization ~17.0.x**: Device locale detection — Expo's official module, auto-linked via config plugin, no native rebuild
+- **i18n-js ^4.5.2**: Translation engine — Expo officially recommends this over react-i18next for simple 2-locale apps (15kb vs 45kb), zero native code
+- **@react-native-async-storage/async-storage 2.2.0**: Settings persistence — Already installed and used by ThemeContext, extends naturally to language and cards-per-session
+- **@lumio/shared VERSION constant**: Dynamic version display — Already available in monorepo, import-only change
 
-**Critical version requirements:**
-- Tailwind CSS must be 3.4.x (NativeWind 4 incompatible with Tailwind 4)
-- @react-native-google-signin 16.x requires compileSdkVersion 35+ on Android
+**What NOT to add:**
+- react-native-svg (requires native rebuild) — use PNG conversion instead
+- react-i18next (45kb, overkill for 2 locales)
+- @gorhom/bottom-sheet (requires react-native-reanimated not currently installed) — fix existing custom Modal pattern
+- Zustand or state management (creates inconsistency with existing Context pattern)
 
 ### Expected Features
 
-Native Android users expect feature parity with the existing PWA plus mobile-specific enhancements. The research identifies 9 table-stakes features that must exist for launch, 8 differentiators that provide competitive advantage, and 10 anti-features to explicitly avoid despite user requests.
-
 **Must have (table stakes):**
-- Smooth study session UX with swipe gestures (Tinder-style card interactions now standard)
-- Dark mode (79% of students prefer it, reduces eye strain during night study)
-- Push notifications for study reminders (drives retention)
-- Offline capability for basic study (students use apps in transit without reliable internet)
-- Fast app launch (< 3 second cold start expected on native)
-- Native gestures and haptic feedback (premium mobile feel)
-- Bottom navigation (thumb-friendly zone, Material Design 3 pattern)
-- Progress visualization (daily/weekly stats, mastery tracking)
-- Markdown rendering with LaTeX support (existing card content format)
+- **IT/EN language toggle in Settings** — Italian target audience, app feels incomplete with English-only UI
+- **Logo on Login screen** — Currently text placeholder with TODO comment, makes app feel unfinished
+- **Dynamic version display** — SettingsScreen hardcodes "v1.0.0" while actual version is v1.1.4
+- **Bottom-sheet card preview bugfix** — Content reported cut off at top, affects core study workflow
 
 **Should have (competitive):**
-- Home screen widget (study directly from home screen, passive learning trigger)
-- Study streak tracking (40-60% higher DAU according to research, loss aversion mechanism)
-- Goal-based study with deadline tracking (existing PWA feature users expect)
-- Quick session mode (5-minute micro-sessions, perfect for native instant launch)
-- Background sync (repos sync while app closed via WorkManager)
-- Biometric app lock (fingerprint/face unlock for study data privacy)
+- **Configurable cards-per-session** — Users with large decks (100+ cards) get exhausted; limit to 10/20/50/All is standard in Anki/Quizlet
+- **Session length display before starting** — Show "Study 20 of 150 cards available" for user expectation setting
+- **Language-aware date formatting** — "2 hours ago" becomes "2 ore fa" in Italian (defer to v1.3)
 
 **Defer (v2+):**
-- Voice input for answers (hands-free study, complex integration, niche use case)
-- Focus timer integration (Pomodoro built-in, not core to Lumio value proposition)
-- Confidence-based rating (Brainscape-style 1-5 scale, requires SM-2 algorithm changes)
-
-**Anti-features (explicitly avoid):**
-- In-app card creation (violates Git-based content model, requires maintaining editor)
-- Social/community decks (Quizlet's quality control nightmare, not Lumio's value)
-- Extensive gamification (shifts focus from learning to game, Duolingo critique applies)
-- Multiple simultaneous goals (cognitive overload, focus on single active goal)
-- Custom spaced repetition algorithms (Anki's complexity is a barrier, "just work" approach)
+- Logo on Dashboard header (nice-to-have brand reinforcement)
+- Auto-detect device locale on first launch (unnecessary with explicit toggle)
+- AI-translated card content (educational material must remain as-authored)
 
 ### Architecture Approach
 
-Follow React Native community best practices: **file-based routing** with Expo Router, **server state in TanStack Query**, **client state in Zustand**, and **business logic in @lumio/core** shared package. The monorepo structure enables 100% code reuse for Supabase client, auth flows, and data fetching—only UI components need native reimplementation.
+The architecture extends existing patterns rather than introducing new ones. i18n uses side-effect initialization (import './i18n' in App.tsx, matching the existing import './lib/supabase' pattern). Language and cards-per-session settings follow the AsyncStorage load/save pattern from lib/theme.ts. The logo becomes either a PNG Image component (simplest) or an inline SVG via SvgXml (requires native rebuild). The bottom-sheet bug is fixed by improving the WebView height measurement timing in cardHtml.ts and resetting ScrollView position on card change.
 
 **Major components:**
-1. **Screens (app/ directory)** — UI layer using React Native primitives (View, Text, FlatList), navigated via file-based routing with automatic deep linking
-2. **State Layer (hooks + stores)** — TanStack Query for server state (repositories, cards, stats), Zustand for client state (current card index, theme preference)
-3. **API Layer (@lumio/core)** — Shared package with Supabase client, auth methods (signInWithGoogle, signOut), data fetching (getUserRepositories, getStudyCards), and quiz generation/validation
-4. **Native Integration** — expo-secure-store for encrypted token storage, @react-native-google-signin for OAuth, AsyncStorage adapter for Supabase session persistence
-5. **Markdown Renderer** — react-native-markdown-display with custom rules for LaTeX (react-native-math-view) and code blocks (react-native-syntax-highlighter)
-
-**Critical architectural decisions:**
-- Use FlatList (not ScrollView) for card lists from the start—performance disaster otherwise
-- Never render full markdown in list items—show preview text only, render on card open
-- Configure Supabase client with `detectSessionInUrl: false` (required for React Native)
-- Install react-native-url-polyfill at entry point (Supabase client assumes browser APIs)
-- Implement proper Android back button handling at every screen (users feel trapped without it)
+1. **i18n module (i18n/index.ts + locales/)** — Side-effect initialization with i18n-js, language detector, fallback config. 82+ strings extracted across 16 files organized into namespaces (login, dashboard, study, settings, repos, summary, common).
+2. **Settings persistence (lib/studySettings.ts)** — AsyncStorage wrapper for cards-per-session preference (5/10/15/20/All), mirrors existing lib/theme.ts pattern. SettingsScreen gets new "Study" section with radio buttons matching theme toggle UI.
+3. **Logo component (components/LumioLogo.tsx OR assets/logo.png)** — Either PNG conversion (no new deps) or SvgXml wrapper (requires react-native-svg + native rebuild). LoginScreen replaces text with image.
+4. **WebView height fix (lib/cardHtml.ts)** — Replace setTimeout(100) with ResizeObserver + document.fonts.ready + window.addEventListener('load') for event-driven height reporting. CardContentView adds opacity transition to prevent flash. CardPreviewModal resets ScrollView.scrollTo({y:0}) on card change.
 
 ### Critical Pitfalls
 
-1. **Using web primitives instead of native components** — Web developers instinctively use div/span/CSS patterns. React Native has no DOM—components render to native views. Using web patterns creates apps that feel sluggish and miss platform conventions. **Prevention:** Learn View/Text/FlatList immediately, use StyleSheet.create not inline styles, never render text outside `<Text>` component.
+1. **WebView height measured before CDN resources load** — Current 100ms timeout races with KaTeX CSS (~230KB) and highlight.js loading. Fix: Use ResizeObserver + resource load events + MutationObserver fallback. Send multiple debounced height updates rather than one-shot measurement. Impact: Directly causes reported "content cut off at top" bug.
 
-2. **FlatList performance disaster on large card lists** — Using ScrollView or misconfiguring FlatList causes severe lag on low-end Android devices. Without `getItemLayout`, `keyExtractor`, and proper memoization, every scroll triggers expensive re-renders. **Prevention:** Always use FlatList for lists > 10 items, implement `getItemLayout` for fixed heights, use React.memo on list items, never use inline functions in `renderItem`, optimize images to max 720p.
+2. **ScrollView + WebView gesture conflict on Android** — Even with scrollEnabled={false}, WebView intercepts touch events, freezing parent ScrollView after user touches rendered card area. Fix: Add pointerEvents="none" to WebView wrapper (content is read-only), or remove outer ScrollView entirely and let WebView handle its own scrolling. Impact: Makes card preview unusable on Android.
 
-3. **Supabase client configuration incompatibilities** — Supabase JavaScript client assumes browser APIs (localStorage, URL, WebSocket) that don't exist in React Native. App crashes on startup or auth flows silently fail. **Prevention:** Install react-native-url-polyfill first, use AsyncStorage for session storage, set `detectSessionInUrl: false` in client config, use expo-secure-store for sensitive tokens.
+3. **i18n retrofit missing strings (incomplete extraction)** — With 82+ strings across 16 files, manual extraction misses: Alert.alert() titles/bodies, Toast messages, error messages in catch blocks, props to EmptyState component, template literals (formatLastStudied, formatDuration), navigation titles. Fix: Use provided exhaustive file-by-file inventory. Test by switching to Italian and navigating every screen including error states. Impact: Partial translation creates jarring user experience.
 
-4. **Google OAuth deep linking failures on Android** — OAuth redirect after Google sign-in doesn't return to app. User completes auth then gets stuck in browser. Android 13+ has stricter deep link verification. **Prevention:** Configure AndroidManifest with `launchMode="singleTask"`, add intent-filters for scheme and Universal Links, set up assetlinks.json with SHA-256 fingerprint, test both cold-start and warm-start scenarios.
+4. **process.env undefined in @lumio/shared at runtime** — VERSION constant works (literal string), but BUILD_INFO.buildNumber/gitSha/buildDate use process.env which is undefined in pre-compiled packages (Expo only inlines EXPO_PUBLIC_* in source files, not node_modules). Fix: Import VERSION or getVersionString() only, not getFullVersionString(). Impact: Version display works, but build metadata always shows dev-local fallback.
 
-5. **Markdown rendering performance with complex content** — Rendering markdown with code blocks, LaTeX, and images causes severe UI lag. Quiz transitions feel sluggish. Entire UI freezes on complex cards. **Prevention:** Don't render markdown in list items (show preview only), use react-native-markdown-display (native, not WebView), use react-native-math-view for LaTeX (native SVG rendering), memoize all rendered markdown, provide explicit image dimensions to prevent layout thrash.
-
-6. **APK distribution and update management** — Unlike Play Store apps, sideloaded APKs have no built-in update mechanism. Users stuck on old buggy versions with no notification of updates. Google tightening sideloading restrictions in Brazil, Indonesia, Singapore, Thailand starting September 2026. **Prevention:** Implement in-app update checking with react-native-update-apk, host version.json on server, use CodePush for JS-only hotfixes, establish clear versioning strategy, monitor Google's policy changes with Play Store contingency plan.
+5. **SVG Metro transformer conflicts with monorepo config** — Adding react-native-svg-transformer requires modifying metro.config.js which already has custom watchFolders/nodeModulesPaths for monorepo. Incorrect merge breaks @lumio/core imports. Fix: Spread existing config into transformer/resolver changes. Alternative: Use PNG conversion to avoid Metro changes entirely.
 
 ## Implications for Roadmap
 
-Based on research, suggested 5-phase structure organized by dependency order and risk mitigation:
+Based on research, suggested phase structure ordered by: dependencies, risk mitigation, and effort-to-impact ratio.
 
-### Phase 1: Foundation & Infrastructure (Week 1)
-**Rationale:** Must establish core infrastructure before any feature work. Supabase client configuration mistakes caught here prevent cascading failures in later phases. Expo project setup with NativeWind and monorepo integration unblocks all UI development.
+### Phase 1: Quick Wins (Bugfix + Version Display)
+**Rationale:** Fix broken functionality before adding features. Both are low-effort, high-visibility improvements with zero new dependencies.
+**Delivers:**
+- Bottom-sheet card preview scrolls correctly
+- Settings displays actual version (v1.1.4 instead of hardcoded v1.0.0)
+**Addresses:** Table stakes (bugfix), polish (version)
+**Avoids:** Pitfall 1 (WebView height timing), Pitfall 2 (gesture conflict)
+**Estimated effort:** 4-6 hours
 
-**Delivers:** Working Expo SDK 54 project integrated into monorepo, NativeWind configured, Supabase client initialized with AsyncStorage adapter and react-native-url-polyfill, @lumio/core verified compatible with React Native, TanStack Query and Zustand providers ready, file-based routing structure established.
+### Phase 2: Logo Integration
+**Rationale:** Visual polish with single new component, no new native dependencies if using PNG. Should happen before i18n modifies LoginScreen.
+**Delivers:**
+- Logo replaces text placeholder on LoginScreen
+- Optional: Logo in Dashboard header
+**Uses:** PNG conversion (no stack changes) OR react-native-svg (requires native rebuild)
+**Addresses:** Table stakes (logo)
+**Avoids:** Pitfall 5 (Metro config conflicts if using transformer), Pitfall 6 (SDK 54 press event regression)
+**Estimated effort:** 2-4 hours (PNG) or 6-8 hours (SVG component)
 
-**Addresses:** Pitfall 3 (Supabase incompatibilities), Pitfall 1 (web primitives—establish conventions early)
+### Phase 3: Configurable Study Sessions
+**Rationale:** Establishes settings infrastructure. Building before i18n means SettingsScreen gets new sections first, then i18n translates final strings (avoids double-editing).
+**Delivers:**
+- Cards-per-session setting (5/10/15/20/All) in SettingsScreen
+- useStudySession hook respects limit
+- "Study X of Y" display on ready screen
+**Uses:** AsyncStorage (existing), lib/studySettings.ts (new, mirrors lib/theme.ts)
+**Implements:** Settings persistence pattern
+**Addresses:** Competitive feature (configurable sessions)
+**Avoids:** Pitfall 10 (stale closure in useStudySession)
+**Estimated effort:** 8-10 hours
 
-**Research flags:** Standard Expo setup, well-documented patterns. Skip research-phase.
-
-### Phase 2: Authentication & Navigation (Week 2)
-**Rationale:** Auth is foundation for all protected features. OAuth deep linking is highest technical risk—must validate on physical devices with cold-start testing before building dependent features. Getting this working unblocks repository management and study flows.
-
-**Delivers:** Google OAuth login via @react-native-google-signin, Expo Router protected routes with auth layout wrapper, OAuth callback handling for both warm and cold start scenarios, AndroidManifest and assetlinks.json properly configured, auth state persistence in expo-secure-store, session management via AuthProvider context.
-
-**Addresses:** Pitfall 4 (OAuth deep linking failures), Table stakes: authentication persistence
-
-**Research flags:** OAuth deep linking on Android 13+ is complex. Consider research-phase if team lacks Android deep linking experience.
-
-### Phase 3: Repository & Card Management (Week 2-3)
-**Rationale:** Repository management required before study features. Card list performance issues must be prevented upfront—FlatList optimization from the start cheaper than refactoring later. Markdown rendering strategy (preview in list, full render on open) established here.
-
-**Delivers:** Repository list screen with add/remove functionality, Card list with FlatList performance optimization (getItemLayout, keyExtractor, memoization), Card preview with markdown/LaTeX rendering via react-native-markdown-display and react-native-math-view, Pull-to-refresh for repo sync, Bottom navigation structure.
-
-**Addresses:** Pitfall 2 (FlatList performance), Pitfall 5 (markdown rendering), Table stakes: repository management, markdown rendering
-
-**Research flags:** Markdown rendering with LaTeX is medium confidence area. May need research-phase for react-native-math-view integration patterns if complex formulas common in cards.
-
-### Phase 4: Study Flow & Quiz (Week 3-4)
-**Rationale:** Core value proposition—AI-generated quiz based on cards. Depends on card rendering from Phase 3. Swipe gestures and haptic feedback establish "native feel" that differentiates from PWA. Progress tracking enables retention metrics.
-
-**Delivers:** Study session screen with swipe gesture controls (Tinder-style), Quiz question generation via existing Edge Functions, Answer validation and SM-2 algorithm integration, Haptic feedback on card flip and answer submission, Progress visualization (daily/weekly stats, mastery tracking), Question voting (like/dislike) UI, Dark mode support.
-
-**Addresses:** Table stakes: smooth study UX, swipe gestures, dark mode, progress visualization, question voting. Differentiator: native gestures with haptic feedback.
-
-**Research flags:** Standard React Native patterns. Skip research-phase.
-
-### Phase 5: Native Enhancements & Distribution (Week 4-5)
-**Rationale:** Native-specific features that leverage platform capabilities beyond PWA. Push notifications drive retention. APK distribution strategy must include update mechanism to avoid version fragmentation. Widget is high-value but non-blocking for launch.
-
-**Delivers:** Push notifications for study reminders (configurable, not aggressive), EAS Build configuration for APK generation (preview and production profiles), In-app update checking with react-native-update-apk, Version.json hosting infrastructure, Study streak tracking, Optional: Home screen widget (show daily card, streak, quick-study button).
-
-**Addresses:** Pitfall 6 (APK distribution), Table stakes: push notifications, fast app launch. Differentiators: study streak, home screen widget.
-
-**Research flags:** EAS Build setup well-documented. Widget implementation may benefit from research-phase if pursuing in v1.
+### Phase 4: Internationalization (IT/EN Toggle)
+**Rationale:** Highest effort (82+ strings across 16 files). Do LAST because it touches every screen — other features finalized first prevents re-translating modified strings.
+**Delivers:**
+- Language toggle in SettingsScreen (Italian/English)
+- All UI strings translated (Login, Dashboard, Study, Summary, Settings, Repos screens + components)
+- AsyncStorage persistence
+- Language-aware relative time formatting
+**Uses:** expo-localization, i18n-js
+**Implements:** i18n context with side-effect init pattern
+**Addresses:** Table stakes (IT/EN toggle)
+**Avoids:** Pitfall 3 (incomplete extraction via systematic file inventory), Pitfall 7 (loading flash via async init), Pitfall 9 (template literals need interpolation params)
+**Estimated effort:** 16-20 hours
 
 ### Phase Ordering Rationale
 
-- **Phase 1 must come first:** Supabase client misconfiguration blocks all features. NativeWind setup enables UI development. Monorepo integration allows @lumio/core reuse.
-- **Phase 2 before 3-4:** Auth required for protected routes. OAuth deep linking most complex—validate early before building dependent features.
-- **Phase 3 before 4:** Study flow needs card rendering. FlatList performance optimization in Phase 3 prevents rework when quiz adds card transitions.
-- **Phase 5 last:** Native enhancements are "polish" features. Push notifications and update mechanism important but non-blocking for core functionality validation.
+- **Bugfix first (Phase 1)**: Broken functionality affects current users. No new code patterns to learn, minimal risk.
+- **Logo second (Phase 2)**: Quick visual improvement. If using PNG, zero dependencies. If using SVG, isolates native rebuild risk before other work.
+- **Settings third (Phase 3)**: Establishes patterns that i18n will extend (new SettingsScreen sections). useStudySession modification isolated from i18n string extraction.
+- **i18n last (Phase 4)**: Touches every file. Doing it after other phases means only one pass of string extraction per file. Reduces merge conflicts and double-work.
 
-**Architecture-driven groupings:**
-- Phase 1: Infrastructure layer (providers, client setup)
-- Phase 2: Auth & navigation layer
-- Phase 3-4: Feature layer (core product functionality)
-- Phase 5: Platform layer (native capabilities)
-
-**Pitfall avoidance built into ordering:**
-- Supabase client config issues caught in Phase 1 (before auth work)
-- OAuth deep linking validated in Phase 2 (before building features that need auth)
-- FlatList optimization enforced in Phase 3 (before study flow multiplies render complexity)
-- Markdown performance strategy established in Phase 3 (before quiz intensive rendering)
+Dependency chain:
+```
+Phase 1 (Bugfix) → No dependencies
+Phase 2 (Logo) → No dependencies
+Phase 3 (Study settings) → No dependencies on 1 or 2, but SettingsScreen changes
+Phase 4 (i18n) → Depends on Phases 1-3 being finalized (translates final strings)
+```
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 2 (Authentication):** If team lacks Android deep linking experience, run research-phase on OAuth callback handling, assetlinks.json configuration, and Android 13+ deep link verification. Medium confidence area in pitfalls research.
-- **Phase 3 (Card Management):** If cards contain complex LaTeX formulas, run research-phase on react-native-math-view vs @caporeista/reactnative-math-latex (WebView fallback). Markdown rendering flagged as medium confidence.
-- **Phase 5 (Widget):** If pursuing home screen widget in v1, run research-phase on Expo widget configuration and update limitations. Not extensively covered in research.
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Bugfix):** Well-documented WebView height measurement patterns, project already uses WebView extensively
+- **Phase 2 (Logo):** PNG conversion is trivial, SVG integration documented in Expo SDK 54 docs
+- **Phase 3 (Settings):** Mirrors existing ThemeContext/AsyncStorage pattern exactly
+- **Phase 4 (i18n):** Expo officially documents expo-localization + i18n-js, standard retrofit process
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Foundation):** Expo SDK 54 setup well-documented in official docs, high confidence
-- **Phase 4 (Study Flow):** React Native gesture handling and animations established patterns, high confidence
+No phases need deeper research. All patterns are either already in the codebase (settings persistence, side-effect init) or well-documented in official Expo/React Native docs (i18n, SVG, WebView).
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All recommendations verified with Expo SDK 54 official docs, NativeWind 4 documentation, and package repositories. Version compatibility matrix confirmed. |
-| Features | MEDIUM | Feature expectations based on multiple WebSearch sources (competitor analysis, UX patterns). Anti-features list is opinionated but well-reasoned from Lumio's PRD. |
-| Architecture | HIGH | React Native community best practices verified with official Expo Router docs, TanStack Query integration patterns, and Supabase React Native quickstart guide. @lumio/core reusability confirmed from existing monorepo structure. |
-| Pitfalls | MEDIUM | Pitfalls sourced from practitioner blog posts and community experiences, verified where possible with official docs. OAuth deep linking and FlatList performance are well-documented pain points. Markdown rendering performance is medium confidence based on library comparisons. |
+| Stack | HIGH | All recommendations verified against Expo SDK 54 docs. i18n-js is Expo's official recommendation. Versions confirmed compatible. |
+| Features | HIGH | All features verified against existing codebase. String count estimated by direct file inspection. Pitfall risks identified in actual source code. |
+| Architecture | HIGH | All patterns mirror existing code (ThemeContext, AsyncStorage, side-effect init). Integration points verified in 13 existing files. |
+| Pitfalls | HIGH | Critical pitfalls (WebView height, gesture conflict) confirmed via GitHub issues with exact symptoms. i18n extraction inventory complete. |
 
 **Overall confidence:** HIGH
 
-The recommended stack (Expo SDK 54, Expo Router, NativeWind, TanStack Query + Zustand) is well-established with official documentation and large community adoption. The main architectural decisions (file-based routing, TanStack Query for server state, @lumio/core reuse) are standard React Native patterns. The critical pitfalls (Supabase client config, OAuth deep linking, FlatList performance) are known issues with documented solutions.
-
 ### Gaps to Address
 
-**LaTeX rendering quality:** Medium confidence on react-native-math-view vs WebView-based solutions. Research recommends react-native-math-view for performance (native SVG rendering) but flags @caporeista/reactnative-math-latex (KaTeX via WebView) as fallback for complex formulas. **Mitigation:** Prototype both approaches in Phase 3 with real Lumio card content. If react-native-math-view has rendering issues, accept WebView performance hit and use React.memo to minimize re-renders.
-
-**Widget implementation scope:** Research mentions home screen widgets as differentiator but doesn't detail Expo widget API limitations or update frequency constraints. **Mitigation:** If pursuing widget in v1, run focused research-phase on Expo widget configuration before Phase 5. Otherwise defer to v1.x.
-
-**Google sideloading policy impact:** Research flags September 2026 restrictions in Brazil, Indonesia, Singapore, Thailand but unclear if affects all sideloading or specific use cases. **Mitigation:** Monitor Google's policy announcements. Have Play Store contingency plan ready (EAS Submit already configured in Phase 5). User base geography will inform urgency.
-
-**Offline mode implementation:** Research identifies offline capability as table stakes but doesn't specify TanStack Query persistence patterns or sync queue architecture. **Mitigation:** Phase 1 sets up TanStack Query with default caching (covers basic offline reads). Full offline mode with sync queue can be v1.1 feature after validating usage patterns. Prioritize if user research shows connectivity issues.
+- **PNG vs SVG logo decision**: Research provides both paths. PNG is simpler (no native rebuild), SVG is more flexible (dynamic theming). Decision should be made in Phase 2 planning based on designer preference.
+- **Language-aware date formatting complexity**: Research notes it as a "should-have" but defers implementation approach. If included in Phase 4, use i18next interpolation with relative time params. If complexity is too high, defer to v1.3.
+- **Bottom-sheet fix validation**: The height measurement fix uses ResizeObserver which may not be available in older Android WebView versions (pre-2020). If compatibility issues arise, fallback to MutationObserver + window.load events as documented in PITFALLS.md.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Expo SDK 54 Reference](https://docs.expo.dev/versions/latest/) — SDK version, React Native compatibility, New Architecture adoption
-- [Expo Router Introduction](https://docs.expo.dev/router/introduction/) — File-based routing, deep linking patterns
-- [Supabase React Native Quickstart](https://supabase.com/docs/guides/auth/quickstarts/with-expo-react-native-social-auth) — Google OAuth integration, AsyncStorage configuration
-- [EAS Build APK Guide](https://docs.expo.dev/build-reference/apk/) — APK generation, distribution setup
-- [React Navigation 7 Documentation](https://reactnavigation.org/docs/getting-started/) — Navigation patterns (Expo Router built on this)
-- [NativeWind Installation](https://www.nativewind.dev/docs/getting-started/installation) — Tailwind CSS for React Native setup
-- [Material Design 3 Gestures](https://m3.material.io/foundations/interaction/gestures) — Android gesture patterns, haptics principles
-- [React Native Performance](https://reactnative.dev/docs/performance) — FlatList optimization, native driver animations
+- **Codebase inspection** — All 13 modified files, 4 new files, hooks, contexts, lib patterns verified directly in /home/toto/scm-projects/lumio
+- [Expo Localization Guide](https://docs.expo.dev/guides/localization/) — Official i18n recommendation (expo-localization + i18n-js)
+- [Expo Localization API](https://docs.expo.dev/versions/latest/sdk/localization/) — getLocales(), useLocales() API
+- [Expo SVG Documentation](https://docs.expo.dev/versions/latest/sdk/svg/) — react-native-svg installation and SvgXml usage
+- [Expo Environment Variables](https://docs.expo.dev/guides/environment-variables/) — EXPO_PUBLIC_* inlining behavior
+- [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715) — Height calculation race with ScrollView
+- [react-native-webview issue #1395](https://github.com/react-native-webview/react-native-webview/issues/1395) — Android wrong content height
+- [react-native-webview issue #2565](https://github.com/react-native-webview/react-native-webview/issues/2565) — ScrollView freezes after WebView press
+- [react-native-svg issue #2784](https://github.com/software-mansion/react-native-svg/issues/2784) — SDK 54 onPress regression
+- [react-native-svg issue #2796](https://github.com/software-mansion/react-native-svg/issues/2796) — Path press not triggered Expo 54
 
 ### Secondary (MEDIUM confidence)
-- [React State Management 2025](https://www.developerway.com/posts/react-state-management-2025) — TanStack Query + Zustand patterns
-- [React Native Wrapped 2025](https://www.callstack.com/blog/react-native-wrapped-2025-a-month-by-month-recap-of-the-year) — Ecosystem trends, New Architecture adoption
-- [Expo vs Bare React Native 2025](https://www.godeltech.com/blog/expo-vs-bare-react-native-in-2025/) — Framework comparison
-- [React Native Deep Linking That Actually Works](https://medium.com/@nikhithsomasani/react-native-deep-linking-that-actually-works-universal-links-cold-starts-oauth-aced7bffaa56) — OAuth callback patterns, assetlinks.json
-- [FlatList Performance Optimization](https://www.obytes.com/blog/a-guide-to-optimizing-flatlists-in-react-native) — getItemLayout, memoization patterns
-- [7 React Native Mistakes Slowing Your App in 2026](https://medium.com/@baheer224/7-react-native-mistakes-slowing-your-app-in-2026-19702572796a) — Common pitfalls
-- [Supabase with React Native Integration Issues](https://medium.com/@kelvinpompey.me/things-to-look-out-for-using-supabase-with-react-native-9638b23e98c2) — Polyfill requirements, configuration
-- [Quizlet vs Anki Comparison](https://www.aitooldiscovery.com/guides/quizlet-vs-anki) — Competitor feature analysis
-- [Streaks for Gamification](https://www.plotline.so/blog/streaks-for-gamification-in-mobile-apps) — Retention mechanics (40-60% DAU increase)
-- [Google Sideloading Policy 2026](https://www.medianama.com/2025/08/223-google-blocks-android-apk-sideloading-2026/) — Distribution restrictions
+- [i18n-js npm](https://www.npmjs.com/package/i18n-js) — v4.5.2 actively maintained
+- [react-native-svg USAGE.md](https://github.com/software-mansion/react-native-svg/blob/main/USAGE.md) — SvgXml component API
+- [react-native-svg-transformer README](https://github.com/kristerkari/react-native-svg-transformer) — Metro config setup
+- [Expo SDK 54 Changelog](https://expo.dev/changelog/sdk-54) — React Native 0.81, React 19.1
+- [Phrase: React Native i18n with Expo and i18next](https://phrase.com/blog/posts/react-native-i18n-with-expo-and-i18next-part-1/) — Alternative i18n approach (not used)
+- [React Native / Expo Starter i18n guide](https://starter.obytes.com/guides/internationalization/) — Community patterns
 
 ### Tertiary (LOW confidence)
-- react-native-markdown-display npm package — Library features, needs validation with real content
-- react-native-math-view GitHub — Native LaTeX rendering, needs complex formula testing
-- Various practitioner blogs on React Native migration patterns — Anecdotal pitfalls, valuable but not verified
+- [Medium: i18n AsyncStorage persistence](https://medium.com/@lasithherath00/implementing-react-native-i18n-and-language-selection-with-asyncstorage-b24ae59e788e) — Language detector pattern
 
 ---
-*Research completed: 2026-01-29*
+*Research completed: 2026-02-09*
 *Ready for roadmap: yes*

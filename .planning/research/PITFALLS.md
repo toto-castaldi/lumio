@@ -1,389 +1,350 @@
-# Pitfalls Research
+# Domain Pitfalls
 
-**Domain:** React Native Android development (PWA-to-native migration)
-**Researched:** 2026-01-29
-**Confidence:** MEDIUM (WebSearch findings verified with official docs where possible)
+**Domain:** Adding i18n, SVG branding, configurable study sessions, bottom-sheet bugfix, and dynamic versioning to existing React Native/Expo Android app
+**Researched:** 2026-02-09
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Using Web Primitives Instead of Native Components
+Mistakes that cause rewrites or major issues.
 
-**What goes wrong:**
-Web developers instinctively reach for `<div>`, `<span>`, CSS flexbox tricks, and DOM-based patterns. In React Native, there is no DOM — components render to native views. Using web patterns results in apps that feel sluggish, look wrong, and miss platform conventions.
+### Pitfall 1: WebView Height Measurement Fires Before CDN Resources Load
 
-**Why it happens:**
-React web experience creates muscle memory. The JSX looks similar, so developers assume web patterns transfer directly. They don't realize that `<View>` is not a `<div>` and `<Text>` is not a `<span>`.
+**What goes wrong:** The current `cardHtml.ts` reports height via `setTimeout(fn, 100)` after rendering (line 222-228). This 100ms delay races against CDN-loaded KaTeX CSS (~230KB), highlight.js CSS/JS (~40KB), and marked.js. On slow connections, these resources are not yet loaded when `document.documentElement.scrollHeight` executes, producing an incorrect height. Content gets cut off, and on Android specifically, the reported `scrollHeight` can also be inflated initially and then shrink as layout stabilizes, causing visual jumps.
 
-**How to avoid:**
-- Learn the core RN primitives immediately: `View`, `Text`, `Image`, `ScrollView`, `FlatList`, `TouchableOpacity`
-- Use `StyleSheet.create()` instead of inline styles — it's not just convention, it's performance
-- Never try to render text outside a `<Text>` component (crashes the app)
-- Accept that styling is a subset of CSS written in JS objects, not CSS files
+**Why it happens:** The `setTimeout(100)` is a guess, not event-driven. CDN resources may take 200-500ms+ to load on mobile networks. The height is measured once and never re-measured, even as CSS changes the layout after load.
 
-**Warning signs:**
-- Attempting to use `className` or CSS modules
-- Using string-based styles instead of `StyleSheet.create()`
-- Text not rendering or app crashing on text render
-- Trying to use `:hover`, `:focus`, or CSS pseudo-selectors
+**Consequences:** Content visually cut off in the CardPreviewModal bottom sheet. The reported bug ("content cut off at top") is a direct symptom: the WebView height is set wrong, and the ScrollView clips incorrectly. The combination of `androidLayerType="hardware"` and `opacity: 0.99` (rendering workaround in `CardContentView.tsx` line 58) adds further layout unpredictability.
 
-**Phase to address:**
-Phase 1 (Project Setup) — Establish conventions immediately
+**Prevention:**
+- Replace `setTimeout(100)` with a `ResizeObserver` on the content div, or use `load` events on `<link>` and `<script>` elements to wait for all CDN resources before measuring.
+- Use a `MutationObserver` as a fallback for older Android WebView versions lacking `ResizeObserver`.
+- Send multiple height updates (debounced) rather than a single one-shot measurement.
+- Example pattern:
+  ```javascript
+  Promise.all([
+    new Promise(r => document.fonts.ready.then(r)),
+    ...Array.from(document.querySelectorAll('link[rel=stylesheet]')).map(
+      link => new Promise(r => { link.onload = r; link.onerror = r; })
+    ),
+  ]).then(() => {
+    var height = document.documentElement.scrollHeight;
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: height }));
+  });
+  // Also observe for dynamic changes
+  new ResizeObserver(() => {
+    clearTimeout(window._ht);
+    window._ht = setTimeout(() => {
+      window.ReactNativeWebView.postMessage(
+        JSON.stringify({ type: 'height', value: document.documentElement.scrollHeight })
+      );
+    }, 50);
+  }).observe(document.getElementById('content'));
+  ```
 
----
+**Detection:** Content is cut off in CardPreviewModal; different card content lengths show inconsistent clipping. Testing on throttled network makes it dramatically worse.
 
-### Pitfall 2: FlatList Performance Disaster on Large Card Lists
-
-**What goes wrong:**
-Using `ScrollView` for the card list or misconfiguring `FlatList` causes severe performance issues, especially on low-end Android devices. Symptoms include laggy scrolling, blank spaces appearing, UI freezes, and even crashes.
-
-**Why it happens:**
-Web developers are used to browser virtualization being handled automatically or via libraries. FlatList requires explicit configuration. Without `getItemLayout`, `keyExtractor`, and proper memoization, every scroll triggers expensive re-renders.
-
-**How to avoid:**
-1. **Always use `FlatList`** (or `FlashList` by Shopify for better performance) — never `ScrollView` for lists > 10 items
-2. **Implement `getItemLayout`** if card heights are fixed — eliminates measurement overhead
-3. **Use `React.memo()`** on list item components — prevents re-render of off-screen items
-4. **Never use inline functions** in `renderItem` — creates new function every render
-5. **Configure `windowSize`** (default 21 is often too high for memory-constrained devices)
-6. **Optimize images** — Android struggles with HD images in lists; use thumbnails, max 720p
-
-**Warning signs:**
-- Scrolling feels janky or stuttery
-- Blank white spaces appear between items while scrolling fast
-- App crashes with large datasets
-- High memory usage in Android profiler
-- Testing only on high-end devices masks the problem
-
-**Phase to address:**
-Phase 3 (Repository and Card Management) — when building card lists
+**Confidence:** HIGH -- verified by reading `cardHtml.ts` (line 222-228) and corroborated by [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715) and [issue #1395](https://github.com/react-native-webview/react-native-webview/issues/1395).
 
 ---
 
-### Pitfall 3: Supabase Client Configuration Incompatibilities
+### Pitfall 2: ScrollView + WebView(scrollEnabled=false) Gesture Conflict on Android
 
-**What goes wrong:**
-Supabase's JavaScript client assumes browser APIs that don't exist in React Native: `localStorage`, `URL`, `WebSocket` streams, `location.href`. App crashes on startup or auth flows silently fail.
+**What goes wrong:** The `CardPreviewModal` wraps a `CardContentView` (WebView with `scrollEnabled={false}`) inside a `ScrollView`. On Android, even with `scrollEnabled={false}`, the WebView's internal gesture handling intercepts touch events, causing the parent ScrollView to stop scrolling entirely after the user interacts with the WebView area.
 
-**Why it happens:**
-The Supabase client is designed for web first. React Native is not a browser — it lacks Web APIs. The PWA version of Lumio works because PWA runs in a browser context.
+**Why it happens:** Android's native `WebView` has its own touch event pipeline separate from React Native's gesture system. Setting `scrollEnabled={false}` on the RN side does not fully disable the native WebView's gesture interception. When a user touches inside the WebView area, Android's WebView consumes `ACTION_MOVE` events before they bubble to the parent ScrollView.
 
-**How to avoid:**
-1. **Install polyfills** — `react-native-url-polyfill` is mandatory
-2. **Use AsyncStorage** — replace localStorage with `@react-native-async-storage/async-storage`
-3. **Disable `detectSessionInUrl`** — set to `false` in client config (RN has no URL bar)
-4. **Import polyfill first** — `import 'react-native-url-polyfill/auto'` at the top of entry file
-5. **Use Expo SecureStore** (if using Expo) or `expo-secure-store` for sensitive data
+**Consequences:** Users cannot scroll the card preview content on Android after touching inside the rendered card area. This makes the feature appear broken for any card with content taller than the visible area.
 
-```typescript
-// Correct Supabase client setup for React Native
-import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
+**Prevention:**
+- Set `nestedScrollEnabled={false}` on the WebView explicitly.
+- Add `pointerEvents="none"` to a View wrapper around the WebView since card previews are read-only, allowing all touch events to pass through to the parent ScrollView.
+- As a more robust alternative, replace the ScrollView/WebView pattern with a single WebView that handles its own scrolling internally (remove outer ScrollView, set `scrollEnabled={true}` on WebView). The header/close button can be positioned absolutely above it.
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false, // CRITICAL for React Native
-  },
-});
-```
+**Detection:** On a physical Android device (not emulator), try scrolling a card preview where content is taller than the bottom sheet. After touching inside the WebView area, the ScrollView will freeze.
 
-**Warning signs:**
-- `TypeError: URL is not a constructor`
-- Auth state not persisting between app restarts
-- `stream` module errors
-- `location is not defined` errors
-
-**Phase to address:**
-Phase 1 (Project Setup) — core infrastructure, before any auth work
+**Confidence:** HIGH -- documented in the project's own MEMORY.md ("Swipe gestures conflict with ScrollView inside child components") and confirmed by [react-native-webview issue #2565](https://github.com/react-native-webview/react-native-webview/issues/2565).
 
 ---
 
-### Pitfall 4: Google OAuth Deep Linking Failures on Android
+### Pitfall 3: i18n Retrofit Missing Strings (Incomplete Extraction)
 
-**What goes wrong:**
-OAuth redirect after Google sign-in doesn't return to the app. User completes Google auth, then gets stuck in the browser or the redirect silently fails. The app chooser appears instead of direct app open.
+**What goes wrong:** When retrofitting i18n into an app with all hardcoded English strings, developers find and translate the obvious JSX strings but miss: `Alert.alert()` titles/bodies, Toast messages, error messages in catch blocks, strings passed as props to reusable components (like `EmptyState`'s `title`/`subtitle`/`actionLabel`), template literals with embedded values (e.g., `` `${diffMinutes}m ago` ``), and navigation header titles.
 
-**Why it happens:**
-Android deep linking requires precise configuration in `AndroidManifest.xml` and `assetlinks.json`. Small mismatches between intent filters, redirect URIs in Google Cloud Console, and Supabase URL configuration break the flow. Additionally, Android 13+ has stricter deep link verification.
+**Why it happens:** Automated extraction tools only find `t('key')` calls. During a retrofit, the process is manual. Without a systematic screen-by-screen audit, strings get missed. The Lumio codebase has approximately 55+ user-visible string literals across 11 files (6 screens + 5 components), plus strings in `formatLastStudied()` and `formatDuration()` helper functions.
 
-**How to avoid:**
-1. **Configure `AndroidManifest.xml`** correctly:
-   - Set `launchMode="singleTask"` on MainActivity
-   - Add intent-filter for your scheme (e.g., `com.toto_castaldi.lumio://`)
-   - Add intent-filter for Universal Links (your domain)
+**Consequences:** A partially-translated app is worse than an untranslated one. Users will see a mix of English and Italian, creating a jarring experience. Strings in Alerts and Toasts are particularly easy to miss because they are inline in handler functions rather than in JSX.
 
-2. **Set up `assetlinks.json`** on your domain:
-   - File must be at `/.well-known/assetlinks.json`
-   - SHA-256 fingerprint must match your signing key
-   - Use Google's validator to verify
+**Prevention:**
+- Create a complete inventory before starting. Here is the exhaustive list for Lumio:
+  - **`DashboardScreen.tsx`**: "Not yet", "Just now", `${n}m ago`, `${n}h ago`, `${n}d ago`, "No Repositories Yet", "Add a repository to start studying...", "Go to Repositories", "Repositories", "Cards", "Last Studied", "Start Study Session"
+  - **`StudyScreen.tsx`**: "End Session?", "Your progress will be saved.", "Continue Studying", "End Session", "Card skipped", "Study", "Review", "Loading cards...", "No cards available", "Questions are being prepared. Try again in a few minutes.", "Back to Dashboard", "Ready to study", `${n} cards available`, "Start", "Loading question...", "Prev Card", "Next Card", "Finish", "Back to Current Card", "Skip", "Skipping...", "Session Complete", "You studied all available cards"
+  - **`LoginScreen.tsx`**: "Lumio", "Your flashcards, supercharged", "Sign in with Google", "Sign in failed", "Google Sign-In not configured."
+  - **`StudySummaryScreen.tsx`**: "Session Complete!", "Score", "Correct", "Incorrect", "Skipped", "Time", "Return to Dashboard", `${n}m ${n}s`, `${n}s`
+  - **`SettingsScreen.tsx`**: "Signed in as", "Unknown user", "Appearance", "System", "Light", "Dark", "Log out", "Lumio v1.0.0"
+  - **`ReposScreen.tsx`**: Various repo-related strings (titles, empty states, form labels)
+  - **`CardPreviewModal.tsx`**: "Card Content", "No card content to display"
+  - **`EmptyState.tsx`**: Receives strings as props -- callers must translate
+  - **`AddRepoForm.tsx`**: Form labels and validation messages
+- Use `eslint-plugin-i18next` or a custom ESLint rule to flag untranslated string literals in JSX.
+- Do a final pass by switching to Italian and testing every screen including error paths and empty states.
 
-3. **Configure Supabase URL settings**:
-   - Add `com.toto_castaldi.lumio://auth/callback` as redirect URL
-   - Add `https://lumio.toto-castaldi.com/auth/callback` as fallback
+**Detection:** Switch app to Italian and methodically navigate every screen, trigger every Alert/Toast, and exercise every empty/error state. Any English text is a missed string.
 
-4. **Use Expo AuthSession** (if using Expo) — handles much of this automatically
-
-5. **Test both scenarios**:
-   - Cold start (app not running)
-   - Warm start (app in background)
-
-**Warning signs:**
-- Auth works in Expo Go but fails in production build
-- Browser opens for OAuth but doesn't return to app
-- App chooser dialog appears instead of direct app launch
-- `Linking.addEventListener` never fires
-
-**Phase to address:**
-Phase 2 (Authentication Flow) — the entire phase depends on this working
+**Confidence:** HIGH -- directly verified by reading all source files.
 
 ---
 
-### Pitfall 5: Markdown Rendering Performance with Complex Content
+### Pitfall 4: process.env in @lumio/shared Being Undefined at Runtime
 
-**What goes wrong:**
-Rendering markdown cards with code blocks, LaTeX formulas, and images causes severe UI lag. Quiz transitions feel sluggish. The card preview dialog is slow to open. On complex cards, the entire UI freezes.
+**What goes wrong:** The `@lumio/shared` package uses `process.env.BUILD_NUMBER`, `process.env.COMMIT_SHA`, and `process.env.BUILD_DATE` in `version.ts` (lines 16-17). These will be `undefined` at runtime in the React Native app because: (1) Expo only inlines `EXPO_PUBLIC_*` variables, and (2) inlining does not apply to code in `node_modules` or pre-compiled packages.
 
-**Why it happens:**
-1. **Markdown parsing is expensive** — parsing happens on JS thread, blocking UI
-2. **LaTeX rendering is very expensive** — KaTeX/MathJax computations are heavy
-3. **Syntax highlighting is expensive** — Prism/Highlight.js parse entire code blocks
-4. **Multiple renders compound** — list of cards each parsing markdown = disaster
-5. **Images blocking render** — large images without proper sizing cause layout thrash
+**Why it happens:** `@lumio/shared` is compiled by `tsup` into `dist/index.js` before consumption. By the time Metro bundles the Android app, the `process.env.BUILD_NUMBER` references are literal `process.env` lookups, not Expo-inlined constants. Expo/Metro only replaces `process.env.EXPO_PUBLIC_*` in source files it compiles directly, not pre-compiled packages.
 
-**How to avoid:**
+**Consequences:** `getFullVersionString()` returns `v1.1.4 (dev-local)` even in production. The version constant (`VERSION = "1.1.4"`) works because it is a literal string, but build metadata always shows fallback values.
 
-1. **Don't render markdown in list items**:
-   - Show only title/preview text in FlatList
-   - Render full markdown only when card is opened for preview
+**Prevention:**
+- For the version display in SettingsScreen, import `VERSION` or `getVersionString()` from `@lumio/core` (which re-exports from `@lumio/shared`). The version constant works correctly because it is a literal.
+- Do NOT rely on `BUILD_INFO.buildNumber`, `BUILD_INFO.gitSha`, or `BUILD_INFO.buildDate` in the Android app.
+- If build metadata is needed, use `expo-constants` (`Constants.expoConfig.version`) or `EXPO_PUBLIC_*` environment variables in the app's own code.
+- When replacing the hardcoded `"Lumio v1.0.0"` in `SettingsScreen.tsx` (line 111), use: `import { getVersionString } from '@lumio/core';` which returns `"v1.1.4"`.
 
-2. **Use native-first markdown libraries**:
-   - `react-native-markdown-display` (recommended by Expo docs)
-   - `@docren/react-native-markdown` (lighter, MDAST-based)
-   - Avoid WebView-based markdown renderers
+**Detection:** Call `getFullVersionString()` in the running app and check if build number and git SHA show as "dev" and "local".
 
-3. **LaTeX: use native solutions**:
-   - `react-native-math-view` — native rendering, no WebView
-   - Avoid `react-native-webview` + KaTeX (creates heavy WebView per formula)
-
-4. **Syntax highlighting: optimize aggressively**:
-   - Use `react-native-syntax-highlighter` with async/light build
-   - Import only needed languages
-   - Memoize highlighted code blocks
-
-5. **Image optimization**:
-   - Use `react-native-fast-image` for caching and performance
-   - Provide explicit `width`/`height` to prevent layout shifts
-   - Use Supabase Storage signed URLs with size transforms
-
-**Warning signs:**
-- Visible delay when opening card preview
-- Scroll performance degrades with markdown content
-- App feels unresponsive during quiz transitions
-- High JS thread usage in profiler
-
-**Phase to address:**
-Phase 3 (Card list) and Phase 4 (Quiz flow) — different strategies for each
+**Confidence:** HIGH -- verified by reading `version.ts`, `tsup` build config, and [Expo environment variables documentation](https://docs.expo.dev/guides/environment-variables/).
 
 ---
 
-### Pitfall 6: APK Distribution and Update Management
+## Moderate Pitfalls
 
-**What goes wrong:**
-Users install the APK but have no way to know when updates are available. Users are stuck on old buggy versions. Manual distribution becomes a nightmare. Google's evolving sideloading policies may block installation entirely in certain regions starting September 2026.
+### Pitfall 5: SVG Metro Transformer Conflicting with Existing Metro Config
 
-**Why it happens:**
-Unlike Play Store apps, sideloaded APKs have no built-in update mechanism. There's no automatic check, no notification, no seamless upgrade path. Additionally, Google is tightening sideloading restrictions in Brazil, Indonesia, Singapore, and Thailand.
+**What goes wrong:** Adding `react-native-svg-transformer` requires modifying `metro.config.js` to change `babelTransformerPath` and move "svg" from `assetExts` to `sourceExts`. The existing `metro.config.js` already has custom config for the monorepo (`watchFolders`, `nodeModulesPaths`, `disableHierarchicalLookup`). Incorrectly merging these configurations breaks either SVG imports or monorepo package resolution.
 
-**How to avoid:**
+**Prevention:**
+- Merge into the existing config rather than replacing it. The SVG changes go into `config.transformer` and `config.resolver`, which must be spread with existing settings:
+  ```javascript
+  // Add to existing metro.config.js AFTER the current resolver config
+  config.transformer = {
+    ...config.transformer,
+    babelTransformerPath: require.resolve("react-native-svg-transformer/expo"),
+  };
+  config.resolver = {
+    ...config.resolver,
+    assetExts: config.resolver.assetExts.filter(ext => ext !== "svg"),
+    sourceExts: [...config.resolver.sourceExts, "svg"],
+  };
+  ```
+- The existing config uses `getDefaultConfig` from `expo/metro-config` which is compatible with `react-native-svg-transformer/expo`.
+- Test that `@lumio/core` imports still resolve correctly after the change.
+- Add TypeScript declaration for `.svg` imports (see Pitfall 12).
 
-1. **Implement in-app update checking**:
-   - Use `react-native-update-apk` library
-   - Host version.json on your server with latest version info
-   - On app start, check version and prompt user to download new APK
-
-2. **CodePush for JS-only updates**:
-   - Microsoft's CodePush can push JS bundle updates without new APK
-   - Limitations: can't update native code or dependencies
-   - Good for hotfixes and minor UI changes
-
-3. **Clear versioning strategy**:
-   - Version code must increment for every APK
-   - Semantic versioning for user-facing version name
-   - Store version in-app for comparison
-
-4. **Distribution infrastructure**:
-   - Host APKs on your own server (not Google Drive for production)
-   - Use proper content-type headers for APK downloads
-   - Provide clear installation instructions for users
-
-5. **Monitor Google's sideloading policy changes**:
-   - September 2026 changes may affect users in specific regions
-   - Have a Play Store contingency plan ready
-
-**Warning signs:**
-- Users reporting bugs you've already fixed
-- No visibility into what versions are in use
-- Users unable to install APK in certain regions
-- Manual tracking of who has which version
-
-**Phase to address:**
-Phase 5 (Build and Distribution) — must be architected upfront
+**Confidence:** HIGH -- verified the existing `metro.config.js` structure and [react-native-svg-transformer Expo setup](https://github.com/kristerkari/react-native-svg-transformer).
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 6: SVG Press Events Broken on Expo SDK 54
 
-Shortcuts that seem reasonable but create long-term problems.
+**What goes wrong:** If the logo SVG has interactive elements (pressable areas, links), they will not work on Expo SDK 54 with react-native-svg. There is a known regression where press events are only detected for the last rendered SVG element, and absolutely-positioned SVGs lose all press handling.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Using Expo Go for all testing | Fast iteration, no build needed | Masks production-only bugs (OAuth, deep links) | Early prototyping only — switch to dev builds ASAP |
-| Inline styles everywhere | Faster initial coding | Performance hit, unmaintainable | Never for production code |
-| Single shared component for card preview | Less code | Performance bottleneck as card complexity grows | Never — optimize from start |
-| Skipping `keyExtractor` on FlatList | Seems to work | Random re-renders, flickering | Never |
-| Not memoizing list items | Simpler code | O(n) re-renders on any state change | Never for lists > 10 items |
-| Using ScrollView for card list | Works initially | Crashes with large decks | Never |
-| Hardcoding API URLs | Quick setup | Painful environment switching | Only in earliest prototype |
-| Ignoring Android back button | Seems to work | App feels broken, users get stuck | Never |
+**Prevention:**
+- For a static logo, this is a non-issue -- static SVG rendering works fine.
+- Do NOT make the logo SVG pressable. If the logo needs to be tappable, wrap it in a `TouchableOpacity` or `Pressable` rather than using SVG's `onPress` prop.
+- Track [react-native-svg issue #2784](https://github.com/software-mansion/react-native-svg/issues/2784) and [#2796](https://github.com/software-mansion/react-native-svg/issues/2796) for fixes.
+
+**Confidence:** HIGH -- confirmed by GitHub issues specifically mentioning Expo SDK 54.
 
 ---
 
-## Integration Gotchas
+### Pitfall 7: i18n Language Preference Loading Race Condition
 
-Common mistakes when connecting to external services.
+**What goes wrong:** The i18next `languageDetector` plugin reads from AsyncStorage on app startup. AsyncStorage is async, but i18next initialization is sync. If the language preference has not loaded when the first screen renders, the app briefly flashes in the wrong language (typically the fallback) before switching.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Supabase Auth | Using `signInWithOAuth` without proper redirect handling | Configure deep links, use `signInWithIdToken` for native Google Sign-In |
-| Supabase Storage | Expecting signed URLs to work like web URLs | Handle image loading with proper headers, use `react-native-fast-image` |
-| Google OAuth | Testing only in Expo Go | Test with development builds — Expo Go can't handle native OAuth modules |
-| Sentry | Using `@sentry/browser` | Use `@sentry/react-native` — different SDK for mobile |
-| AsyncStorage | Storing large data (> 2MB) | Use SQLite or file system for large data |
-| Deep Links | Testing only warm start | Test cold start (app killed) — different code path |
+**Prevention:**
+- Use a "loading" state in the i18n provider that blocks rendering until the stored language is loaded, matching the existing `ThemeProvider` pattern.
+- Since Lumio only supports EN/IT toggle (not auto-detecting device locale), skip the `languageDetector` plugin. Load the preference from AsyncStorage in a context provider and call `i18n.changeLanguage()` imperatively:
+  ```typescript
+  // Follow ThemeProvider pattern (ThemeContext.tsx lines 44-48)
+  useEffect(() => {
+    loadLanguagePreference().then((lang) => {
+      i18n.changeLanguage(lang);
+      setReady(true);
+    });
+  }, []);
+  ```
+- The existing `ThemeContext.tsx` already demonstrates this exact async-load-before-render pattern.
 
----
+**Detection:** Set language to Italian, kill the app, reopen. Watch for a brief flash of English text before Italian loads.
 
-## Performance Traps
-
-Patterns that work at small scale but fail as usage grows.
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Rendering markdown in FlatList items | Scrolling lag | Show preview text only, render full markdown on tap | > 20 cards |
-| No image caching | Slow image loading, data usage | Use `react-native-fast-image` | Any production use |
-| Parsing markdown on every render | UI freezes | Memoize parsed result | Any complex markdown |
-| console.log in production | JS thread bottleneck | Use `babel-plugin-transform-remove-console` | Release builds |
-| JS-thread animations | Choppy transitions | Use `useNativeDriver: true` or Reanimated | Any visible animation |
-| Synchronous storage operations | UI freezes on startup | Use async patterns for all storage | > 100ms startup |
-| Large bundle size (Expo default) | Slow install, slow cold start | Use bare workflow or custom dev client | App size > 50MB |
-| Testing only on emulator | False confidence | Test on low-end physical device | Always |
+**Confidence:** MEDIUM -- based on documented async nature of AsyncStorage and standard i18next patterns; ThemeProvider shows the correct pattern already in use.
 
 ---
 
-## Security Mistakes
+### Pitfall 8: Separate AsyncStorage Keys vs. Single Settings Object
 
-Domain-specific security issues beyond general mobile security.
+**What goes wrong:** The current codebase stores theme under `@lumio/theme-preference`. Adding i18n and cards-per-session means either: (A) two more separate keys with 3+ independent reads on startup, or (B) migrating to a single settings object, risking data loss during migration.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Storing API keys in JS bundle | Keys extracted via APK decompilation | Keys already in Supabase backend — good! Don't regress. |
-| Exposing Supabase anon key in APK | Less severe but enables API abuse | Rate limiting, RLS policies (already implemented) |
-| OAuth state not validated | CSRF attacks on auth | Use state parameter in OAuth flow |
-| Deep link scheme hijacking | Malicious app intercepts auth callbacks | Use Android App Links with domain verification |
-| Sensitive data in AsyncStorage | Data accessible if device compromised | Use `expo-secure-store` for tokens |
-| Not pinning SSL certificates | MITM attacks | Enable certificate pinning in production (Phase 2+) |
+**Prevention:**
+- Use separate keys. Three small AsyncStorage reads in parallel via `Promise.all` are fast enough and avoid migration complexity:
+  ```typescript
+  const [theme, language, cardsPerSession] = await Promise.all([
+    loadThemePreference(),
+    loadLanguagePreference(),
+    loadCardsPerSession(),
+  ]);
+  ```
+- Use consistent naming: `@lumio/theme-preference`, `@lumio/language-preference`, `@lumio/cards-per-session`.
+- Do NOT use a single JSON blob. If the JSON gets corrupted (partial write, app crash), all settings are lost. Individual keys provide fault isolation.
 
----
+**Detection:** Verify changing one setting does not affect others. Verify app startup time with all three settings stored.
 
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Ignoring Android back button | Users feel trapped, force-close app | Implement proper back navigation at every screen |
-| Web-style loading spinners | Feels foreign on mobile | Use skeleton screens, native activity indicators |
-| No offline indication | Users confused why things fail | Clear "no connection" state with retry action |
-| Tiny touch targets | Frustrating tap experience | Minimum 44x44px touch targets (already in design system) |
-| Modal overuse | Feels heavy, disrupts flow | Use bottom sheets, inline expansion |
-| Ignoring platform conventions | App feels "off" | Study Material Design guidelines |
-| Blocking UI during API calls | App feels frozen | Optimistic UI updates, background refresh |
-| Quiz transition without feedback | Did my answer register? | Clear visual feedback, animations |
+**Confidence:** HIGH -- based on AsyncStorage best practices and the existing codebase pattern.
 
 ---
 
-## "Looks Done But Isn't" Checklist
+### Pitfall 9: i18n Interpolation Breaking with Dynamic Format Functions
 
-Things that appear complete but are missing critical pieces.
+**What goes wrong:** `formatLastStudied()` in `DashboardScreen.tsx` returns strings like `` `${diffMinutes}m ago` ``. `formatDuration()` returns `` `${minutes}m ${seconds}s` ``. Simply wrapping these in `t()` does not work because the variable parts need to be interpolation parameters, and different languages structure these differently (Italian: "5 minuti fa" vs English: "5m ago").
 
-- [ ] **OAuth Login:** Often missing cold-start deep link handling — verify app killed, then link opens app correctly
-- [ ] **FlatList:** Often missing `getItemLayout` — verify scrolling to specific index works
-- [ ] **Image loading:** Often missing error states — verify broken image URL shows fallback
-- [ ] **Card preview:** Often missing LaTeX rendering — verify math formulas display correctly
-- [ ] **Code blocks:** Often missing horizontal scroll — verify long lines don't overflow
-- [ ] **Back navigation:** Often missing per-screen handling — verify back works from every screen
-- [ ] **Offline state:** Often missing error UI — verify graceful failure without network
-- [ ] **Orientation lock:** Often missing AndroidManifest config — verify app stays portrait
-- [ ] **Status bar:** Often missing styling — verify status bar style matches screens
-- [ ] **Splash screen:** Often missing proper config — verify no white flash on app start
-- [ ] **APK signing:** Often missing release keystore — verify APK installs on non-dev devices
+**Prevention:**
+- Use i18next interpolation for all dynamic strings:
+  ```json
+  // en.json
+  { "time.minutesAgo": "{{count}}m ago", "time.justNow": "Just now" }
+  // it.json
+  { "time.minutesAgo": "{{count}} min fa", "time.justNow": "Adesso" }
+  ```
+- If pluralization is needed later (Italian: "1 ora fa" vs "2 ore fa"), use i18next's plural support with `_one`/`_other` suffixes.
+- Audit all functions that construct strings with embedded numbers.
 
----
+**Detection:** Check translations make grammatical sense in Italian. Template literal strings with embedded values always need interpolation params.
 
-## Recovery Strategies
-
-When pitfalls occur despite prevention, how to recover.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Used ScrollView for lists | MEDIUM | Replace with FlatList, implement `renderItem` pattern |
-| OAuth deep links broken | HIGH | Audit entire Manifest, assetlinks.json, Supabase config; may need app re-release |
-| Supabase client crashes | LOW | Add missing polyfills, update client config |
-| Markdown performance issues | MEDIUM | Add memoization, split preview from list, consider different library |
-| APK distribution chaos | MEDIUM | Implement version checking, set up proper hosting |
-| FlatList blank spaces | LOW | Add `getItemLayout`, tune `windowSize`, memoize items |
-| App size too large | HIGH | Migrate from Expo managed to bare/custom dev client |
-| Images not loading | LOW | Switch to `react-native-fast-image`, add error handling |
+**Confidence:** HIGH -- directly observed `formatLastStudied()` and `formatDuration()` in source code.
 
 ---
 
-## Pitfall-to-Phase Mapping
+### Pitfall 10: Cards-Per-Session Config Using Stale Closure or Wrong Limit Point
 
-How roadmap phases should address these pitfalls.
+**What goes wrong:** Adding a "cards per session" setting requires modifying `useStudySession` to stop after N cards. A naive implementation either: (A) limits the initial `cards` array (breaking random selection since fewer cards means less variety), or (B) checks the count in `handleNext` but uses a stale closure of the config value.
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Web primitives usage | Phase 1 (Setup) | Code review: no div/span, StyleSheet.create everywhere |
-| Supabase client config | Phase 1 (Setup) | App starts without URL/storage errors |
-| OAuth deep linking | Phase 2 (Auth) | Complete OAuth flow on physical device, both warm and cold start |
-| FlatList performance | Phase 3 (Cards) | Scroll 100+ cards smoothly on low-end device |
-| Markdown rendering | Phase 3-4 (Cards/Quiz) | Complex card with code + LaTeX opens in < 500ms |
-| APK distribution | Phase 5 (Distribution) | Version check works, update flow tested |
-| Android back button | All phases | Back button works correctly from every screen |
-| Offline handling | All phases | Clear error states when network unavailable |
+**Prevention:**
+- Add the limit check in `handleNext` by comparing `session.answeredCards.length + session.skippedCount` against the maximum:
+  ```typescript
+  const totalSeen = session.answeredCards.length + session.skippedCount;
+  if (totalSeen >= maxCardsPerSession) {
+    setSession(prev => ({ ...prev, state: 'completed' }));
+    return;
+  }
+  ```
+- Load cards-per-session once at session start (from SettingsContext), store in a `useRef` to avoid stale closures.
+- Use `Infinity` as default if no preference is set, preserving backward compatibility.
+- Do NOT filter the initial `cards` array -- the session needs all cards for random selection.
+
+**Detection:** Set cards-per-session to 3, start a session with 10+ cards. Verify session completes after exactly 3 cards (answered + skipped).
+
+**Confidence:** HIGH -- directly observed the `useStudySession` hook and its `handleNext` closure patterns.
+
+---
+
+## Minor Pitfalls
+
+### Pitfall 11: WebView react-native-webview v13.13.2+ ScrollView Rendering Regression
+
+**What goes wrong:** react-native-webview v13.13.2 introduced a regression where WebViews wrapped in ScrollView may not render on Android with React Native 0.77+. The project uses v13.16.0 with RN 0.81.5.
+
+**Prevention:**
+- Ensure the parent ScrollView has `contentContainerStyle={{ flexGrow: 1 }}` (current code has this).
+- If blank rendering occurs, pin to v13.12.5 as a temporary workaround.
+- Monitor [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715).
+
+**Confidence:** MEDIUM -- potentially affected version but may not manifest depending on exact conditions.
+
+---
+
+### Pitfall 12: Missing TypeScript Declarations for SVG Imports
+
+**What goes wrong:** After setting up `react-native-svg-transformer`, importing SVG files with `import Logo from './logo.svg'` produces a TypeScript error: "Cannot find module './logo.svg'". The app runs but TypeScript errors clutter CI and IDE.
+
+**Prevention:**
+- Create `apps/android/declarations.d.ts`:
+  ```typescript
+  declare module '*.svg' {
+    import React from 'react';
+    import { SvgProps } from 'react-native-svg';
+    const content: React.FC<SvgProps>;
+    export default content;
+  }
+  ```
+- Ensure `tsconfig.json` includes this declaration file.
+
+**Confidence:** HIGH -- standard requirement documented in react-native-svg-transformer README.
+
+---
+
+### Pitfall 13: StatusBar Style Not Adapting to Theme
+
+**What goes wrong:** The current `App.tsx` hard-codes `<StatusBar style="light" />` (line 22). This is a pre-existing bug: the status bar is always light regardless of theme preference. When adding settings, this becomes more visible as users interact more with Settings.
+
+**Prevention:**
+- Change to `<StatusBar style={isDark ? 'light' : 'dark'} />` and move it inside `ThemeProvider` where `isDark` is available. Fix as part of the settings screen updates.
+
+**Confidence:** HIGH -- directly observed in `App.tsx` line 22.
+
+---
+
+### Pitfall 14: Bottom Sheet Height Cached from Static Dimensions.get()
+
+**What goes wrong:** `CardPreviewModal` calculates `SCREEN_HEIGHT = Dimensions.get('window').height` at module load time (line 130). If window dimensions change (keyboard visible when module first imported, screen rotation, split-screen mode), the bottom sheet `maxHeight` (80% of screen) will be wrong.
+
+**Prevention:**
+- Use `useWindowDimensions()` hook instead of `Dimensions.get()` at module scope:
+  ```typescript
+  const { height: screenHeight } = useWindowDimensions();
+  // Then in style: maxHeight: screenHeight * 0.8
+  ```
+
+**Detection:** Open the app in split-screen mode or rotate the device. The bottom sheet will have incorrect height.
+
+**Confidence:** HIGH -- directly observed in `CardPreviewModal.tsx` line 130.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Bottom-sheet bugfix (WebView height) | Pitfall 1: Height measured before CDN loads | Use ResizeObserver + resource load events instead of setTimeout(100) |
+| Bottom-sheet bugfix (scroll) | Pitfall 2: ScrollView freezes after WebView touch | Use pointerEvents="none" wrapper since content is read-only |
+| Bottom-sheet bugfix (dimensions) | Pitfall 14: Static Dimensions.get at module scope | Replace with useWindowDimensions() hook |
+| i18n: String extraction | Pitfall 3: Incomplete extraction, ~55 strings across 11 files | Use provided exhaustive file-by-file inventory |
+| i18n: Interpolated strings | Pitfall 9: Template literals need i18next interpolation params | Convert formatLastStudied/formatDuration to use t() with params |
+| i18n: Initialization | Pitfall 7: Flash of wrong language on startup | Follow existing ThemeProvider pattern for async load |
+| i18n: Settings persistence | Pitfall 8: Separate keys vs single settings object | Use separate keys, parallel load via Promise.all |
+| Dynamic version | Pitfall 4: process.env undefined in pre-built shared package | Import VERSION constant (not BUILD_INFO) from @lumio/core |
+| SVG logo setup | Pitfall 5: Metro config merge breaks monorepo resolution | Merge carefully into existing config, test @lumio/core imports |
+| SVG press events | Pitfall 6: SDK 54 regression for interactive SVGs | Use Pressable wrapper, not SVG onPress prop |
+| Cards-per-session | Pitfall 10: Stale closure or wrong limit point in useStudySession | Count answered+skipped in handleNext, store limit in ref |
+| WebView rendering | Pitfall 11: v13.13.2+ regression on Android | Ensure flexGrow: 1 on ScrollView container |
+| SVG TypeScript | Pitfall 12: Missing module declarations | Add declarations.d.ts for *.svg |
+| StatusBar | Pitfall 13: Fixed to "light" regardless of theme | Fix when updating SettingsScreen |
 
 ---
 
 ## Sources
 
-- [React Native Performance Overview](https://reactnative.dev/docs/performance) (Official Docs, HIGH confidence)
-- [Supabase React Native Auth Quickstart](https://supabase.com/docs/guides/auth/quickstarts/react-native) (Official Docs, HIGH confidence)
-- [I learned React Native as a web developer, and I got everything wrong](https://fernandorojo.co/mistakes) (Blog, MEDIUM confidence)
-- [7 React Native Mistakes Slowing Your App in 2026](https://medium.com/@baheer224/7-react-native-mistakes-slowing-your-app-in-2026-19702572796a) (Blog, MEDIUM confidence)
-- [From Zero to Production: Building a React Native App in 2026](https://medium.com/@andy.a.g/from-zero-to-production-building-a-react-native-app-in-2026-2a664a967193) (Blog, MEDIUM confidence)
-- [Supabase React Native Integration Issues](https://medium.com/@kelvinpompey.me/things-to-look-out-for-using-supabase-with-react-native-9638b23e98c2) (Blog, MEDIUM confidence)
-- [React Native Deep Linking That Actually Works](https://medium.com/@nikhithsomasani/react-native-deep-linking-that-actually-works-universal-links-cold-starts-oauth-aced7bffaa56) (Blog, MEDIUM confidence)
-- [FlatList Performance Optimization](https://www.obytes.com/blog/a-guide-to-optimizing-flatlists-in-react-native) (Blog, MEDIUM confidence)
-- [FlashList vs FlatList](https://medium.com/whitespectre/flashlist-vs-flatlist-understanding-the-key-differences-for-react-native-performance-15f59236a39c) (Blog, MEDIUM confidence)
-- [Google Sideloading Policy Changes 2026](https://www.medianama.com/2025/08/223-google-blocks-android-apk-sideloading-2026/) (News, MEDIUM confidence)
-- [Expo vs Bare React Native 2025](https://www.godeltech.com/blog/expo-vs-bare-react-native-in-2025/) (Blog, MEDIUM confidence)
-- [React Native Reanimated 4 Guide](https://dev.to/erenelagz/react-native-reanimated-3-the-ultimate-guide-to-high-performance-animations-in-2025-4ae4) (Blog, MEDIUM confidence)
+- [react-native-webview issue #3715: WebView v13.13.2 cannot render with ScrollView on Android](https://github.com/react-native-webview/react-native-webview/issues/3715) -- HIGH confidence
+- [react-native-webview issue #1395: Android gives wrong content height](https://github.com/react-native-webview/react-native-webview/issues/1395) -- HIGH confidence
+- [react-native-webview issue #2565: ScrollView not working after WebView pressed on Android](https://github.com/react-native-webview/react-native-webview/issues/2565) -- HIGH confidence
+- [react-native-svg issue #2784: SVG onPress broken in Expo SDK 54](https://github.com/software-mansion/react-native-svg/issues/2784) -- HIGH confidence
+- [react-native-svg issue #2796: Path onPress not triggered since Expo 54](https://github.com/software-mansion/react-native-svg/issues/2796) -- HIGH confidence
+- [react-native-svg-transformer README: Expo Metro config setup](https://github.com/kristerkari/react-native-svg-transformer) -- HIGH confidence
+- [Expo: Environment Variables docs](https://docs.expo.dev/guides/environment-variables/) -- HIGH confidence
+- [Expo: Monorepo guide](https://docs.expo.dev/guides/monorepos/) -- HIGH confidence
+- [react-i18next documentation](https://react.i18next.com/) -- HIGH confidence
+- [Expo Localization SDK docs](https://docs.expo.dev/versions/latest/sdk/localization/) -- HIGH confidence
+- Lumio codebase direct inspection: `CardPreviewModal.tsx`, `CardContentView.tsx`, `cardHtml.ts`, `ThemeContext.tsx`, `SettingsScreen.tsx`, `StudyScreen.tsx`, `useStudySession.ts`, `DashboardScreen.tsx`, `LoginScreen.tsx`, `StudySummaryScreen.tsx`, `version.ts`, `metro.config.js`, `App.tsx` -- PRIMARY source
 
 ---
-*Pitfalls research for: React Native Android development (Lumio PWA migration)*
-*Researched: 2026-01-29*
+*Pitfalls research for: Lumio v1.2 milestone (i18n, branding, configurable sessions, bottom-sheet bugfix, dynamic versioning)*
+*Researched: 2026-02-09*
