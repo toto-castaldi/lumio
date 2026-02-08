@@ -1,8 +1,8 @@
-# Lumio Native
+# Lumio
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. Questa milestone segna il passaggio da due app web (React PWA) a una singola app nativa Android (React Native), con un sito informativo per il download dell'APK.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) con landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
 
 ## Core Value
 
@@ -12,8 +12,6 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Validated
 
-Funzionalità esistenti nel backend che rimangono invariate:
-
 - ✓ Autenticazione Google OAuth via Supabase — existing
 - ✓ Gestione repository (aggiunta/rimozione) via Docora webhook — existing
 - ✓ Sync automatico card da repository GitHub (pubblici e privati) — existing
@@ -21,21 +19,22 @@ Funzionalità esistenti nel backend che rimangono invariate:
 - ✓ Storage immagini in Supabase con signed URLs — existing
 - ✓ API keys AI centralizzate a livello piattaforma — existing
 - ✓ Filtro .lumioignore applicato nel backend — existing
+- ✓ App nativa Android con React Native — v1.1
+- ✓ Login Google OAuth nativo — v1.1
+- ✓ Dashboard con statistiche (repos, cards) — v1.1
+- ✓ Gestione repository (aggiungi/rimuovi con PAT) — v1.1
+- ✓ Studio con quiz pre-generati e sistema voti — v1.1
+- ✓ Preview card con markdown, syntax highlighting, LaTeX, immagini — v1.1
+- ✓ Landing page statica su lumio.toto-castaldi.com — v1.1
+- ✓ Download APK dalla landing page — v1.1
+- ✓ Rimozione apps/web e apps/mobile (PWA) — v1.1
+- ✓ Dark mode con toggle (system/light/dark) — v1.1
+- ✓ Haptic feedback su risposte quiz — v1.1
+- ✓ CI/CD per build APK e deploy landing — v1.1
 
 ### Active
 
-Nuove funzionalità da implementare:
-
-- [ ] App nativa Android con React Native
-- [ ] Login Google OAuth nativo
-- [ ] Dashboard con statistiche (repos, cards)
-- [ ] Gestione repository (aggiungi/rimuovi)
-- [ ] Studio con quiz pre-generati e sistema voti
-- [ ] Preview card con markdown, syntax highlighting, LaTeX, immagini
-- [ ] Landing page statica su lumio.toto-castaldi.com
-- [ ] Download APK dalla landing page
-- [ ] Rimozione apps/web e apps/mobile (PWA)
-- [ ] Unificazione codebase (rimozione packages/core e packages/shared)
+(Empty — next milestone requirements to be defined with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -43,44 +42,41 @@ Nuove funzionalità da implementare:
 - Distribuzione su Google Play Store — per ora solo APK diretto
 - Offline mode — richiede connessione per studio
 - Notifiche push — da valutare in futuro
+- Unificazione packages/core e packages/shared — @lumio/core riusato as-is, funziona bene
 
 ## Context
 
-**Stato attuale:**
-- Monorepo pnpm con apps/web, apps/mobile (PWA), packages/core, packages/shared
-- Backend Supabase completo e funzionante (auth, DB, storage, edge functions)
-- 13 milestone completate, versione v1.0.1
-- Unico utente attivo (developer), nessuna migrazione utenti necessaria
-
-**Motivazione del cambio:**
-- PWA ha limitazioni su mobile (OAuth flow, performance, UX)
-- Una sola app semplifica manutenzione
-- React Native permette riuso parziale competenze React
-- Preparazione per futuro rilascio iOS
-
-**Stack backend (invariato):**
-- Supabase (PostgreSQL, Auth, Storage, Edge Functions)
-- Docora per sync repository via webhook
-- OpenAI/Anthropic per generazione quiz (API keys centrali)
+**Stato attuale (post v1.1):**
+- Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
+- Backend Supabase invariato (auth, DB, storage, edge functions, Docora webhook)
+- 5,019 LOC TypeScript/JS (4,538 Android + 481 landing)
+- Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core
+- CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
+- Versione corrente: v1.1.3
+- App funzionante su Android con Google OAuth, studio quiz, card rendering
 
 ## Constraints
 
-- **Platform**: Solo Android per questa milestone
-- **Distribution**: APK diretto, no app store
-- **Tech stack**: React Native (da ricercare: Expo vs bare)
+- **Platform**: Solo Android
+- **Distribution**: APK diretto via GitHub Releases
 - **Backend**: Nessuna modifica alle Edge Functions o schema DB
-- **Timeline**: MVP, iterazione rapida
+- **Build**: Expo prebuild + Gradle (no EAS Build)
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| React Native over Flutter | Riuso competenze React, ecosistema familiare | ✓ Confirmed |
-| Expo managed workflow | Semplifica build/deploy, buon supporto community | ✓ Confirmed |
-| react-navigation over expo-router | expo-router incompatibile con pnpm monorepo (errore String→Boolean) | ✓ Confirmed |
-| Android-first | Dispositivo principale dello sviluppatore | ✓ Confirmed |
-| APK diretto vs Play Store | Velocità rilascio, nessuna review | — Pending |
-| Unificare codebase | Semplificazione, meno overhead packages | — Pending |
+| React Native over Flutter | Riuso competenze React, ecosistema familiare | ✓ Good |
+| Expo managed workflow | Semplifica build/deploy, buon supporto community | ✓ Good |
+| react-navigation over expo-router | expo-router incompatibile con pnpm monorepo | ✓ Good |
+| Android-first | Dispositivo principale dello sviluppatore | ✓ Good |
+| APK diretto vs Play Store | Velocità rilascio, nessuna review | ✓ Good (per ora) |
+| @lumio/core riusato as-is | Platform-agnostic types/utilities, nessun overhead | ✓ Good |
+| SecureStore per auth tokens | Encryption hardware-backed per sessioni Supabase | ✓ Good |
+| CDN libraries in WebView | LaTeX + code blocks impossibili con RN text components | ✓ Good |
+| Prev/Next buttons over swipe | ScrollView conflict con QuizCard su device reale | ✓ Good |
+| Bottom-sheet modal over fullscreen | Android nav controls coprono contenuto fullscreen | ✓ Good |
+| Expo config plugin per signing | android/ è gitignored, plugin sopravvive a prebuild | ✓ Good |
 
 ---
-*Last updated: 2026-02-04 after navigation decision*
+*Last updated: 2026-02-08 after v1.1 milestone*

@@ -2,103 +2,40 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-29)
+See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** ALL PHASES COMPLETE
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 5 of 5 (Distribution & Cleanup)
-Plan: 4 of 4 complete (01, 02, 03, 04 done)
-Status: COMPLETE - All phases finished
-Last activity: 2026-02-08 — Completed 05-04-PLAN.md (Legacy web/mobile cleanup)
+Phase: v1.1 complete — all 5 phases shipped
+Plan: Not started
+Status: Ready to plan next milestone
+Last activity: 2026-02-08 — v1.1 milestone complete
 
-Progress: [████████████████████████████████████████] 100% (19/19 plans total)
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 19
-- Average duration: 3.8 min
-- Total execution time: 72 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-foundation | 2 | 7 min | 3.5 min |
-| 02-auth-navigation | 4 | 11 min | 2.75 min |
-| 03-core-screens | 5 | 16 min | 3.2 min |
-| 04-study-cards | 4 | 24 min | 6.0 min |
-| 05-distribution-cleanup | 4 | 14 min | 3.5 min |
-
-**Recent Trend:**
-- Last 5 plans: 04-04 (15 min), 05-01 (3 min), 05-02 (2 min), 05-03 (2 min), 05-04 (7 min)
-- Trend: Phase 5 plans consistently fast (infra/config changes)
-
-*Updated after each plan completion*
+Progress: [████████████████████████████████████████] 100% (20/20 plans total)
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- **NAV-01:** Use react-navigation directly instead of expo-router (monorepo incompatibility)
-- **CLEAN-03:** Reuse @lumio/core as-is (platform-agnostic types and utilities)
-- **Package naming:** @lumio/android for workspace consistency
-- **Secure storage:** LargeSecureStore pattern (AES-256 keys in SecureStore, encrypted data in AsyncStorage)
-- **Env validation:** Fail-fast at module load if Supabase credentials missing
-- **AUTH-01:** SecureStore adapter replaces AsyncStorage for encrypted Supabase auth token storage
-- **AUTH-02:** Google Sign-In uses webClientId (not Android client ID) for Supabase signInWithIdToken compatibility
-- **AUTH-03:** Cancelled sign-in returns silently (no error toast) per CONTEXT discretion
-- **AUTH-04:** signOut does not require confirmation (immediate action per CONTEXT)
-- **NAV-02:** AppNavigator directly renders navigator components (no conditional routes)
-- **NAV-03:** Study button integrated in DashboardScreen (FAB overlay removed for better UX)
-- **NAV-04:** Icons-only tab bar (tabBarShowLabel: false)
-- **NAV-05:** Root native-stack wraps MainNavigator (tabs) to enable modal Study/StudySummary screens with card presentation
-- **PKG-01:** Android package name is `com.toto_castaldi.lumio` (underscore required, hyphens not allowed)
-- **CORE-01:** @lumio/core singleton replaces standalone supabase client via side-effect import pattern
-- **THEME-01:** ThemeProvider inside AuthProvider, wrapping NavigationContainer
-- **DASH-01:** getUserStats() from @lumio/core for repo/card counts, direct Supabase query for lastStudied
-- **DASH-02:** Dark mode iconBgColor variants for purple and amber stat cards
-- **DARK-01:** Google brand colors kept hardcoded in LoginScreen per brand guidelines
-- **DARK-02:** White text on colored backgrounds (logout, offline banner) for contrast in both themes
-- **PAT-01:** PAT input uses plain text (no secureTextEntry) since PATs are paste-and-submit tokens
-- **STUDY-01:** useStudySession mirrors PWA StudyPage pattern -- parallel load repos+cards, Deck filtering, random unseen card selection
-- **QUIZ-01:** AnswerOption uses Ionicons checkmark/close icons in answered state badges for clear visual differentiation
-- **QUIZ-02:** Review mode uses separate isReviewing state with explicit "Back to Current Card" button
-- **RENDER-01:** CDN-loaded libraries (marked.js, KaTeX, highlight.js) in WebView for card content rendering -- native RN text components cannot handle LaTeX + code blocks
-- **RENDER-02:** postMessage-based dynamic height reporting with 100ms delay for WebView rendering settlement
-- **NAV-06:** Prev/Next buttons (50/50 width) replace swipe gestures — swipe conflicted with ScrollView inside QuizCard
-- **RENDER-03:** No pinch-to-zoom on card images — card preview modal is read-only, no image zoom
-- **RENDER-04:** CardPreviewModal uses bottom-sheet style (80% height, rounded corners, backdrop tap to close) instead of fullscreen
-- **LANDING-01:** Pure CSS language toggle using html[lang] attribute selectors instead of JS DOM manipulation
-- **LANDING-02:** Screenshot placeholders use CSS ::after pseudo-element with onerror/onload for graceful degradation
-- **SIGN-01:** Expo config plugin instead of direct build.gradle edit (android/ is gitignored, regenerated by prebuild)
-- **SIGN-02:** Debug keystore fallbacks in release signingConfig for local dev without env vars
-- **CI-01:** build-apk gated on auto-release (only builds when new version is released)
-- **CI-02:** deploy-landing runs on every push to main (not gated on auto-release)
-- **CI-03:** strip_components: 2 for landing deploy (strips apps/landing/ prefix)
-- **CLEAN-04:** Remove apps/web and apps/mobile entirely (git history preserves all code, no archiving needed)
+All decisions logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-- expo-router incompatible with pnpm monorepo (resolved: using react-navigation)
-- Minor peer dependency warnings for @types/react-dom (non-blocking)
+None — milestone shipped and verified on device.
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: ALL PLANS COMPLETE -- 19/19 plans across 5 phases executed successfully
-Resume file: N/A -- project roadmap fully executed
+Stopped at: v1.1 milestone archived
+Resume file: N/A — start next milestone with /gsd:new-milestone
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-08 (05-04 -- Legacy web/mobile cleanup, ALL PHASES COMPLETE)*
+*Last updated: 2026-02-08 (v1.1 milestone complete)*
