@@ -19,9 +19,9 @@ Progress: [██████████████████░░] 90% (14
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: 3.1 min
-- Total execution time: 40 min
+- Total execution time: 43 min
 
 **By Phase:**
 
@@ -30,7 +30,7 @@ Progress: [██████████████████░░] 90% (14
 | 01-foundation | 2 | 7 min | 3.5 min |
 | 02-auth-navigation | 4 | 11 min | 2.75 min |
 | 03-core-screens | 5 | 16 min | 3.2 min |
-| 04-study-cards | 2 | 6 min | 3.0 min |
+| 04-study-cards | 3 | 9 min | 3.0 min |
 
 **Recent Trend:**
 - Last 5 plans: 03-03 (2 min), 03-04 (3 min), 03-05 (3 min), 04-01 (4 min), 04-03 (2 min)
@@ -67,6 +67,8 @@ Recent decisions affecting current work:
 - **DARK-02:** White text on colored backgrounds (logout, offline banner) for contrast in both themes
 - **PAT-01:** PAT input uses plain text (no secureTextEntry) since PATs are paste-and-submit tokens
 - **STUDY-01:** useStudySession mirrors PWA StudyPage pattern -- parallel load repos+cards, Deck filtering, random unseen card selection
+- **QUIZ-01:** AnswerOption uses Ionicons checkmark/close icons in answered state badges for clear visual differentiation
+- **QUIZ-02:** Review mode uses separate isReviewing state with explicit "Back to Current Card" button
 - **RENDER-01:** CDN-loaded libraries (marked.js, KaTeX, highlight.js) in WebView for card content rendering -- native RN text components cannot handle LaTeX + code blocks
 - **RENDER-02:** postMessage-based dynamic height reporting with 100ms delay for WebView rendering settlement
 

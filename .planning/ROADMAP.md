@@ -96,7 +96,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Install deps, restructure navigation (RootStack), create useStudySession hook and StudyScreen skeleton
-- [ ] 04-02-PLAN.md — Quiz interaction UI (QuizCard, AnswerOption, ExplanationPanel, haptics, swipe, skip, progress, quit confirmation)
+- [x] 04-02-PLAN.md — Quiz interaction UI (QuizCard, AnswerOption, ExplanationPanel, haptics, swipe, skip, progress, quit confirmation)
 - [x] 04-03-PLAN.md — Card content WebView renderer (markdown, LaTeX, code highlighting, images, pinch-to-zoom)
 - [ ] 04-04-PLAN.md — StudySummaryScreen, complete flow wiring, native rebuild, device verification
 
