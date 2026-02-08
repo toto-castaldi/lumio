@@ -34,7 +34,11 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(Empty — next milestone requirements to be defined with `/gsd:new-milestone`)
+- [ ] Logo Lumio nell'app e landing page
+- [ ] Internazionalizzazione (IT/EN) con toggle in Settings
+- [ ] Numero carte per sessione configurabile in Settings
+- [ ] Fix preview carta tagliata nel bottom-sheet
+- [ ] Versione dinamica da @lumio/shared (non hardcoded)
 
 ### Out of Scope
 
@@ -52,7 +56,7 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - 5,019 LOC TypeScript/JS (4,538 Android + 481 landing)
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core
 - CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
-- Versione corrente: v1.1.3
+- Versione corrente: v1.1.4
 - App funzionante su Android con Google OAuth, studio quiz, card rendering
 
 ## Constraints
@@ -78,5 +82,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Bottom-sheet modal over fullscreen | Android nav controls coprono contenuto fullscreen | ✓ Good |
 | Expo config plugin per signing | android/ è gitignored, plugin sopravvive a prebuild | ✓ Good |
 
+## Current Milestone: v1.2 Polish & UX
+
+**Goal:** Migliorare la qualità dell'esperienza utente con branding, internazionalizzazione, sessioni di studio configurabili e bugfix.
+
+**Target features:**
+- Logo Lumio integrato in app e landing
+- Toggle lingua IT/EN persistente
+- Carte per sessione configurabili
+- Fix preview carta tagliata
+- Versione dinamica da versionamento automatico
+
 ---
-*Last updated: 2026-02-08 after v1.1 milestone*
+*Last updated: 2026-02-08 after v1.2 milestone started*
