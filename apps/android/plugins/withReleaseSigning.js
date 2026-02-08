@@ -63,7 +63,7 @@ function withReleaseSigning(config) {
     if (!buildGradle.includes("findProperty('versionCode')")) {
       buildGradle = buildGradle.replace(
         /versionCode\s+\d+/,
-        "versionCode (findProperty('versionCode') ?: 1).toInteger()"
+        "versionCode Integer.parseInt(findProperty('versionCode') ?: '1')"
       );
     }
 
