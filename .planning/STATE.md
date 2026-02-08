@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 3 - Core Screens (Complete)
+**Current focus:** Phase 4 - Study & Cards (In Progress)
 
 ## Current Position
 
-Phase: 3 of 5 (Core Screens)
-Plan: 5 of 5 complete
-Status: Phase complete (including gap closure)
-Last activity: 2026-02-07 — Completed 03-05-PLAN.md (UAT gap closure: Dashboard nav + PAT usability)
+Phase: 4 of 5 (Study & Cards)
+Plan: 1 of 4 complete
+Status: In progress
+Last activity: 2026-02-08 — Completed 04-01-PLAN.md (Navigation restructure + study session hook)
 
-Progress: [████████████████████] 100% (11/11 plans through Phase 3.5)
+Progress: [████████████████░░░░] 80% (12/15 plans through Phase 4.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 3.1 min
-- Total execution time: 34 min
+- Total plans completed: 12
+- Average duration: 3.2 min
+- Total execution time: 38 min
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████████████████████] 100% (1
 | 01-foundation | 2 | 7 min | 3.5 min |
 | 02-auth-navigation | 4 | 11 min | 2.75 min |
 | 03-core-screens | 5 | 16 min | 3.2 min |
+| 04-study-cards | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (4 min), 03-02 (4 min), 03-03 (2 min), 03-04 (3 min), 03-05 (3 min)
-- Trend: Stable at ~3 min per plan
+- Last 5 plans: 03-02 (4 min), 03-03 (2 min), 03-04 (3 min), 03-05 (3 min), 04-01 (4 min)
+- Trend: Stable at ~3-4 min per plan
 
 *Updated after each plan completion*
 
@@ -56,6 +57,7 @@ Recent decisions affecting current work:
 - **NAV-02:** AppNavigator directly renders navigator components (no conditional routes)
 - **NAV-03:** Study button integrated in DashboardScreen (FAB overlay removed for better UX)
 - **NAV-04:** Icons-only tab bar (tabBarShowLabel: false)
+- **NAV-05:** Root native-stack wraps MainNavigator (tabs) to enable modal Study/StudySummary screens with card presentation
 - **PKG-01:** Android package name is `com.toto_castaldi.lumio` (underscore required, hyphens not allowed)
 - **CORE-01:** @lumio/core singleton replaces standalone supabase client via side-effect import pattern
 - **THEME-01:** ThemeProvider inside AuthProvider, wrapping NavigationContainer
@@ -64,6 +66,7 @@ Recent decisions affecting current work:
 - **DARK-01:** Google brand colors kept hardcoded in LoginScreen per brand guidelines
 - **DARK-02:** White text on colored backgrounds (logout, offline banner) for contrast in both themes
 - **PAT-01:** PAT input uses plain text (no secureTextEntry) since PATs are paste-and-submit tokens
+- **STUDY-01:** useStudySession mirrors PWA StudyPage pattern -- parallel load repos+cards, Deck filtering, random unseen card selection
 
 ### Pending Todos
 
@@ -76,10 +79,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Completed 03-05-PLAN.md (UAT gap closure) - Phase 3 fully complete
-Resume file: None
+Last session: 2026-02-08
+Stopped at: Completed 04-01-PLAN.md (Navigation restructure + study session hook)
+Resume file: .planning/phases/04-study-cards/04-02-PLAN.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*
