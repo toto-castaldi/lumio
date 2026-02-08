@@ -8,10 +8,6 @@
     }
   },
   "scripts": {
-    "dev:web": "pnpm --filter @lumio/web dev",
-    "dev:mobile": "pnpm --filter @lumio/mobile dev",
-    "build:web": "pnpm --filter @lumio/web build",
-    "build:mobile": "pnpm --filter @lumio/mobile build",
     "build:packages": "pnpm --filter @lumio/shared build && pnpm --filter @lumio/core build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
