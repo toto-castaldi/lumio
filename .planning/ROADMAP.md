@@ -97,7 +97,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Install deps, restructure navigation (RootStack), create useStudySession hook and StudyScreen skeleton
 - [ ] 04-02-PLAN.md — Quiz interaction UI (QuizCard, AnswerOption, ExplanationPanel, haptics, swipe, skip, progress, quit confirmation)
-- [ ] 04-03-PLAN.md — Card content WebView renderer (markdown, LaTeX, code highlighting, images, pinch-to-zoom)
+- [x] 04-03-PLAN.md — Card content WebView renderer (markdown, LaTeX, code highlighting, images, pinch-to-zoom)
 - [ ] 04-04-PLAN.md — StudySummaryScreen, complete flow wiring, native rebuild, device verification
 
 ### Phase 5: Distribution & Cleanup
@@ -127,7 +127,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 2/2 | ✅ Complete | 2026-02-04 |
 | 2. Auth & Navigation | 4/4 | ✅ Complete | 2026-02-04 |
 | 3. Core Screens | 4/4 | ✅ Complete | 2026-02-07 |
-| 4. Study & Cards | 1/4 | In progress | - |
+| 4. Study & Cards | 3/4 | In progress | - |
 | 5. Distribution & Cleanup | 0/TBD | Not started | - |
 
 ---

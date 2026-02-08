@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 4 of 5 (Study & Cards)
-Plan: 1 of 4 complete
+Plan: 3 of 4 complete (01, 02, 03 done)
 Status: In progress
-Last activity: 2026-02-08 — Completed 04-01-PLAN.md (Navigation restructure + study session hook)
+Last activity: 2026-02-08 — Completed 04-03-PLAN.md (Card content WebView renderer)
 
-Progress: [████████████████░░░░] 80% (12/15 plans through Phase 4.1)
+Progress: [██████████████████░░] 90% (14/15 plans through Phase 4.3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 3.2 min
-- Total execution time: 38 min
+- Total plans completed: 13
+- Average duration: 3.1 min
+- Total execution time: 40 min
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [████████████████░░░░] 80% (12
 | 01-foundation | 2 | 7 min | 3.5 min |
 | 02-auth-navigation | 4 | 11 min | 2.75 min |
 | 03-core-screens | 5 | 16 min | 3.2 min |
-| 04-study-cards | 1 | 4 min | 4.0 min |
+| 04-study-cards | 2 | 6 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (4 min), 03-03 (2 min), 03-04 (3 min), 03-05 (3 min), 04-01 (4 min)
-- Trend: Stable at ~3-4 min per plan
+- Last 5 plans: 03-03 (2 min), 03-04 (3 min), 03-05 (3 min), 04-01 (4 min), 04-03 (2 min)
+- Trend: Stable at ~2-4 min per plan
 
 *Updated after each plan completion*
 
@@ -67,6 +67,8 @@ Recent decisions affecting current work:
 - **DARK-02:** White text on colored backgrounds (logout, offline banner) for contrast in both themes
 - **PAT-01:** PAT input uses plain text (no secureTextEntry) since PATs are paste-and-submit tokens
 - **STUDY-01:** useStudySession mirrors PWA StudyPage pattern -- parallel load repos+cards, Deck filtering, random unseen card selection
+- **RENDER-01:** CDN-loaded libraries (marked.js, KaTeX, highlight.js) in WebView for card content rendering -- native RN text components cannot handle LaTeX + code blocks
+- **RENDER-02:** postMessage-based dynamic height reporting with 100ms delay for WebView rendering settlement
 
 ### Pending Todos
 
@@ -80,9 +82,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 04-01-PLAN.md (Navigation restructure + study session hook)
-Resume file: .planning/phases/04-study-cards/04-02-PLAN.md
+Stopped at: Completed 04-03-PLAN.md (Card content WebView renderer)
+Resume file: .planning/phases/04-study-cards/04-04-PLAN.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-08 (04-03)*
