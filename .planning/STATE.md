@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 5 - Distribution & Cleanup (In progress)
+**Current focus:** ALL PHASES COMPLETE
 
 ## Current Position
 
 Phase: 5 of 5 (Distribution & Cleanup)
-Plan: 3 of 4 complete (01, 02, 03 done)
-Status: In progress
-Last activity: 2026-02-08 — Completed 05-03-PLAN.md (CI/CD pipeline migration)
+Plan: 4 of 4 complete (01, 02, 03, 04 done)
+Status: COMPLETE - All phases finished
+Last activity: 2026-02-08 — Completed 05-04-PLAN.md (Legacy web/mobile cleanup)
 
-Progress: [████████████████████████████████████░░░░] 95% (18/19 plans total)
+Progress: [████████████████████████████████████████] 100% (19/19 plans total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: 3.4 min
-- Total execution time: 65 min
+- Total plans completed: 19
+- Average duration: 3.8 min
+- Total execution time: 72 min
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [███████████████████████
 | 02-auth-navigation | 4 | 11 min | 2.75 min |
 | 03-core-screens | 5 | 16 min | 3.2 min |
 | 04-study-cards | 4 | 24 min | 6.0 min |
-| 05-distribution-cleanup | 3 | 7 min | 2.3 min |
+| 05-distribution-cleanup | 4 | 14 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (2 min), 04-04 (15 min), 05-02 (2 min), 05-01 (3 min), 05-03 (2 min)
+- Last 5 plans: 04-04 (15 min), 05-01 (3 min), 05-02 (2 min), 05-03 (2 min), 05-04 (7 min)
 - Trend: Phase 5 plans consistently fast (infra/config changes)
 
 *Updated after each plan completion*
@@ -82,6 +82,7 @@ Recent decisions affecting current work:
 - **CI-01:** build-apk gated on auto-release (only builds when new version is released)
 - **CI-02:** deploy-landing runs on every push to main (not gated on auto-release)
 - **CI-03:** strip_components: 2 for landing deploy (strips apps/landing/ prefix)
+- **CLEAN-04:** Remove apps/web and apps/mobile entirely (git history preserves all code, no archiving needed)
 
 ### Pending Todos
 
@@ -95,9 +96,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 05-03 (CI/CD Pipeline Migration) — APK build + landing deploy jobs added
-Resume file: .planning/phases/05-distribution-cleanup/05-04-PLAN.md (next incomplete plan)
+Stopped at: ALL PLANS COMPLETE -- 19/19 plans across 5 phases executed successfully
+Resume file: N/A -- project roadmap fully executed
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-08 (05-03 — CI/CD pipeline migration complete)*
+*Last updated: 2026-02-08 (05-04 -- Legacy web/mobile cleanup, ALL PHASES COMPLETE)*
