@@ -195,6 +195,33 @@ jobs:
   # Deploy Jobs - Only on push to main
   # ============================================
 
+  deploy-landing:
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, auto-release]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: 'apps/landing/*'
+          target: '/var/www/lumio'
+          strip_components: 2
+
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: sudo systemctl reload nginx
+
   deploy-migrations:
     runs-on: ubuntu-latest
     needs: [lint-and-typecheck, auto-release]
