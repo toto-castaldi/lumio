@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { StudyScreen } from '../screens/StudyScreen';
+import { StudySummaryScreen } from '../screens/StudySummaryScreen';
 
 /**
  * Root stack param list for modal screens (Study, StudySummary)
@@ -23,31 +24,6 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-/**
- * Placeholder for StudySummaryScreen until plan 04 creates it.
- */
-function StudySummaryPlaceholder() {
-  return (
-    <View style={placeholderStyles.container}>
-      <Text style={placeholderStyles.text}>Study Summary</Text>
-    </View>
-  );
-}
-
-const placeholderStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-});
 
 /**
  * AppNavigator is the root navigator that switches between auth and main flows
@@ -86,8 +62,8 @@ export function AppNavigator() {
       />
       <Stack.Screen
         name="StudySummary"
-        component={StudySummaryPlaceholder}
-        options={{ presentation: 'card' }}
+        component={StudySummaryScreen}
+        options={{ presentation: 'card', gestureEnabled: false }}
       />
     </Stack.Navigator>
   );

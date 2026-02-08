@@ -103,6 +103,26 @@ export function StudyScreen() {
   }, [navigation, session.state]);
 
   // ---------------------------------------------------------------------------
+  // Auto-navigate to StudySummary on session completion
+  // ---------------------------------------------------------------------------
+  const hasNavigatedToSummary = useRef(false);
+
+  useEffect(() => {
+    if (session.state === 'completed' && !hasNavigatedToSummary.current) {
+      hasNavigatedToSummary.current = true;
+      navigation.replace('StudySummary', {
+        totalCards: session.answeredCards.length + session.skippedCount,
+        correctCount: session.answeredCards.filter(a => a.isCorrect).length,
+        incorrectCount: session.answeredCards.filter(a => !a.isCorrect).length,
+        skippedCount: session.skippedCount,
+        timeSpentSeconds: Math.floor(
+          (Date.now() - session.startedAt.getTime()) / 1000,
+        ),
+      });
+    }
+  }, [session.state, session.answeredCards, session.skippedCount, session.startedAt, navigation]);
+
+  // ---------------------------------------------------------------------------
   // Navigation helpers
   // ---------------------------------------------------------------------------
   const canGoNext = session.userAnswer !== null && !isReviewing;
