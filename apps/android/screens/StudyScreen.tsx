@@ -18,6 +18,7 @@ import { useStudySession } from '../hooks/useStudySession';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { QuizCard } from '../components/study/QuizCard';
 import { ProgressBar } from '../components/study/ProgressBar';
+import { CardPreviewModal } from '../components/study/CardPreviewModal';
 
 type StudyNavProp = NativeStackNavigationProp<RootStackParamList, 'Study'>;
 
@@ -55,6 +56,8 @@ export function StudyScreen() {
     progress,
   } = useStudySession();
 
+  // Card preview modal state
+  const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
   // Track whether we're reviewing a previously answered card
   const [isReviewing, setIsReviewing] = useState(false);
   // Store the "live" index (the furthest card the user has reached)
@@ -207,20 +210,31 @@ export function StudyScreen() {
         {isReviewing ? 'Review' : 'Study'}
       </Text>
 
-      {showSkip ? (
-        <TouchableOpacity
-          style={headerStyles.skipButton}
-          onPress={onSkip}
-          disabled={isSkipping}
-          activeOpacity={0.7}
-        >
-          <Text style={[headerStyles.skipText, { color: colors.primary }]}>
-            {isSkipping ? 'Skipping...' : 'Skip'}
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={headerStyles.spacer} />
-      )}
+      <View style={headerStyles.rightActions}>
+        {session.currentCard && (
+          <TouchableOpacity
+            style={headerStyles.iconButton}
+            onPress={() => setIsCardPreviewOpen(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="eye-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+        )}
+        {showSkip ? (
+          <TouchableOpacity
+            style={headerStyles.skipButton}
+            onPress={onSkip}
+            disabled={isSkipping}
+            activeOpacity={0.7}
+          >
+            <Text style={[headerStyles.skipText, { color: colors.primary }]}>
+              {isSkipping ? 'Skipping...' : 'Skip'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={headerStyles.spacer} />
+        )}
+      </View>
     </View>
   );
 
@@ -435,6 +449,12 @@ export function StudyScreen() {
       <View style={screenStyles.content}>
         {renderContent()}
       </View>
+      <CardPreviewModal
+        visible={isCardPreviewOpen}
+        onClose={() => setIsCardPreviewOpen(false)}
+        card={session.currentCard}
+        repositoryMap={session.repositoryMap}
+      />
     </SafeAreaView>
   );
 }
@@ -471,6 +491,18 @@ const headerStyles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
   },
   skipButton: {
     paddingHorizontal: 12,
