@@ -11,7 +11,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../hooks/useTheme';
 import { useStudySession } from '../hooks/useStudySession';
@@ -22,23 +21,6 @@ import { CardPreviewModal } from '../components/study/CardPreviewModal';
 
 type StudyNavProp = NativeStackNavigationProp<RootStackParamList, 'Study'>;
 
-/**
- * StudyScreen is the main study session orchestrator.
- *
- * States:
- * - loading: Cards are being fetched from the backend
- * - no_cards: No study cards available (questions being prepared)
- * - studying (no question yet): Ready state with "Start" button
- * - studying (with question): Full quiz UI with answer options, haptics, explanation, vote
- * - completed: Session complete (Plan 04 will add StudySummary navigation)
- *
- * Features:
- * - Swipe left = next card (after answering)
- * - Swipe right = review previous answered card
- * - Skip button removes card from session
- * - Back/close button shows quit confirmation during active study
- * - Progress bar tracks session completion
- */
 export function StudyScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<StudyNavProp>();
@@ -60,27 +42,12 @@ export function StudyScreen() {
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
   // Track whether we're reviewing a previously answered card
   const [isReviewing, setIsReviewing] = useState(false);
-  // Store the "live" index (the furthest card the user has reached)
-  const liveIndexRef = useRef(-1);
-
-  // Keep liveIndex in sync with session progression
-  useEffect(() => {
-    if (
-      session.state === 'studying' &&
-      session.currentCard &&
-      session.currentQuestion &&
-      !isReviewing
-    ) {
-      liveIndexRef.current = session.currentIndex;
-    }
-  }, [session.currentIndex, session.state, session.currentCard, session.currentQuestion, isReviewing]);
 
   // ---------------------------------------------------------------------------
   // Quit confirmation on back press
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      // Only block if actively studying
       if (session.state !== 'studying') return;
 
       e.preventDefault();
@@ -126,7 +93,7 @@ export function StudyScreen() {
   // Navigation helpers
   // ---------------------------------------------------------------------------
   const canGoNext = session.userAnswer !== null && !isReviewing;
-  const canGoBack = session.answeredCards.length > 0;
+  const canGoBack = session.answeredCards.length > 0 && !isReviewing;
   const isLastCard = cardsRemaining === 0;
 
   const goToNextCard = () => {
@@ -136,19 +103,16 @@ export function StudyScreen() {
   };
 
   const goToPreviousCard = () => {
-    if (!canGoBack) return;
+    if (session.answeredCards.length === 0) return;
 
     if (isReviewing) {
-      // Find the current review position
       const currentReviewIndex = session.answeredCards.findIndex(
         (a) => a.card.id === session.currentCard?.id,
       );
       if (currentReviewIndex > 0) {
-        setIsReviewing(true);
         handleGoToCard(currentReviewIndex - 1);
       }
     } else {
-      // Go to most recent answered card
       setIsReviewing(true);
       handleGoToCard(session.answeredCards.length - 1);
     }
@@ -156,44 +120,9 @@ export function StudyScreen() {
 
   const returnFromReview = () => {
     if (!isReviewing) return;
-
-    // Check if there's a next review card
-    const currentReviewIndex = session.answeredCards.findIndex(
-      (a) => a.card.id === session.currentCard?.id,
-    );
-
-    if (currentReviewIndex < session.answeredCards.length - 1) {
-      // Go to next reviewed card
-      handleGoToCard(currentReviewIndex + 1);
-    } else {
-      // Return to the live card (reload current question)
-      setIsReviewing(false);
-      // handleGoToCard to the live index triggers restore of the live card
-      // We need to call handleNext to re-load a fresh question if live card was already answered
-      handleNext();
-    }
+    setIsReviewing(false);
+    handleNext();
   };
-
-  // ---------------------------------------------------------------------------
-  // Swipe gestures
-  // ---------------------------------------------------------------------------
-  const flingLeft = Gesture.Fling()
-    .direction(Directions.LEFT)
-    .onEnd(() => {
-      if (isReviewing) {
-        returnFromReview();
-      } else if (canGoNext) {
-        goToNextCard();
-      }
-    });
-
-  const flingRight = Gesture.Fling()
-    .direction(Directions.RIGHT)
-    .onEnd(() => {
-      goToPreviousCard();
-    });
-
-  const swipeGesture = Gesture.Simultaneous(flingLeft, flingRight);
 
   // ---------------------------------------------------------------------------
   // Skip handler with toast
@@ -295,7 +224,7 @@ export function StudyScreen() {
   );
 
   // ---------------------------------------------------------------------------
-  // Ready to study state (studying but no question loaded yet)
+  // Ready to study state
   // ---------------------------------------------------------------------------
   const renderReady = () => (
     <View style={contentStyles.centered}>
@@ -347,60 +276,84 @@ export function StudyScreen() {
 
     return (
       <View style={{ flex: 1 }}>
-        <GestureDetector gesture={swipeGesture}>
-          <View style={{ flex: 1 }}>
-            <QuizCard
-              card={session.currentCard}
-              question={session.currentQuestion}
-              userAnswer={session.userAnswer}
-              userVote={session.userVote}
-              onAnswer={handleAnswer}
-              onVote={handleVote}
-              isVoting={isVoting}
-            />
-          </View>
-        </GestureDetector>
+        <QuizCard
+          card={session.currentCard}
+          question={session.currentQuestion}
+          userAnswer={session.userAnswer}
+          userVote={session.userVote}
+          onAnswer={handleAnswer}
+          onVote={handleVote}
+          isVoting={isVoting}
+        />
 
-        {/* Bottom action: Next Card button (shown after answering, hidden during review) */}
+        {/* Bottom actions */}
         {session.userAnswer !== null && !isReviewing && (
           <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[bottomStyles.nextButton, { backgroundColor: colors.primary }]}
-              onPress={goToNextCard}
-              disabled={isLoadingQuestion}
-              activeOpacity={0.8}
-            >
-              {isLoadingQuestion ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <>
-                  <Text style={bottomStyles.nextButtonText}>
-                    {isLastCard ? 'Finish' : 'Next Card'}
+            <View style={bottomStyles.buttonRow}>
+              {canGoBack && (
+                <TouchableOpacity
+                  style={[bottomStyles.prevButton, { borderColor: colors.border, flex: 1 }]}
+                  onPress={goToPreviousCard}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="arrow-back" size={20} color={colors.text} />
+                  <Text style={[bottomStyles.prevButtonText, { color: colors.text }]}>
+                    Prev Card
                   </Text>
-                  <Ionicons
-                    name={isLastCard ? 'checkmark' : 'arrow-forward'}
-                    size={20}
-                    color="#ffffff"
-                  />
-                </>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[bottomStyles.nextButton, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={goToNextCard}
+                disabled={isLoadingQuestion}
+                activeOpacity={0.8}
+              >
+                {isLoadingQuestion ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Text style={bottomStyles.nextButtonText}>
+                      {isLastCard ? 'Finish' : 'Next Card'}
+                    </Text>
+                    <Ionicons
+                      name={isLastCard ? 'checkmark' : 'arrow-forward'}
+                      size={20}
+                      color="#ffffff"
+                    />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {/* Review navigation hint */}
+        {/* Review mode bottom bar */}
         {isReviewing && (
           <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[bottomStyles.reviewButton, { borderColor: colors.primary }]}
-              onPress={returnFromReview}
-              activeOpacity={0.8}
-            >
-              <Text style={[bottomStyles.reviewButtonText, { color: colors.primary }]}>
-                Back to Current Card
-              </Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.primary} />
-            </TouchableOpacity>
+            <View style={bottomStyles.buttonRow}>
+              {session.answeredCards.findIndex(a => a.card.id === session.currentCard?.id) > 0 && (
+                <TouchableOpacity
+                  style={[bottomStyles.prevButton, { borderColor: colors.border, flex: 1 }]}
+                  onPress={goToPreviousCard}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="arrow-back" size={20} color={colors.text} />
+                  <Text style={[bottomStyles.prevButtonText, { color: colors.text }]}>
+                    Prev Card
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[bottomStyles.reviewButton, { borderColor: colors.primary, flex: 1 }]}
+                onPress={returnFromReview}
+                activeOpacity={0.8}
+              >
+                <Text style={[bottomStyles.reviewButtonText, { color: colors.primary }]}>
+                  Back to Current Card
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -408,7 +361,7 @@ export function StudyScreen() {
   };
 
   // ---------------------------------------------------------------------------
-  // Completed state (placeholder for StudySummary navigation in plan 04)
+  // Completed state
   // ---------------------------------------------------------------------------
   const renderCompleted = () => (
     <View style={contentStyles.centered}>
@@ -432,7 +385,7 @@ export function StudyScreen() {
   );
 
   // ---------------------------------------------------------------------------
-  // Render based on session state
+  // Render
   // ---------------------------------------------------------------------------
   const renderContent = () => {
     switch (session.state) {
@@ -449,7 +402,6 @@ export function StudyScreen() {
     }
   };
 
-  // Show progress bar when studying (has a current card or has answered cards)
   const showProgress =
     session.state === 'studying' &&
     (session.currentCard !== null || session.answeredCards.length > 0);
@@ -593,6 +545,24 @@ const bottomStyles = StyleSheet.create({
   container: {
     padding: 16,
     borderTopWidth: 1,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  prevButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  prevButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   nextButton: {
     flexDirection: 'row',

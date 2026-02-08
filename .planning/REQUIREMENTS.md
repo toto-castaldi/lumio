@@ -55,7 +55,7 @@ Requirements per il rilascio iniziale dell'app nativa Android.
 
 ### Distribuzione
 
-- [ ] **DIST-01**: Build APK con EAS Build (Android)
+- [ ] **DIST-01**: Build APK con Gradle in GitHub Actions (Android)
 - [ ] **DIST-02**: Landing page statica su lumio.toto-castaldi.com
 - [ ] **DIST-03**: Download APK dalla landing page
 - [ ] **DIST-04**: Descrizione prodotto e screenshot nella landing

@@ -177,6 +177,7 @@ export function generateCardHtml(markdownContent: string, isDark: boolean): stri
     /* Strong and emphasis */
     strong { font-weight: 600; }
     em { font-style: italic; }
+
   </style>
 </head>
 <body>
