@@ -1,7 +1,7 @@
 # Requirements: Lumio
 
 **Defined:** 2026-02-08
-**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
+**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
 
 ## v1.2 Requirements
 
@@ -48,11 +48,11 @@ Deferred to follow-up milestones.
 
 | Feature | Reason |
 |---------|--------|
-| react-native-svg for logo | Native rebuild required, SDK 54 press event regressions — use PNG conversion |
-| Slider for cards-per-session | Decision paralysis — use preset radio buttons (10/20/50/All) |
+| react-native-svg for logo | Native rebuild required, SDK 54 press event regressions -- use PNG conversion |
+| Slider for cards-per-session | Decision paralysis -- use preset radio buttons (10/20/50/All) |
 | Card content translation | Educational material must stay in original language |
 | RTL language support | No RTL languages planned |
-| Translation management platform (Crowdin etc.) | 2 languages, ~84 strings, single developer — JSON files sufficient |
+| Translation management platform (Crowdin etc.) | 2 languages, ~84 strings, single developer -- JSON files sufficient |
 | Per-screen language switching | Over-engineered for 2-language app |
 
 ## Traceability
@@ -61,24 +61,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | — | Pending |
-| BUG-02 | — | Pending |
-| BRAND-01 | — | Pending |
-| BRAND-02 | — | Pending |
-| BRAND-03 | — | Pending |
-| STUDY-01 | — | Pending |
-| STUDY-02 | — | Pending |
-| STUDY-03 | — | Pending |
-| I18N-01 | — | Pending |
-| I18N-02 | — | Pending |
-| I18N-03 | — | Pending |
-| I18N-04 | — | Pending |
+| BUG-01 | Phase 6 | Pending |
+| BUG-02 | Phase 6 | Pending |
+| BRAND-01 | Phase 7 | Pending |
+| BRAND-02 | Phase 7 | Pending |
+| BRAND-03 | Phase 7 | Pending |
+| STUDY-01 | Phase 8 | Pending |
+| STUDY-02 | Phase 8 | Pending |
+| STUDY-03 | Phase 8 | Pending |
+| I18N-01 | Phase 9 | Pending |
+| I18N-02 | Phase 9 | Pending |
+| I18N-03 | Phase 9 | Pending |
+| I18N-04 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after initial definition*
+*Last updated: 2026-02-09 after roadmap creation (traceability complete)*
