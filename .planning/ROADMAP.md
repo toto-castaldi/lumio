@@ -24,7 +24,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Milestone Goal:** Migliorare la qualita dell'esperienza utente con bugfix, branding, sessioni configurabili e internazionalizzazione IT/EN.
 
-- [ ] **Phase 6: Bugfix & Version** -- Fix card preview cutoff and display actual app version
+- [x] **Phase 6: Bugfix & Version** -- Fix card preview cutoff and display actual app version (completed 2026-02-09)
 - [ ] **Phase 7: Branding** -- Integrate Lumio logo across app and landing page
 - [ ] **Phase 8: Configurable Study Sessions** -- Let users control session length with preset options
 - [ ] **Phase 9: Internationalization** -- IT/EN language toggle with full UI string translation
@@ -42,8 +42,8 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Install dependencies + fix version display (BUG-02)
-- [ ] 06-02-PLAN.md — Rewrite card preview with native rendering (BUG-01)
+- [x] 06-01-PLAN.md — Install dependencies + fix version display (BUG-02)
+- [x] 06-02-PLAN.md — Rewrite card preview with native rendering (BUG-01)
 
 ### Phase 7: Branding
 **Goal**: Users see the Lumio logo as a consistent brand element throughout the app and landing page
@@ -102,7 +102,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 3. Core Screens | v1.1 | 5/5 | Complete | 2026-02-07 |
 | 4. Study & Cards | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 5. Distribution & Cleanup | v1.1 | 4/4 | Complete | 2026-02-08 |
-| 6. Bugfix & Version | v1.2 | 0/2 | Planning complete | - |
+| 6. Bugfix & Version | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 7. Branding | v1.2 | 0/? | Not started | - |
 | 8. Configurable Study Sessions | v1.2 | 0/? | Not started | - |
 | 9. Internationalization | v1.2 | 0/? | Not started | - |
