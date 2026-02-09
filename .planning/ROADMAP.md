@@ -84,12 +84,12 @@ Plans:
   3. All UI strings (buttons, labels, headers, toasts, empty states, error messages) update immediately on language change
   4. Card content and AI-generated quiz questions remain in their original language regardless of UI language setting
   5. No untranslated strings visible when navigating any screen in either language
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: TBD
-- [ ] 09-02: TBD
-- [ ] 09-03: TBD
+- [ ] 09-01-PLAN.md — Install i18n-js, create translation infrastructure, wire I18nProvider, add language selector (I18N-01, I18N-02)
+- [ ] 09-02-PLAN.md — Extract and translate all screen strings (I18N-03 screens)
+- [ ] 09-03-PLAN.md — Extract and translate all component and navigation strings (I18N-03 components, I18N-04 verified)
 
 ## Progress
 
@@ -106,7 +106,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 6. Bugfix & Version | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 7. Branding | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
-| 9. Internationalization | v1.2 | 0/? | Not started | - |
+| 9. Internationalization | v1.2 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
