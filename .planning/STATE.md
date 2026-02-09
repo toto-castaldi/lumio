@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 ## Current Position
 
-Phase: 6 of 9 (Bugfix & Version)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-09 -- Completed 06-01 (deps & version fix)
+Phase: 6 of 9 (Bugfix & Version) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-09 -- Completed 06-02 (card preview native rendering)
 
-Progress: [#####################.........] 21/? plans (v1.1 complete, v1.2 in progress)
+Progress: [######################........] 22/? plans (v1.1 complete, v1.2 phase 6 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20 (v1.1)
+- Total plans completed: 22 (20 v1.1 + 2 v1.2)
 - Average duration: ~5.3 hours (estimated from 11-day milestone)
 - Total execution time: ~106 hours (v1.1)
 
@@ -37,7 +37,7 @@ Progress: [#####################.........] 21/? plans (v1.1 complete, v1.2 in pr
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 6. Bugfix & Version | 1/2 | In progress |
+| 6. Bugfix & Version | 2/2 | Complete |
 
 *v1.2 metrics will populate as plans execute*
 
@@ -53,6 +53,10 @@ Recent decisions affecting current work:
 - v1.2: Preset radio buttons for cards-per-session (not slider, avoids decision paralysis)
 - 06-01: workspace:* for @lumio/shared, expo install for SDK 54 SVG compat
 - 06-01: Version display shows "v1.1.4" only (no app name prefix)
+- 06-02: LaTeX preprocessor wraps $...$ in backticks (marked only calls codespan for backtick-delimited content)
+- 06-02: Bottom-sheet fixed height (not maxHeight) for FlatList scroll compatibility
+- 06-02: Server-only modules shimmed via Metro resolveRequest to empty module
+- 06-02: trim-newlines forced to v5 for ESM named exports in react-native-code-highlighter
 
 ### Pending Todos
 
@@ -60,15 +64,15 @@ None.
 
 ### Blockers/Concerns
 
-- WebView height fix may need ResizeObserver fallback for older Android WebView (pre-2020)
+- ~~WebView height fix may need ResizeObserver fallback for older Android WebView (pre-2020)~~ -- resolved: card preview no longer uses WebView for markdown
 - i18n retrofit touches 16 files / 82+ strings -- systematic extraction needed to avoid partial translation
 
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 06-01-PLAN.md (deps & version fix)
+Stopped at: Completed 06-02-PLAN.md (card preview native rendering) -- Phase 6 complete
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (06-01 completed)*
+*Last updated: 2026-02-09 (06-02 completed, phase 6 done)*
