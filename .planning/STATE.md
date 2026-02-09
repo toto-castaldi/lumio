@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 9 of 9 (Internationalization)
-Plan: 1 of 3 in current phase
-Status: Executing Phase 09 (plan 1 of 3 complete)
-Last activity: 2026-02-09 -- Completed 09-01 (i18n infrastructure + language selector)
+Plan: 2 of 3 in current phase
+Status: Executing Phase 09 (plan 2 of 3 complete)
+Last activity: 2026-02-09 -- Completed 09-02 (screen translation)
 
-Progress: [############################..] 28/? plans (v1.1 complete, v1.2 phases 6-8 complete, 09-01 done)
+Progress: [#############################.] 29/? plans (v1.1 complete, v1.2 phases 6-8 complete, 09-01/09-02 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28 (20 v1.1 + 8 v1.2)
+- Total plans completed: 29 (20 v1.1 + 9 v1.2)
 - Average duration: ~5.3 hours (estimated from 11-day milestone)
 - Total execution time: ~106 hours (v1.1)
 
@@ -40,7 +40,7 @@ Progress: [############################..] 28/? plans (v1.1 complete, v1.2 phase
 | 6. Bugfix & Version | 2/2 | Complete |
 | 7. Branding | 2/2 | Complete |
 | 8. Configurable Study Sessions | 2/2 | Complete |
-| 9. Internationalization | 1/3 | In Progress |
+| 9. Internationalization | 2/3 | In Progress |
 
 ## Accumulated Context
 
@@ -49,6 +49,9 @@ Progress: [############################..] 28/? plans (v1.1 complete, v1.2 phase
 All decisions logged in PROJECT.md Key Decisions table.
 
 Recent decisions affecting current work:
+- 09-02: formatLastStudied accepts t as parameter (module-level function outside component cannot use hooks)
+- 09-02: t added to useCallback/useEffect dependency arrays to ensure locale changes propagate to callbacks
+- 09-02: Card content and AI-generated quiz questions intentionally left untranslated (I18N-04)
 - 09-01: DeepStringify<T> type utility to widen as-const literal types for translation file type safety
 - 09-01: I18nProvider inside ThemeProvider but outside StudySettingsProvider in provider tree
 - 09-01: Language option labels use autonyms (English/Italiano) not translated names
@@ -80,14 +83,14 @@ None.
 ### Blockers/Concerns
 
 - ~~WebView height fix may need ResizeObserver fallback for older Android WebView (pre-2020)~~ -- resolved: card preview no longer uses WebView for markdown
-- i18n retrofit touches 16 files / 82+ strings -- infrastructure complete (09-01), SettingsScreen translated, remaining screens in 09-02/09-03
+- i18n retrofit touches 16 files / 82+ strings -- infrastructure complete (09-01), all screens translated (09-02), remaining components in 09-03
 
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 09-01-PLAN.md (i18n infrastructure + language selector)
+Stopped at: Completed 09-02-PLAN.md (screen translation)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (09-01 completed, i18n infrastructure in place)*
+*Last updated: 2026-02-09 (09-02 completed, all screens translated)*
