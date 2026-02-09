@@ -3,7 +3,7 @@
 ## Milestones
 
 - SHIPPED **v1.1 Lumio Native** -- Phases 1-5 (shipped 2026-02-08)
-- IN PROGRESS **v1.2 Polish & UX** -- Phases 6-9
+- SHIPPED **v1.2 Polish & UX** -- Phases 6-9 (shipped 2026-02-09)
 
 ## Phases
 
@@ -27,7 +27,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 6: Bugfix & Version** -- Fix card preview cutoff and display actual app version (completed 2026-02-09)
 - [x] **Phase 7: Branding** -- Integrate Lumio logo across app and landing page (completed 2026-02-09)
 - [x] **Phase 8: Configurable Study Sessions** -- Let users control session length with preset options (completed 2026-02-09)
-- [ ] **Phase 9: Internationalization** -- IT/EN language toggle with full UI string translation
+- [x] **Phase 9: Internationalization** -- IT/EN language toggle with full UI string translation (completed 2026-02-09)
 
 ## Phase Details
 
@@ -87,9 +87,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Install i18n-js, create translation infrastructure, wire I18nProvider, add language selector (I18N-01, I18N-02)
-- [ ] 09-02-PLAN.md — Extract and translate all screen strings (I18N-03 screens)
-- [ ] 09-03-PLAN.md — Extract and translate all component and navigation strings (I18N-03 components, I18N-04 verified)
+- [x] 09-01-PLAN.md — Install i18n-js, create translation infrastructure, wire I18nProvider, add language selector (I18N-01, I18N-02)
+- [x] 09-02-PLAN.md — Extract and translate all screen strings (I18N-03 screens)
+- [x] 09-03-PLAN.md — Extract and translate all component and navigation strings (I18N-03 components, I18N-04 verified)
 
 ## Progress
 
@@ -106,7 +106,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 6. Bugfix & Version | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 7. Branding | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
-| 9. Internationalization | v1.2 | 0/3 | Not started | - |
+| 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
 
 ---
 *Roadmap created: 2026-01-29*
