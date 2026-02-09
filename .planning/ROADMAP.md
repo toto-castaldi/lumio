@@ -53,10 +53,11 @@ Plans:
   1. User sees the Lumio logo on the Login screen instead of a text placeholder
   2. User sees the Lumio logo icon in the Dashboard navigation header
   3. Visitor to lumio.toto-castaldi.com sees the Lumio logo on the landing page
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md — Generate PNG logo assets + integrate logo in Login screen and Dashboard header (BRAND-01, BRAND-02)
+- [ ] 07-02-PLAN.md — Add inline SVG logo to landing page header (BRAND-03)
 
 ### Phase 8: Configurable Study Sessions
 **Goal**: Users can control how many cards they study per session through persistent settings
@@ -103,7 +104,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 4. Study & Cards | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 5. Distribution & Cleanup | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 6. Bugfix & Version | v1.2 | 2/2 | Complete | 2026-02-09 |
-| 7. Branding | v1.2 | 0/? | Not started | - |
+| 7. Branding | v1.2 | 0/2 | Not started | - |
 | 8. Configurable Study Sessions | v1.2 | 0/? | Not started | - |
 | 9. Internationalization | v1.2 | 0/? | Not started | - |
 
