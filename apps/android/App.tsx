@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { StudySettingsProvider } from './contexts/StudySettingsContext';
 import { AppNavigator } from './navigation/AppNavigator';
 import { OfflineBanner } from './components/OfflineBanner';
 
@@ -15,10 +16,12 @@ export default function App() {
       <SafeAreaProvider>
         <AuthProvider>
           <ThemeProvider>
-            <NavigationContainer>
-              <OfflineBanner />
-              <AppNavigator />
-            </NavigationContainer>
+            <StudySettingsProvider>
+              <NavigationContainer>
+                <OfflineBanner />
+                <AppNavigator />
+              </NavigationContainer>
+            </StudySettingsProvider>
           </ThemeProvider>
         </AuthProvider>
         <StatusBar style="light" />

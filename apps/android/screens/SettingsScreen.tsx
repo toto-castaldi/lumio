@@ -12,7 +12,9 @@ import Toast from 'react-native-toast-message';
 import { getVersionString } from '@lumio/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../hooks/useTheme';
+import { useStudySettings } from '../hooks/useStudySettings';
 import type { ThemePreference } from '../lib/theme';
+import type { CardsPerSession } from '../lib/studySettings';
 
 type ThemeOption = {
   value: ThemePreference;
@@ -24,6 +26,19 @@ const themeOptions: ThemeOption[] = [
   { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
   { value: 'light', label: 'Light', icon: 'sunny-outline' },
   { value: 'dark', label: 'Dark', icon: 'moon-outline' },
+];
+
+type StudyOption = {
+  value: CardsPerSession;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+};
+
+const studyOptions: StudyOption[] = [
+  { value: 10, label: '10 cards', icon: 'flash-outline' },
+  { value: 20, label: '20 cards', icon: 'layers-outline' },
+  { value: 50, label: '50 cards', icon: 'library-outline' },
+  { value: 'all', label: 'All cards', icon: 'infinite-outline' },
 ];
 
 /**
@@ -38,6 +53,7 @@ const themeOptions: ThemeOption[] = [
 export function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { colors, preference, setPreference } = useTheme();
+  const { cardsPerSession, setCardsPerSession } = useStudySettings();
   const version = getVersionString();
 
   const handleCopyVersion = async () => {
@@ -100,6 +116,42 @@ export function SettingsScreen() {
               </Text>
             </View>
             {preference === option.value && (
+              <Ionicons name="checkmark" size={20} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Study section */}
+      <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+        Study
+      </Text>
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        {studyOptions.map((option, index) => (
+          <TouchableOpacity
+            key={String(option.value)}
+            style={[
+              styles.optionRow,
+              index < studyOptions.length - 1 && [
+                styles.optionBorder,
+                { borderBottomColor: colors.border },
+              ],
+            ]}
+            onPress={() => setCardsPerSession(option.value)}
+            activeOpacity={0.6}
+          >
+            <View style={styles.optionLeft}>
+              <Ionicons
+                name={option.icon}
+                size={20}
+                color={colors.textSecondary}
+                style={styles.optionIcon}
+              />
+              <Text style={[styles.optionLabel, { color: colors.text }]}>
+                {option.label}
+              </Text>
+            </View>
+            {cardsPerSession === option.value && (
               <Ionicons name="checkmark" size={20} color={colors.primary} />
             )}
           </TouchableOpacity>
