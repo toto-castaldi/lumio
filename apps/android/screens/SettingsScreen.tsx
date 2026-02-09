@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import Toast from 'react-native-toast-message';
+import { getVersionString } from '@lumio/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../hooks/useTheme';
 import type { ThemePreference } from '../lib/theme';
@@ -35,6 +38,17 @@ const themeOptions: ThemeOption[] = [
 export function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { colors, preference, setPreference } = useTheme();
+  const version = getVersionString();
+
+  const handleCopyVersion = async () => {
+    await Clipboard.setStringAsync(version);
+    Toast.show({
+      type: 'success',
+      text1: 'Version copied',
+      text2: version,
+      visibilityTime: 2000,
+    });
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -107,9 +121,11 @@ export function SettingsScreen() {
       </View>
 
       {/* App version */}
-      <Text style={[styles.version, { color: colors.textSecondary }]}>
-        Lumio v1.0.0
-      </Text>
+      <TouchableOpacity onPress={handleCopyVersion} activeOpacity={0.6}>
+        <Text style={[styles.version, { color: colors.textSecondary }]}>
+          {version}
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
