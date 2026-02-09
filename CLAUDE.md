@@ -13,7 +13,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Monorepo, stack, Supabase, CI/CD, deploy, monitoring](./docs/TECHNICAL-ARCHITECTURE.md)
 - [Onboarding, studio, obiettivi, repository, notifiche](./docs/USER-FLOWS.md)
 - [Schema PostgreSQL, entità, relazioni, RLS policies](./docs/DATA-MODEL.md)
-- [Roadmap](./docs/ROADMAP.md)
 - [Versioning](./docs/VERSIONING.md)
 
 ## Configuration Files

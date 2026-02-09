@@ -26,3 +26,31 @@
 **What's next:** v2 enhancements — push notifications, offline mode, Google Play Store distribution
 
 ---
+
+## v1.2 Polish & UX (Shipped: 2026-02-09)
+
+**Delivered:** Polished user experience with native card rendering, brand identity, configurable study sessions, and full IT/EN internationalization.
+
+**Phases completed:** 6-9 (9 plans total)
+
+**Key accomplishments:**
+
+- Native card preview with markdown, syntax highlighting, and KaTeX math (replaced WebView)
+- Lumio logo integrated across Login screen, Dashboard header, and landing page
+- Configurable cards-per-session (10/20/50/All) with persistent settings and progress tracking
+- Full IT/EN internationalization with ~85 translated strings and reactive language toggle
+- Dynamic version display from @lumio/shared with tap-to-copy in Settings
+
+**Stats:**
+
+- 65 files changed (+7,052 / -251 lines)
+- 5,960 lines of code (5,506 Android app + 454 landing page)
+- 4 phases, 9 plans, 12 requirements
+- 1 day (2026-02-09)
+
+**Git range:** `v1.1` → `docs(phase-09)` (14 feat commits)
+
+**What's next:** v1.3 enhancements
+
+---
+
