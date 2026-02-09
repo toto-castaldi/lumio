@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: SCREEN_HEIGHT * 0.8,
+    height: SCREEN_HEIGHT * 0.8,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',

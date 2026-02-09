@@ -38,6 +38,29 @@ interface CardContentViewProps {
  * inside CardPreviewModal, scrollEnabled should be true so the FlatList
  * is the sole scroll container.
  */
+/**
+ * Pre-process markdown to wrap LaTeX delimiters in backticks so
+ * marked treats them as codespan tokens. This lets CardRenderer.codespan()
+ * detect and render them via KaTeXView.
+ *
+ * Skips content inside fenced code blocks (``` ... ```).
+ */
+function wrapLatexInCodespans(md: string): string {
+  // Split by fenced code blocks to avoid replacing inside them
+  const parts = md.split(/(```[\s\S]*?```)/g);
+  return parts
+    .map((part, i) => {
+      // Odd indices are code blocks — leave them untouched
+      if (i % 2 === 1) return part;
+      // Display math: $$...$$ (may span lines)
+      let result = part.replace(/\$\$([^$]+?)\$\$/g, '`$$$1$$`');
+      // Inline math: $...$ (single line, not inside backticks)
+      result = result.replace(/(?<!`)\$([^\$\n]+?)\$(?!`)/g, '`$$$1$$`');
+      return result;
+    })
+    .join('');
+}
+
 export function CardContentView({
   content,
   isDark,
@@ -47,6 +70,9 @@ export function CardContentView({
   // Memoize renderer and tokenizer to avoid re-creation on every render
   const renderer = useMemo(() => new CardRenderer(isDark), [isDark]);
   const tokenizer = useMemo(() => new CardTokenizer(), []);
+
+  // Pre-process content to wrap LaTeX in backticks for tokenizer detection
+  const processedContent = useMemo(() => wrapLatexInCodespans(content), [content]);
 
   // Theme object for react-native-marked matching app theme
   const markdownTheme = useMemo(
@@ -63,7 +89,7 @@ export function CardContentView({
 
   return (
     <Markdown
-      value={content}
+      value={processedContent}
       flatListProps={{
         style: [
           { backgroundColor: 'transparent' },
