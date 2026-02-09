@@ -3,6 +3,7 @@ import { Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ReposScreen } from '../screens/ReposScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -24,6 +25,7 @@ type TabIconName = 'home' | 'home-outline' | 'folder' | 'folder-outline' | 'sett
  */
 export function MainNavigator() {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   return (
     <Tab.Navigator
@@ -65,7 +67,7 @@ export function MainNavigator() {
           name="Repos"
           component={ReposScreen}
           options={{
-            title: 'Repositories',
+            title: t('navigation.repositories'),
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons
                 name={(focused ? 'folder' : 'folder-outline') as TabIconName}
@@ -79,6 +81,7 @@ export function MainNavigator() {
           name="Settings"
           component={SettingsScreen}
           options={{
+            title: t('navigation.settings'),
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons
                 name={(focused ? 'settings' : 'settings-outline') as TabIconName}

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 
 // Check if Google Sign-In is configured
 const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -30,6 +31,7 @@ console.log('[LoginScreen] isGoogleConfigured:', isGoogleConfigured);
 export function LoginScreen() {
   const { signInWithGoogle } = useAuth();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export function LoginScreen() {
       await signInWithGoogle();
       // Navigation happens automatically via AuthContext state change
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Sign in failed';
+      const message = e instanceof Error ? e.message : t('login.signInFailed');
       setError(message);
     } finally {
       setIsLoading(false);
@@ -55,12 +57,12 @@ export function LoginScreen() {
           source={require('../assets/logo-login.png')}
           style={styles.logoImage}
           resizeMode="contain"
-          accessibilityLabel="Lumio logo"
+          accessibilityLabel={t('login.lumioLogo')}
         />
 
         {/* Tagline */}
         <Text style={[styles.tagline, { color: colors.textSecondary }]}>
-          Your flashcards, supercharged
+          {t('login.tagline')}
         </Text>
 
         {/* Error message */}
@@ -82,15 +84,14 @@ export function LoginScreen() {
               <View style={styles.googleIconContainer}>
                 <Text style={styles.googleIcon}>G</Text>
               </View>
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
+              <Text style={styles.googleButtonText}>{t('login.signInWithGoogle')}</Text>
             </View>
           </TouchableOpacity>
         )}
 
         {!isGoogleConfigured && (
           <Text style={[styles.configWarning, { color: colors.danger }]}>
-            Google Sign-In not configured.{'\n'}
-            Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+            {t('login.googleNotConfigured')}
           </Text>
         )}
       </View>

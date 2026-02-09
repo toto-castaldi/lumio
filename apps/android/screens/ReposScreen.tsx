@@ -14,6 +14,7 @@ import {
   type Repository,
 } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { RepoListItem } from '../components/RepoListItem';
 import { AddRepoForm } from '../components/AddRepoForm';
 import { EmptyState } from '../components/EmptyState';
@@ -27,6 +28,7 @@ import { EmptyState } from '../components/EmptyState';
  */
 export function ReposScreen() {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -41,11 +43,11 @@ export function ReposScreen() {
       console.error('[ReposScreen] fetchRepos error:', error);
       Toast.show({
         type: 'error',
-        text1: 'Failed to load repositories',
-        text2: error instanceof Error ? error.message : 'Unknown error',
+        text1: t('repos.failedToLoad'),
+        text2: error instanceof Error ? error.message : t('common.unknownError'),
       });
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchRepos().finally(() => setIsLoading(false));
@@ -68,14 +70,14 @@ export function ReposScreen() {
         });
         Toast.show({
           type: 'success',
-          text1: 'Repository added',
-          text2: 'Syncing cards from repository...',
+          text1: t('repos.repoAdded'),
+          text2: t('repos.syncingCards'),
         });
         setShowPatPrompt(false);
         await fetchRepos();
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unknown error';
+          error instanceof Error ? error.message : t('common.unknownError');
 
         // If the error indicates private/not-found and no PAT was provided,
         // prompt the user for a Personal Access Token
@@ -88,13 +90,13 @@ export function ReposScreen() {
           setShowPatPrompt(true);
           Toast.show({
             type: 'info',
-            text1: 'Private repository?',
-            text2: 'Enter a Personal Access Token to add this repo.',
+            text1: t('repos.privateRepo'),
+            text2: t('repos.enterPat'),
           });
         } else {
           Toast.show({
             type: 'error',
-            text1: 'Failed to add repository',
+            text1: t('repos.failedToAdd'),
             text2: message,
           });
         }
@@ -104,34 +106,34 @@ export function ReposScreen() {
         setIsAdding(false);
       }
     },
-    [fetchRepos],
+    [fetchRepos, t],
   );
 
   const handleDeleteRepo = useCallback(
     (id: string, name: string) => {
       Alert.alert(
-        'Delete Repository',
-        `Are you sure you want to delete "${name}"? All associated cards will also be removed.`,
+        t('repos.deleteConfirmTitle'),
+        t('repos.deleteConfirmBody', { name }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deleteRepository(id);
                 Toast.show({
                   type: 'success',
-                  text1: 'Repository deleted',
-                  text2: `"${name}" has been removed.`,
+                  text1: t('repos.repoDeleted'),
+                  text2: t('repos.repoDeletedBody', { name }),
                 });
                 await fetchRepos();
               } catch (error) {
                 Toast.show({
                   type: 'error',
-                  text1: 'Failed to delete repository',
+                  text1: t('repos.failedToDelete'),
                   text2:
-                    error instanceof Error ? error.message : 'Unknown error',
+                    error instanceof Error ? error.message : t('common.unknownError'),
                 });
               }
             },
@@ -139,7 +141,7 @@ export function ReposScreen() {
         ],
       );
     },
-    [fetchRepos],
+    [fetchRepos, t],
   );
 
   if (isLoading) {
@@ -177,8 +179,8 @@ export function ReposScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="git-branch-outline"
-            title="No repositories yet"
-            subtitle="Add a GitHub repository URL above to start importing study cards."
+            title={t('repos.emptyTitle')}
+            subtitle={t('repos.emptySubtitle')}
           />
         }
       />

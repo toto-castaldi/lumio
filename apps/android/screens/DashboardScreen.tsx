@@ -15,6 +15,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getUserStats, getSupabaseClient } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { MainTabParamList } from '../navigation/MainNavigator';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { StatCard } from '../components/StatCard';
@@ -24,8 +25,11 @@ import { EmptyState } from '../components/EmptyState';
  * Format a date string into relative time (e.g., "2 hours ago")
  * or 'Not yet' if null.
  */
-function formatLastStudied(dateString: string | null): string {
-  if (!dateString) return 'Not yet';
+function formatLastStudied(
+  dateString: string | null,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (!dateString) return t('dashboard.notYet');
 
   const date = new Date(dateString);
   const now = new Date();
@@ -34,10 +38,10 @@ function formatLastStudied(dateString: string | null): string {
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMinutes < 1) return t('dashboard.justNow');
+  if (diffMinutes < 60) return t('dashboard.mAgo', { count: diffMinutes });
+  if (diffHours < 24) return t('dashboard.hAgo', { count: diffHours });
+  if (diffDays < 7) return t('dashboard.dAgo', { count: diffDays });
 
   return date.toLocaleDateString();
 }
@@ -49,6 +53,7 @@ function formatLastStudied(dateString: string | null): string {
  */
 export function DashboardScreen() {
   const { colors, isDark } = useTheme();
+  const { t } = useI18n();
   const navigation = useNavigation<
     CompositeNavigationProp<
       BottomTabNavigationProp<MainTabParamList>,
@@ -114,9 +119,9 @@ export function DashboardScreen() {
       >
         <EmptyState
           icon="folder-open-outline"
-          title="No Repositories Yet"
-          subtitle="Add a repository to start studying. Your flashcards will appear here once a repo is synced."
-          actionLabel="Go to Repositories"
+          title={t('dashboard.emptyTitle')}
+          subtitle={t('dashboard.emptySubtitle')}
+          actionLabel={t('dashboard.goToRepos')}
           onAction={() => navigation.navigate('Repos')}
         />
       </ScrollView>
@@ -137,7 +142,7 @@ export function DashboardScreen() {
           icon="folder-outline"
           iconColor={colors.primary}
           iconBgColor={colors.primaryLight}
-          label="Repositories"
+          label={t('dashboard.repositories')}
           value={repoCount}
           isLoading={isLoading}
         />
@@ -145,7 +150,7 @@ export function DashboardScreen() {
           icon="documents-outline"
           iconColor="#8B5CF6"
           iconBgColor={isDark ? '#2e1065' : '#EDE9FE'}
-          label="Cards"
+          label={t('dashboard.cards')}
           value={cardCount}
           isLoading={isLoading}
         />
@@ -157,8 +162,8 @@ export function DashboardScreen() {
           icon="time-outline"
           iconColor="#F59E0B"
           iconBgColor={isDark ? '#78350f' : '#FEF3C7'}
-          label="Last Studied"
-          value={formatLastStudied(lastStudied)}
+          label={t('dashboard.lastStudied')}
+          value={formatLastStudied(lastStudied, t)}
           isLoading={isLoading}
         />
       </View>
@@ -181,7 +186,7 @@ export function DashboardScreen() {
         ) : (
           <Ionicons name="play" size={24} color="#ffffff" />
         )}
-        <Text style={styles.studyButtonText}>Start Study Session</Text>
+        <Text style={styles.studyButtonText}>{t('dashboard.startStudySession')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
