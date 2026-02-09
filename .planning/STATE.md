@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 8 of 9 (Configurable Study Sessions)
-Plan: 1 of 2 in current phase
-Status: Plan 08-01 complete, 08-02 remaining
-Last activity: 2026-02-09 -- Completed 08-01 (study settings persistence & UI)
+Plan: 2 of 2 in current phase
+Status: Phase 08 complete (all plans done)
+Last activity: 2026-02-09 -- Completed 08-02 (study session limiting)
 
-Progress: [##########################....] 26/? plans (v1.1 complete, v1.2 phase 6-8 in progress)
+Progress: [############################..] 27/? plans (v1.1 complete, v1.2 phases 6-8 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26 (20 v1.1 + 6 v1.2)
+- Total plans completed: 27 (20 v1.1 + 7 v1.2)
 - Average duration: ~5.3 hours (estimated from 11-day milestone)
 - Total execution time: ~106 hours (v1.1)
 
@@ -39,7 +39,7 @@ Progress: [##########################....] 26/? plans (v1.1 complete, v1.2 phase
 |-------|-------|--------|
 | 6. Bugfix & Version | 2/2 | Complete |
 | 7. Branding | 2/2 | Complete |
-| 8. Configurable Study Sessions | 1/2 | In Progress |
+| 8. Configurable Study Sessions | 2/2 | Complete |
 
 ## Accumulated Context
 
@@ -48,6 +48,9 @@ Progress: [##########################....] 26/? plans (v1.1 complete, v1.2 phase
 All decisions logged in PROJECT.md Key Decisions table.
 
 Recent decisions affecting current work:
+- 08-02: effectiveLimit = min(cardsPerSession, totalCards) for graceful handling when limit > available
+- 08-02: seenCardIds.size as limit counter (includes skipped + question-less cards, not just answered)
+- 08-02: Conditional ready text only when limit < total (backward compatible default)
 - 08-01: Mirror ThemeContext pattern exactly for StudySettings (lib + context + hook re-export)
 - 08-01: String(value) for AsyncStorage serialization with explicit parse on load
 - 07-01: Square viewBox (-10 -10 420 420) for SVG-to-PNG to ensure square output at all sizes
@@ -77,9 +80,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 08-01-PLAN.md (study settings persistence & UI)
+Stopped at: Completed 08-02-PLAN.md (study session limiting) -- Phase 08 complete
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (08-01 completed, phase 8 in progress)*
+*Last updated: 2026-02-09 (08-02 completed, phase 8 complete)*
