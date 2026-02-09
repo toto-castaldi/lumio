@@ -39,11 +39,11 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   1. User opens card preview bottom-sheet and sees full card content from the top -- no content is cut off or hidden
   2. User opens Settings and sees the actual installed app version (e.g., v1.1.4), not a hardcoded placeholder
   3. Card preview correctly renders markdown, LaTeX, code blocks, and images without layout issues after the fix
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Install dependencies + fix version display (BUG-02)
+- [ ] 06-02-PLAN.md — Rewrite card preview with native rendering (BUG-01)
 
 ### Phase 7: Branding
 **Goal**: Users see the Lumio logo as a consistent brand element throughout the app and landing page
@@ -102,7 +102,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 3. Core Screens | v1.1 | 5/5 | Complete | 2026-02-07 |
 | 4. Study & Cards | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 5. Distribution & Cleanup | v1.1 | 4/4 | Complete | 2026-02-08 |
-| 6. Bugfix & Version | v1.2 | 0/? | Not started | - |
+| 6. Bugfix & Version | v1.2 | 0/2 | Planning complete | - |
 | 7. Branding | v1.2 | 0/? | Not started | - |
 | 8. Configurable Study Sessions | v1.2 | 0/? | Not started | - |
 | 9. Internationalization | v1.2 | 0/? | Not started | - |
