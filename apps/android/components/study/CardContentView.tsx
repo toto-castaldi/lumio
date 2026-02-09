@@ -1,20 +1,21 @@
 /**
- * WebView-based card content renderer.
+ * Native markdown card content renderer.
  *
- * Renders markdown content with:
- * - Syntax-highlighted code blocks (highlight.js)
- * - LaTeX formula rendering (KaTeX)
- * - Supabase-hosted images with pinch-to-zoom
+ * Renders markdown content using react-native-marked with:
+ * - Syntax-highlighted code blocks (react-native-code-highlighter)
+ * - LaTeX formula rendering (KaTeX via micro-WebView)
+ * - Full-width images with aspect ratio preservation
  * - Dark/light theme adaptation
  *
- * The WebView loads CDN resources and renders content client-side.
- * Height is dynamically adjusted based on content via postMessage.
+ * Replaces the previous WebView-based implementation that caused
+ * content cutoff (BUG-01) due to async height reporting.
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { type ViewStyle } from 'react-native';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import { generateCardHtml } from '../../lib/cardHtml';
+import Markdown from 'react-native-marked';
+import { CardRenderer } from './CardRenderer';
+import { CardTokenizer } from './CardTokenizer';
 
 interface CardContentViewProps {
   /** Markdown content to render (may include LaTeX, code blocks, images) */
@@ -23,49 +24,60 @@ interface CardContentViewProps {
   isDark: boolean;
   /** Optional additional styles for the container */
   style?: ViewStyle;
+  /** Whether the internal FlatList should scroll (default: false) */
+  scrollEnabled?: boolean;
 }
 
 /**
- * Renders card markdown content in a WebView with full support for
- * LaTeX formulas, syntax-highlighted code blocks, and zoomable images.
+ * Renders card markdown content natively via react-native-marked with
+ * full support for LaTeX formulas, syntax-highlighted code blocks,
+ * and images.
  *
- * The component dynamically adjusts its height based on the rendered
- * content size reported by the WebView via postMessage.
+ * Uses FlatList internally (from react-native-marked). The scrollEnabled
+ * prop controls whether this FlatList scrolls independently. When used
+ * inside CardPreviewModal, scrollEnabled should be true so the FlatList
+ * is the sole scroll container.
  */
-export function CardContentView({ content, isDark, style }: CardContentViewProps) {
-  const [webViewHeight, setWebViewHeight] = useState(300);
+export function CardContentView({
+  content,
+  isDark,
+  style,
+  scrollEnabled = false,
+}: CardContentViewProps) {
+  // Memoize renderer and tokenizer to avoid re-creation on every render
+  const renderer = useMemo(() => new CardRenderer(isDark), [isDark]);
+  const tokenizer = useMemo(() => new CardTokenizer(), []);
 
-  // Memoize HTML generation to avoid re-rendering on every parent update
-  const html = useMemo(
-    () => generateCardHtml(content, isDark),
-    [content, isDark],
+  // Theme object for react-native-marked matching app theme
+  const markdownTheme = useMemo(
+    () => ({
+      colors: {
+        text: isDark ? '#f9fafb' : '#333333',
+        link: isDark ? '#60a5fa' : '#3B82F6',
+        border: isDark ? '#374151' : '#e5e7eb',
+        code: isDark ? '#111827' : '#f3f4f6',
+      },
+    }),
+    [isDark],
   );
 
-  const handleMessage = useCallback((event: WebViewMessageEvent) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'height' && typeof data.value === 'number' && data.value > 0) {
-        setWebViewHeight(data.value);
-      }
-    } catch {
-      // Ignore malformed messages
-    }
-  }, []);
-
   return (
-    <WebView
-      source={{ html }}
-      style={[{ height: webViewHeight, opacity: 0.99 }, style]}
-      scrollEnabled={false}
-      originWhitelist={['*']}
-      javaScriptEnabled={true}
-      onMessage={handleMessage}
-      // Allow mixed content for CDN resources
-      mixedContentMode="compatibility"
-      // Disable file access for security
-      allowFileAccess={false}
-      // Transparent background to match parent
-      androidLayerType="hardware"
+    <Markdown
+      value={content}
+      flatListProps={{
+        style: [
+          { backgroundColor: 'transparent' },
+          style,
+        ],
+        scrollEnabled,
+        contentContainerStyle: {
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+        },
+      }}
+      renderer={renderer}
+      tokenizer={tokenizer}
+      theme={markdownTheme}
     />
   );
 }

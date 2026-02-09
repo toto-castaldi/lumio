@@ -1,26 +1,29 @@
 /**
  * Standalone modal for previewing full card content.
  *
- * Displays the card's markdown content rendered via CardContentView
- * (WebView with marked.js, KaTeX, highlight.js). Image URLs are
- * resolved through CardView from @lumio/core for Supabase Storage.
+ * Displays the card's markdown content rendered natively via
+ * react-native-marked (CardContentView). Image URLs are resolved
+ * through CardView from @lumio/core for Supabase Storage.
  *
- * This component is self-contained and ready to be imported by
- * StudyScreen once plan 04-02 completes its modifications.
+ * Dismiss methods:
+ * - Swipe down on the drag handle (PanResponder)
+ * - Tap the dimmed backdrop
+ * - Android back button (onRequestClose)
+ *
+ * No close button (X) per locked design decision.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Modal,
   View,
   Text,
-  TouchableOpacity,
-  ScrollView,
   StyleSheet,
   Dimensions,
   Pressable,
+  PanResponder,
+  Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import {
   CardView,
   getSupabaseUrl,
@@ -41,9 +44,13 @@ interface CardPreviewModalProps {
   repositoryMap: Map<string, Repository>;
 }
 
+const DISMISS_THRESHOLD = 100;
+
 /**
- * Full-screen modal that renders a card's markdown content with
+ * Bottom-sheet modal that renders a card's markdown content with
  * support for LaTeX, code blocks, and Supabase-hosted images.
+ *
+ * Swipe down on the drag handle or tap backdrop to dismiss.
  */
 export function CardPreviewModal({
   visible,
@@ -52,6 +59,46 @@ export function CardPreviewModal({
   repositoryMap,
 }: CardPreviewModalProps) {
   const { colors, isDark } = useTheme();
+
+  // Animated value for swipe-down dismiss gesture
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  // PanResponder for the drag handle area only
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        // Only capture vertical downward gestures
+        return gestureState.dy > 5;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        // Only allow downward movement (positive dy)
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dy > DISMISS_THRESHOLD) {
+          // Swipe exceeded threshold -- dismiss
+          Animated.timing(translateY, {
+            toValue: SCREEN_HEIGHT,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            onClose();
+            translateY.setValue(0);
+          });
+        } else {
+          // Spring back to original position
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 8,
+          }).start();
+        }
+      },
+    }),
+  ).current;
 
   // Resolve image URLs through CardView
   let content = card?.content || '';
@@ -80,49 +127,62 @@ export function CardPreviewModal({
       transparent
       onRequestClose={onClose}
     >
-      {/* Dimmed backdrop — tap to close */}
+      {/* Dimmed backdrop -- tap to close */}
       <Pressable style={styles.backdrop} onPress={onClose}>
         <View />
       </Pressable>
 
-      {/* Bottom-sheet card */}
-      <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-        {/* Drag handle */}
-        <View style={styles.handleRow}>
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
+      {/* Bottom-sheet card with swipe-down dismiss */}
+      <Animated.View
+        style={[
+          styles.sheet,
+          { backgroundColor: colors.background },
+          { transform: [{ translateY }] },
+        ]}
+      >
+        {/* Drag handle -- PanResponder attached here only */}
+        <View {...panResponder.panHandlers}>
+          <View style={styles.handleRow}>
+            <View
+              style={[styles.handle, { backgroundColor: colors.border }]}
+            />
+          </View>
         </View>
 
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+        {/* Header (title only, no close button) */}
+        <View
+          style={[styles.header, { borderBottomColor: colors.border }]}
+        >
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {card?.title || 'Card Content'}
           </Text>
-          <TouchableOpacity
-            onPress={onClose}
-            style={[styles.closeButton, { backgroundColor: colors.surface }]}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
         </View>
 
-        {/* Content */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={true}
-        >
+        {/* Content -- FlatList inside Markdown handles scrolling */}
+        <View style={styles.contentContainer}>
           {card ? (
-            <CardContentView content={content} isDark={isDark} />
+            <CardContentView
+              content={content}
+              isDark={isDark}
+              scrollEnabled={true}
+            />
           ) : (
             <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: colors.textSecondary },
+                ]}
+              >
                 No card content to display
               </Text>
             </View>
           )}
-        </ScrollView>
-      </View>
+        </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -160,9 +220,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -170,22 +227,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  contentContainer: {
     flex: 1,
-    marginRight: 12,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 32,
   },
   emptyState: {
     flex: 1,
