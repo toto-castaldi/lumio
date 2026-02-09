@@ -1,4 +1,5 @@
 import React from 'react';
+import { Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
@@ -43,6 +44,14 @@ export function MainNavigator() {
           name="Dashboard"
           component={DashboardScreen}
           options={{
+            headerTitle: () => (
+              <Image
+                source={require('../assets/logo-header.png')}
+                style={{ width: 28, height: 28 }}
+                resizeMode="contain"
+                accessibilityLabel="Lumio"
+              />
+            ),
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons
                 name={(focused ? 'home' : 'home-outline') as TabIconName}

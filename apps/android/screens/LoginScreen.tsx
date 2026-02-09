@@ -20,7 +20,7 @@ console.log('[LoginScreen] isGoogleConfigured:', isGoogleConfigured);
  * LoginScreen displays the login UI with Google Sign-In.
  *
  * Layout:
- * - Lumio logo (text placeholder for now)
+ * - Lumio logo (tri-color pie brand mark)
  * - Tagline: "Your flashcards, supercharged"
  * - Google Sign-In button
  *
@@ -50,8 +50,13 @@ export function LoginScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        {/* Logo placeholder - will be replaced with actual logo */}
-        <Text style={[styles.logo, { color: colors.primary }]}>Lumio</Text>
+        {/* Lumio logo */}
+        <Image
+          source={require('../assets/logo-login.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+          accessibilityLabel="Lumio logo"
+        />
 
         {/* Tagline */}
         <Text style={[styles.tagline, { color: colors.textSecondary }]}>
@@ -103,9 +108,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-  logo: {
-    fontSize: 48,
-    fontWeight: 'bold',
+  logoImage: {
+    width: 128,
+    height: 128,
     marginBottom: 8,
   },
   tagline: {
