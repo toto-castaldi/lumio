@@ -26,7 +26,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [x] **Phase 6: Bugfix & Version** -- Fix card preview cutoff and display actual app version (completed 2026-02-09)
 - [x] **Phase 7: Branding** -- Integrate Lumio logo across app and landing page (completed 2026-02-09)
-- [ ] **Phase 8: Configurable Study Sessions** -- Let users control session length with preset options
+- [x] **Phase 8: Configurable Study Sessions** -- Let users control session length with preset options (completed 2026-02-09)
 - [ ] **Phase 9: Internationalization** -- IT/EN language toggle with full UI string translation
 
 ## Phase Details
@@ -71,8 +71,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Settings persistence + context + radio-button UI (STUDY-01)
-- [ ] 08-02-PLAN.md — Session limiting + ready screen count + progress bar (STUDY-02, STUDY-03)
+- [x] 08-01-PLAN.md — Settings persistence + context + radio-button UI (STUDY-01)
+- [x] 08-02-PLAN.md — Session limiting + ready screen count + progress bar (STUDY-02, STUDY-03)
 
 ### Phase 9: Internationalization
 **Goal**: Users can switch between Italian and English, with all UI strings updating accordingly
@@ -105,7 +105,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 5. Distribution & Cleanup | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 6. Bugfix & Version | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 7. Branding | v1.2 | 2/2 | Complete | 2026-02-09 |
-| 8. Configurable Study Sessions | v1.2 | 0/2 | Not started | - |
+| 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 9. Internationalization | v1.2 | 0/? | Not started | - |
 
 ---
