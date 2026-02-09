@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../hooks/useTheme';
+import { useStudySettings } from '../hooks/useStudySettings';
 import { useStudySession } from '../hooks/useStudySession';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { QuizCard } from '../components/study/QuizCard';
@@ -24,6 +25,7 @@ type StudyNavProp = NativeStackNavigationProp<RootStackParamList, 'Study'>;
 export function StudyScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<StudyNavProp>();
+  const { cardsPerSession } = useStudySettings();
   const {
     session,
     isLoadingQuestion,
@@ -36,7 +38,8 @@ export function StudyScreen() {
     isSkipping,
     cardsRemaining,
     progress,
-  } = useStudySession();
+    effectiveLimit,
+  } = useStudySession(cardsPerSession);
 
   // Card preview modal state
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
@@ -235,7 +238,9 @@ export function StudyScreen() {
         Ready to study
       </Text>
       <Text style={[contentStyles.subtitle, { color: colors.textSecondary }]}>
-        {session.cards.length} cards available
+        {effectiveLimit < session.cards.length
+          ? `Studying ${effectiveLimit} of ${session.cards.length} cards`
+          : `${session.cards.length} cards available`}
       </Text>
       <TouchableOpacity
         style={[contentStyles.primaryButton, { backgroundColor: colors.primary }]}
@@ -415,7 +420,7 @@ export function StudyScreen() {
         <ProgressBar
           progress={progress}
           current={answeredCount}
-          total={session.cards.length}
+          total={effectiveLimit}
         />
       )}
       <View style={screenStyles.content}>
