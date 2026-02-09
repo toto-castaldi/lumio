@@ -10,6 +10,7 @@ import {
   type ShuffledQuestion,
   type QuestionVote,
 } from '@lumio/core';
+import type { CardsPerSession } from '../lib/studySettings';
 
 // =============================================================================
 // TYPES
@@ -51,13 +52,14 @@ export interface UseStudySessionReturn {
   handleGoToCard: (index: number) => void;
   cardsRemaining: number;
   progress: number;
+  effectiveLimit: number;
 }
 
 // =============================================================================
 // HOOK
 // =============================================================================
 
-export function useStudySession(): UseStudySessionReturn {
+export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseStudySessionReturn {
   const [session, setSession] = useState<StudySessionState>({
     state: 'loading',
     cards: [],
@@ -139,11 +141,13 @@ export function useStudySession(): UseStudySessionReturn {
   // Select a random unseen card
   // -------------------------------------------------------------------------
   const selectRandomCard = useCallback((cards: StudyCard[]): StudyCard | null => {
+    const effectiveLimit = cardsPerSession === 'all' ? cards.length : cardsPerSession;
+    if (seenCardIds.current.size >= effectiveLimit) return null;
     const unseenCards = cards.filter(c => !seenCardIds.current.has(c.id));
     if (unseenCards.length === 0) return null;
     const randomIndex = Math.floor(Math.random() * unseenCards.length);
     return unseenCards[randomIndex];
-  }, []);
+  }, [cardsPerSession]);
 
   // -------------------------------------------------------------------------
   // Load the next card's question
@@ -314,9 +318,10 @@ export function useStudySession(): UseStudySessionReturn {
   // Computed values
   // -------------------------------------------------------------------------
   const totalCards = session.cards.length;
+  const effectiveLimit = cardsPerSession === 'all' ? totalCards : Math.min(cardsPerSession as number, totalCards);
   const seenCount = seenCardIds.current.size;
-  const cardsRemaining = Math.max(0, totalCards - seenCount);
-  const progress = totalCards > 0 ? seenCount / totalCards : 0;
+  const cardsRemaining = Math.max(0, effectiveLimit - seenCount);
+  const progress = effectiveLimit > 0 ? Math.min(1, seenCount / effectiveLimit) : 0;
 
   return {
     session,
@@ -330,5 +335,6 @@ export function useStudySession(): UseStudySessionReturn {
     handleGoToCard,
     cardsRemaining,
     progress,
+    effectiveLimit,
   };
 }
