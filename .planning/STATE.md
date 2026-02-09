@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 6 - Bugfix & Version (v1.2)
+**Current focus:** Phase 7 - Branding (v1.2)
 
 ## Current Position
 
-Phase: 6 of 9 (Bugfix & Version) -- COMPLETE
+Phase: 7 of 9 (Branding)
 Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-09 -- Completed 06-02 (card preview native rendering)
+Status: Plan 07-02 complete
+Last activity: 2026-02-09 -- Completed 07-02 (landing page logo)
 
-Progress: [######################........] 22/? plans (v1.1 complete, v1.2 phase 6 done)
+Progress: [########################......] 24/? plans (v1.1 complete, v1.2 phase 6 done, phase 7 in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22 (20 v1.1 + 2 v1.2)
+- Total plans completed: 24 (20 v1.1 + 4 v1.2)
 - Average duration: ~5.3 hours (estimated from 11-day milestone)
 - Total execution time: ~106 hours (v1.1)
 
@@ -38,6 +38,7 @@ Progress: [######################........] 22/? plans (v1.1 complete, v1.2 phase
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 6. Bugfix & Version | 2/2 | Complete |
+| 7. Branding | 1/2 | In Progress |
 
 *v1.2 metrics will populate as plans execute*
 
@@ -48,6 +49,9 @@ Progress: [######################........] 22/? plans (v1.1 complete, v1.2 phase
 All decisions logged in PROJECT.md Key Decisions table.
 
 Recent decisions affecting current work:
+- 07-02: Inline SVG for landing logo (1.3KB, avoids extra HTTP request)
+- 07-02: viewBox cropped to 0 0 400 300 (removes empty space below graphic)
+- 07-02: Signature line omitted from inline SVG (invisible at 36px)
 - v1.2: PNG for logo (no react-native-svg, avoids native rebuild + SDK 54 press regressions)
 - v1.2: i18n-js over react-i18next (Expo recommended, 15kb vs 45kb, sufficient for 2 locales)
 - v1.2: Preset radio buttons for cards-per-session (not slider, avoids decision paralysis)
@@ -70,9 +74,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 06-02-PLAN.md (card preview native rendering) -- Phase 6 complete
+Stopped at: Completed 07-02-PLAN.md (landing page logo)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (06-02 completed, phase 6 done)*
+*Last updated: 2026-02-09 (07-02 completed)*
