@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 7 - Branding (v1.2)
+**Current focus:** Phase 8 - Configurable Study Sessions (v1.2)
 
 ## Current Position
 
-Phase: 7 of 9 (Branding) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-09 -- Completed 07-01 (android logo integration)
+Phase: 8 of 9 (Configurable Study Sessions)
+Plan: 1 of 2 in current phase
+Status: Plan 08-01 complete, 08-02 remaining
+Last activity: 2026-02-09 -- Completed 08-01 (study settings persistence & UI)
 
-Progress: [#########################.....] 25/? plans (v1.1 complete, v1.2 phase 6-7 done)
+Progress: [##########################....] 26/? plans (v1.1 complete, v1.2 phase 6-8 in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25 (20 v1.1 + 5 v1.2)
+- Total plans completed: 26 (20 v1.1 + 6 v1.2)
 - Average duration: ~5.3 hours (estimated from 11-day milestone)
 - Total execution time: ~106 hours (v1.1)
 
@@ -39,8 +39,7 @@ Progress: [#########################.....] 25/? plans (v1.1 complete, v1.2 phase
 |-------|-------|--------|
 | 6. Bugfix & Version | 2/2 | Complete |
 | 7. Branding | 2/2 | Complete |
-
-*v1.2 metrics will populate as plans execute*
+| 8. Configurable Study Sessions | 1/2 | In Progress |
 
 ## Accumulated Context
 
@@ -49,6 +48,8 @@ Progress: [#########################.....] 25/? plans (v1.1 complete, v1.2 phase
 All decisions logged in PROJECT.md Key Decisions table.
 
 Recent decisions affecting current work:
+- 08-01: Mirror ThemeContext pattern exactly for StudySettings (lib + context + hook re-export)
+- 08-01: String(value) for AsyncStorage serialization with explicit parse on load
 - 07-01: Square viewBox (-10 -10 420 420) for SVG-to-PNG to ensure square output at all sizes
 - 07-01: Signature line omitted from all PNG variants (invisible at small sizes)
 - 07-02: Inline SVG for landing logo (1.3KB, avoids extra HTTP request)
@@ -76,9 +77,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 07-01 + 07-02 (android logo + landing page logo) -- Phase 7 verified & complete
+Stopped at: Completed 08-01-PLAN.md (study settings persistence & UI)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (07-01 completed, phase 7 done)*
+*Last updated: 2026-02-09 (08-01 completed, phase 8 in progress)*
