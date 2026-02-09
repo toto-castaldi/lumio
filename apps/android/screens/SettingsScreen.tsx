@@ -12,55 +12,62 @@ import Toast from 'react-native-toast-message';
 import { getVersionString } from '@lumio/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
 import type { ThemePreference } from '../lib/theme';
+import type { AppLocale } from '../lib/i18n';
 import type { CardsPerSession } from '../lib/studySettings';
 
-type ThemeOption = {
-  value: ThemePreference;
+type OptionItem<T> = {
+  value: T;
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
 };
-
-const themeOptions: ThemeOption[] = [
-  { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
-  { value: 'light', label: 'Light', icon: 'sunny-outline' },
-  { value: 'dark', label: 'Dark', icon: 'moon-outline' },
-];
-
-type StudyOption = {
-  value: CardsPerSession;
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-};
-
-const studyOptions: StudyOption[] = [
-  { value: 10, label: '10 cards', icon: 'flash-outline' },
-  { value: 20, label: '20 cards', icon: 'layers-outline' },
-  { value: 50, label: '50 cards', icon: 'library-outline' },
-  { value: 'all', label: 'All cards', icon: 'infinite-outline' },
-];
 
 /**
- * SettingsScreen with user info, dark mode toggle, and logout functionality.
+ * SettingsScreen with user info, appearance toggle, study options,
+ * language selector, and logout functionality.
  *
  * Layout:
  * - User email section
  * - Appearance section with system/light/dark toggle
+ * - Study section with cards-per-session options
+ * - Language section with English/Italiano toggle
  * - Logout button (immediate logout, no confirmation per CONTEXT)
  * - App version footer
  */
 export function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { colors, preference, setPreference } = useTheme();
+  const { t, locale, setLocale } = useI18n();
   const { cardsPerSession, setCardsPerSession } = useStudySettings();
   const version = getVersionString();
+
+  // Option arrays inside component body so t() picks up current locale
+  const themeOptions: OptionItem<ThemePreference>[] = [
+    { value: 'system', label: t('settings.system'), icon: 'phone-portrait-outline' },
+    { value: 'light', label: t('settings.light'), icon: 'sunny-outline' },
+    { value: 'dark', label: t('settings.dark'), icon: 'moon-outline' },
+  ];
+
+  const studyOptions: OptionItem<CardsPerSession>[] = [
+    { value: 10, label: t('settings.tenCards'), icon: 'flash-outline' },
+    { value: 20, label: t('settings.twentyCards'), icon: 'layers-outline' },
+    { value: 50, label: t('settings.fiftyCards'), icon: 'library-outline' },
+    { value: 'all', label: t('settings.allCards'), icon: 'infinite-outline' },
+  ];
+
+  // Language names use autonyms (the language's own name for itself) -- NOT translated
+  const languageOptions: OptionItem<AppLocale>[] = [
+    { value: 'en', label: 'English', icon: 'language-outline' },
+    { value: 'it', label: 'Italiano', icon: 'language-outline' },
+  ];
 
   const handleCopyVersion = async () => {
     await Clipboard.setStringAsync(version);
     Toast.show({
       type: 'success',
-      text1: 'Version copied',
+      text1: t('settings.versionCopied'),
       text2: version,
       visibilityTime: 2000,
     });
@@ -79,16 +86,16 @@ export function SettingsScreen() {
       {/* User info section */}
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>
-          Signed in as
+          {t('settings.signedInAs')}
         </Text>
         <Text style={[styles.email, { color: colors.text }]}>
-          {user?.email ?? 'Unknown user'}
+          {user?.email ?? t('common.unknownUser')}
         </Text>
       </View>
 
       {/* Appearance section */}
       <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
-        Appearance
+        {t('settings.appearance')}
       </Text>
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
         {themeOptions.map((option, index) => (
@@ -124,7 +131,7 @@ export function SettingsScreen() {
 
       {/* Study section */}
       <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
-        Study
+        {t('settings.study')}
       </Text>
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
         {studyOptions.map((option, index) => (
@@ -158,6 +165,42 @@ export function SettingsScreen() {
         ))}
       </View>
 
+      {/* Language section */}
+      <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+        {t('settings.language')}
+      </Text>
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        {languageOptions.map((option, index) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[
+              styles.optionRow,
+              index < languageOptions.length - 1 && [
+                styles.optionBorder,
+                { borderBottomColor: colors.border },
+              ],
+            ]}
+            onPress={() => setLocale(option.value)}
+            activeOpacity={0.6}
+          >
+            <View style={styles.optionLeft}>
+              <Ionicons
+                name={option.icon}
+                size={20}
+                color={colors.textSecondary}
+                style={styles.optionIcon}
+              />
+              <Text style={[styles.optionLabel, { color: colors.text }]}>
+                {option.label}
+              </Text>
+            </View>
+            {locale === option.value && (
+              <Ionicons name="checkmark" size={20} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* Spacer */}
       <View style={styles.spacer} />
 
@@ -168,7 +211,7 @@ export function SettingsScreen() {
           onPress={handleLogout}
           activeOpacity={0.8}
         >
-          <Text style={styles.logoutText}>Log out</Text>
+          <Text style={styles.logoutText}>{t('settings.logOut')}</Text>
         </TouchableOpacity>
       </View>
 
