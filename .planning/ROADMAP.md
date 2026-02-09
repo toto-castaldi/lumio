@@ -68,11 +68,11 @@ Plans:
   2. User sees "studying Y of X" count on the study ready screen reflecting the configured limit
   3. Study session ends after the configured number of cards is reached (or after all cards if "All" is selected)
   4. Default behavior (before user configures) studies all available cards (backward compatible)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md — Settings persistence + context + radio-button UI (STUDY-01)
+- [ ] 08-02-PLAN.md — Session limiting + ready screen count + progress bar (STUDY-02, STUDY-03)
 
 ### Phase 9: Internationalization
 **Goal**: Users can switch between Italian and English, with all UI strings updating accordingly
@@ -105,7 +105,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9
 | 5. Distribution & Cleanup | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 6. Bugfix & Version | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 7. Branding | v1.2 | 2/2 | Complete | 2026-02-09 |
-| 8. Configurable Study Sessions | v1.2 | 0/? | Not started | - |
+| 8. Configurable Study Sessions | v1.2 | 0/2 | Not started | - |
 | 9. Internationalization | v1.2 | 0/? | Not started | - |
 
 ---
