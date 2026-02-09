@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 9 of 9 (Internationalization)
-Plan: 2 of 3 in current phase
-Status: Executing Phase 09 (plan 2 of 3 complete)
-Last activity: 2026-02-09 -- Completed 09-02 (screen translation)
+Plan: 3 of 3 in current phase
+Status: Phase 09 COMPLETE (all 3 plans done)
+Last activity: 2026-02-09 -- Completed 09-03 (component & navigation i18n)
 
-Progress: [#############################.] 29/? plans (v1.1 complete, v1.2 phases 6-8 complete, 09-01/09-02 done)
+Progress: [##############################] 30/30 plans (v1.1 complete, v1.2 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29 (20 v1.1 + 9 v1.2)
+- Total plans completed: 30 (20 v1.1 + 10 v1.2)
 - Average duration: ~5.3 hours (estimated from 11-day milestone)
 - Total execution time: ~106 hours (v1.1)
 
@@ -40,7 +40,7 @@ Progress: [#############################.] 29/? plans (v1.1 complete, v1.2 phase
 | 6. Bugfix & Version | 2/2 | Complete |
 | 7. Branding | 2/2 | Complete |
 | 8. Configurable Study Sessions | 2/2 | Complete |
-| 9. Internationalization | 2/3 | In Progress |
+| 9. Internationalization | 3/3 | Complete |
 
 ## Accumulated Context
 
@@ -49,6 +49,8 @@ Progress: [#############################.] 29/? plans (v1.1 complete, v1.2 phase
 All decisions logged in PROJECT.md Key Decisions table.
 
 Recent decisions affecting current work:
+- 09-03: ConnectionTest.tsx excluded from translation (developer-only component per 09-RESEARCH)
+- 09-03: Props-only components (EmptyState, StatCard, ProgressBar, StudyFAB) confirmed no-translate
 - 09-02: formatLastStudied accepts t as parameter (module-level function outside component cannot use hooks)
 - 09-02: t added to useCallback/useEffect dependency arrays to ensure locale changes propagate to callbacks
 - 09-02: Card content and AI-generated quiz questions intentionally left untranslated (I18N-04)
@@ -83,14 +85,14 @@ None.
 ### Blockers/Concerns
 
 - ~~WebView height fix may need ResizeObserver fallback for older Android WebView (pre-2020)~~ -- resolved: card preview no longer uses WebView for markdown
-- i18n retrofit touches 16 files / 82+ strings -- infrastructure complete (09-01), all screens translated (09-02), remaining components in 09-03
+- ~~i18n retrofit touches 16 files / 82+ strings~~ -- COMPLETE: infrastructure (09-01), screens (09-02), components & navigation (09-03)
 
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 09-02-PLAN.md (screen translation)
+Stopped at: Completed 09-03-PLAN.md (component & navigation i18n -- Phase 9 complete)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (09-02 completed, all screens translated)*
+*Last updated: 2026-02-09 (09-03 completed, Phase 9 Internationalization complete, v1.2 milestone complete)*
