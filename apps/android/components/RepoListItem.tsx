@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 
 interface RepoListItemProps {
   repo: {
@@ -22,6 +23,7 @@ interface RepoListItemProps {
  */
 export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const swipeableRef = useRef<Swipeable>(null);
 
   const renderRightActions = (
@@ -38,7 +40,7 @@ export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
         activeOpacity={0.7}
       >
         <Ionicons name="trash-outline" size={24} color="#ffffff" />
-        <Text style={styles.deleteText}>Delete</Text>
+        <Text style={styles.deleteText}>{t('components.delete')}</Text>
       </TouchableOpacity>
     );
   };

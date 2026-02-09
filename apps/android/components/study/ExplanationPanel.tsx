@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
+import { useI18n } from '../../hooks/useI18n';
 import type { QuestionVote } from '@lumio/core';
 
 interface ExplanationPanelProps {
@@ -25,11 +26,12 @@ export function ExplanationPanel({
   isVoting,
 }: ExplanationPanelProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   const accentColor = isCorrect ? '#10b981' : '#ef4444';
   const bgColor = isCorrect ? '#ecfdf5' : '#fef2f2';
   const borderColor = isCorrect ? '#a7f3d0' : '#fecaca';
-  const resultText = isCorrect ? 'Correct!' : 'Incorrect';
+  const resultText = isCorrect ? t('components.correct') : t('components.incorrect');
   const resultIcon = isCorrect ? 'checkmark-circle' : 'close-circle';
 
   return (
@@ -52,7 +54,7 @@ export function ExplanationPanel({
       {/* Vote section */}
       <View style={[styles.voteSection, { backgroundColor: colors.surface }]}>
         <Text style={[styles.voteLabel, { color: colors.textSecondary }]}>
-          Was this question helpful?
+          {t('components.questionHelpful')}
         </Text>
         <View style={styles.voteButtons}>
           <TouchableOpacity
@@ -78,7 +80,7 @@ export function ExplanationPanel({
                 { color: userVote === 'like' ? '#ffffff' : colors.textSecondary },
               ]}
             >
-              Yes
+              {t('components.yes')}
             </Text>
           </TouchableOpacity>
 
@@ -105,7 +107,7 @@ export function ExplanationPanel({
                 { color: userVote === 'dislike' ? '#ffffff' : colors.textSecondary },
               ]}
             >
-              No
+              {t('components.no')}
             </Text>
           </TouchableOpacity>
         </View>

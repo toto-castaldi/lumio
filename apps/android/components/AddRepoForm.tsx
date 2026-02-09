@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 
 interface AddRepoFormProps {
   onAdd: (url: string, accessToken?: string) => Promise<void>;
@@ -23,19 +24,20 @@ interface AddRepoFormProps {
  */
 export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel }: AddRepoFormProps) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [url, setUrl] = useState('');
   const [pat, setPat] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
 
   const validateUrl = (value: string): boolean => {
     if (!value.trim()) {
-      setUrlError('Repository URL is required');
+      setUrlError(t('components.urlRequired'));
       return false;
     }
     // Basic GitHub URL validation
     const githubPattern = /^https?:\/\/(www\.)?github\.com\/[\w.-]+\/[\w.-]+\/?$/i;
     if (!githubPattern.test(value.trim())) {
-      setUrlError('Enter a valid GitHub repository URL');
+      setUrlError(t('components.invalidGithubUrl'));
       return false;
     }
     setUrlError(null);
@@ -112,7 +114,7 @@ export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel }
       {showPatPrompt && (
         <View style={styles.patSection}>
           <Text style={[styles.patLabel, { color: colors.textSecondary }]}>
-            This repository appears to be private. Enter a Personal Access Token:
+            {t('components.privateRepoPatLabel')}
           </Text>
           <TextInput
             style={[
@@ -141,7 +143,7 @@ export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel }
               disabled={isAdding}
               activeOpacity={0.7}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.submitButton, { backgroundColor: colors.primary }]}
@@ -149,7 +151,7 @@ export function AddRepoForm({ onAdd, isAdding, showPatPrompt = false, onCancel }
               disabled={isAdding}
               activeOpacity={0.7}
             >
-              <Text style={styles.submitButtonText}>Submit with Token</Text>
+              <Text style={styles.submitButtonText}>{t('components.submitWithToken')}</Text>
             </TouchableOpacity>
           </View>
         </View>

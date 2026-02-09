@@ -31,6 +31,7 @@ import {
   type Repository,
 } from '@lumio/core';
 import { useTheme } from '../../hooks/useTheme';
+import { useI18n } from '../../hooks/useI18n';
 import { CardContentView } from './CardContentView';
 
 interface CardPreviewModalProps {
@@ -59,6 +60,7 @@ export function CardPreviewModal({
   repositoryMap,
 }: CardPreviewModalProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useI18n();
 
   // Animated value for swipe-down dismiss gesture
   const translateY = useRef(new Animated.Value(0)).current;
@@ -157,7 +159,7 @@ export function CardPreviewModal({
             style={[styles.title, { color: colors.text }]}
             numberOfLines={1}
           >
-            {card?.title || 'Card Content'}
+            {card?.title || t('components.cardContent')}
           </Text>
         </View>
 
@@ -177,7 +179,7 @@ export function CardPreviewModal({
                   { color: colors.textSecondary },
                 ]}
               >
-                No card content to display
+                {t('components.noCardContent')}
               </Text>
             </View>
           )}
