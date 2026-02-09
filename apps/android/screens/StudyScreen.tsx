@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
 import { useStudySession } from '../hooks/useStudySession';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -24,6 +25,7 @@ type StudyNavProp = NativeStackNavigationProp<RootStackParamList, 'Study'>;
 
 export function StudyScreen() {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const navigation = useNavigation<StudyNavProp>();
   const { cardsPerSession } = useStudySettings();
   const {
@@ -56,12 +58,12 @@ export function StudyScreen() {
       e.preventDefault();
 
       Alert.alert(
-        'End Session?',
-        'Your progress will be saved.',
+        t('study.endSessionTitle'),
+        t('study.endSessionBody'),
         [
-          { text: 'Continue Studying', style: 'cancel' },
+          { text: t('study.continueStudying'), style: 'cancel' },
           {
-            text: 'End Session',
+            text: t('study.endSession'),
             style: 'destructive',
             onPress: () => navigation.dispatch(e.data.action),
           },
@@ -70,7 +72,7 @@ export function StudyScreen() {
     });
 
     return unsubscribe;
-  }, [navigation, session.state]);
+  }, [navigation, session.state, t]);
 
   // ---------------------------------------------------------------------------
   // Auto-navigate to StudySummary on session completion
@@ -134,7 +136,7 @@ export function StudyScreen() {
     await handleSkip();
     Toast.show({
       type: 'info',
-      text1: 'Card skipped',
+      text1: t('study.cardSkipped'),
       visibilityTime: 1500,
     });
   };
@@ -159,7 +161,7 @@ export function StudyScreen() {
       </TouchableOpacity>
 
       <Text style={[headerStyles.title, { color: colors.text }]}>
-        {isReviewing ? 'Review' : 'Study'}
+        {isReviewing ? t('study.review') : t('study.studyTitle')}
       </Text>
 
       <View style={headerStyles.rightActions}>
@@ -180,7 +182,7 @@ export function StudyScreen() {
             activeOpacity={0.7}
           >
             <Text style={[headerStyles.skipText, { color: colors.primary }]}>
-              {isSkipping ? 'Skipping...' : 'Skip'}
+              {isSkipping ? t('study.skipping') : t('study.skip')}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -197,7 +199,7 @@ export function StudyScreen() {
     <View style={contentStyles.centered}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={[contentStyles.message, { color: colors.textSecondary }]}>
-        Loading cards...
+        {t('study.loadingCards')}
       </Text>
     </View>
   );
@@ -211,17 +213,17 @@ export function StudyScreen() {
         <Ionicons name="documents-outline" size={40} color={colors.primary} />
       </View>
       <Text style={[contentStyles.heading, { color: colors.text }]}>
-        No cards available
+        {t('study.noCardsTitle')}
       </Text>
       <Text style={[contentStyles.subtitle, { color: colors.textSecondary }]}>
-        Questions are being prepared. Try again in a few minutes.
+        {t('study.noCardsSubtitle')}
       </Text>
       <TouchableOpacity
         style={[contentStyles.primaryButton, { backgroundColor: colors.primary }]}
         onPress={() => navigation.goBack()}
         activeOpacity={0.8}
       >
-        <Text style={contentStyles.primaryButtonText}>Back to Dashboard</Text>
+        <Text style={contentStyles.primaryButtonText}>{t('study.backToDashboard')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -235,12 +237,12 @@ export function StudyScreen() {
         <Ionicons name="school-outline" size={40} color={colors.primary} />
       </View>
       <Text style={[contentStyles.heading, { color: colors.text }]}>
-        Ready to study
+        {t('study.readyTitle')}
       </Text>
       <Text style={[contentStyles.subtitle, { color: colors.textSecondary }]}>
         {effectiveLimit < session.cards.length
-          ? `Studying ${effectiveLimit} of ${session.cards.length} cards`
-          : `${session.cards.length} cards available`}
+          ? t('study.studyingXOfY', { limit: effectiveLimit, total: session.cards.length })
+          : t('study.cardsAvailable', { count: session.cards.length })}
       </Text>
       <TouchableOpacity
         style={[contentStyles.primaryButton, { backgroundColor: colors.primary }]}
@@ -253,7 +255,7 @@ export function StudyScreen() {
         ) : (
           <>
             <Ionicons name="play" size={20} color="#ffffff" />
-            <Text style={contentStyles.primaryButtonText}>Start</Text>
+            <Text style={contentStyles.primaryButtonText}>{t('study.start')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -269,7 +271,7 @@ export function StudyScreen() {
         <View style={contentStyles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[contentStyles.message, { color: colors.textSecondary }]}>
-            Loading question...
+            {t('study.loadingQuestion')}
           </Text>
         </View>
       );
@@ -303,7 +305,7 @@ export function StudyScreen() {
                 >
                   <Ionicons name="arrow-back" size={20} color={colors.text} />
                   <Text style={[bottomStyles.prevButtonText, { color: colors.text }]}>
-                    Prev Card
+                    {t('study.prevCard')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -318,7 +320,7 @@ export function StudyScreen() {
                 ) : (
                   <>
                     <Text style={bottomStyles.nextButtonText}>
-                      {isLastCard ? 'Finish' : 'Next Card'}
+                      {isLastCard ? t('study.finish') : t('study.nextCard')}
                     </Text>
                     <Ionicons
                       name={isLastCard ? 'checkmark' : 'arrow-forward'}
@@ -344,7 +346,7 @@ export function StudyScreen() {
                 >
                   <Ionicons name="arrow-back" size={20} color={colors.text} />
                   <Text style={[bottomStyles.prevButtonText, { color: colors.text }]}>
-                    Prev Card
+                    {t('study.prevCard')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -354,7 +356,7 @@ export function StudyScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={[bottomStyles.reviewButtonText, { color: colors.primary }]}>
-                  Back to Current Card
+                  {t('study.backToCurrentCard')}
                 </Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.primary} />
               </TouchableOpacity>
@@ -374,17 +376,17 @@ export function StudyScreen() {
         <Ionicons name="checkmark-circle" size={40} color="#10b981" />
       </View>
       <Text style={[contentStyles.heading, { color: colors.text }]}>
-        Session Complete
+        {t('study.sessionComplete')}
       </Text>
       <Text style={[contentStyles.subtitle, { color: colors.textSecondary }]}>
-        You studied all available cards
+        {t('study.studiedAllCards')}
       </Text>
       <TouchableOpacity
         style={[contentStyles.primaryButton, { backgroundColor: colors.primary }]}
         onPress={() => navigation.goBack()}
         activeOpacity={0.8}
       >
-        <Text style={contentStyles.primaryButtonText}>Back to Dashboard</Text>
+        <Text style={contentStyles.primaryButtonText}>{t('study.backToDashboard')}</Text>
       </TouchableOpacity>
     </View>
   );

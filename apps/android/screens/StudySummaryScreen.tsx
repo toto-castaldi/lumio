@@ -5,6 +5,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../hooks/useI18n';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type SummaryNavProp = NativeStackNavigationProp<RootStackParamList, 'StudySummary'>;
@@ -40,6 +41,7 @@ function formatDuration(totalSeconds: number): string {
  */
 export function StudySummaryScreen() {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const navigation = useNavigation<SummaryNavProp>();
   const route = useRoute<SummaryRouteProp>();
 
@@ -68,7 +70,7 @@ export function StudySummaryScreen() {
 
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Session Complete!
+          {t('summary.title')}
         </Text>
 
         {/* Score percentage */}
@@ -77,7 +79,7 @@ export function StudySummaryScreen() {
             {scorePercent}%
           </Text>
           <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>
-            Score
+            {t('summary.score')}
           </Text>
         </View>
 
@@ -87,7 +89,7 @@ export function StudySummaryScreen() {
           <View style={styles.statRow}>
             <View style={styles.statLeft}>
               <Ionicons name="checkmark-circle" size={22} color="#10b981" />
-              <Text style={[styles.statLabel, { color: colors.text }]}>Correct</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('summary.correct')}</Text>
             </View>
             <Text style={[styles.statValue, { color: '#10b981' }]}>
               {correctCount}
@@ -100,7 +102,7 @@ export function StudySummaryScreen() {
           <View style={styles.statRow}>
             <View style={styles.statLeft}>
               <Ionicons name="close-circle" size={22} color="#ef4444" />
-              <Text style={[styles.statLabel, { color: colors.text }]}>Incorrect</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('summary.incorrect')}</Text>
             </View>
             <Text style={[styles.statValue, { color: '#ef4444' }]}>
               {incorrectCount}
@@ -113,7 +115,7 @@ export function StudySummaryScreen() {
           <View style={styles.statRow}>
             <View style={styles.statLeft}>
               <Ionicons name="play-skip-forward" size={22} color="#9ca3af" />
-              <Text style={[styles.statLabel, { color: colors.text }]}>Skipped</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('summary.skipped')}</Text>
             </View>
             <Text style={[styles.statValue, { color: colors.textSecondary }]}>
               {skippedCount}
@@ -126,7 +128,7 @@ export function StudySummaryScreen() {
           <View style={styles.statRow}>
             <View style={styles.statLeft}>
               <Ionicons name="time-outline" size={22} color="#f59e0b" />
-              <Text style={[styles.statLabel, { color: colors.text }]}>Time</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('summary.time')}</Text>
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>
               {formatDuration(timeSpentSeconds)}
@@ -141,7 +143,7 @@ export function StudySummaryScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="home-outline" size={20} color="#ffffff" />
-          <Text style={styles.dashboardButtonText}>Return to Dashboard</Text>
+          <Text style={styles.dashboardButtonText}>{t('summary.returnToDashboard')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
