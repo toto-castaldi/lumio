@@ -34,10 +34,10 @@ const serverOnlyPackages = [
 ];
 
 // pnpm hoists trim-newlines v3 to root but react-native-code-highlighter
-// needs v5 (ESM named exports). Force resolution to v5.
-const trimNewlinesV5 = path.resolve(
-  monorepoRoot,
-  'node_modules/.pnpm/trim-newlines@5.0.0/node_modules/trim-newlines/index.js',
+// needs v5 (ESM named exports). Use local CJS shim instead of pointing into
+// .pnpm store (which fails in CI due to unwatched path SHA-1 errors).
+const trimNewlinesShim = require.resolve(
+  path.resolve(projectRoot, 'trim-newlines-shim.js')
 );
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
@@ -45,7 +45,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return { filePath: emptyModule, type: 'sourceFile' };
   }
   if (moduleName === 'trim-newlines') {
-    return { filePath: trimNewlinesV5, type: 'sourceFile' };
+    return { filePath: trimNewlinesShim, type: 'sourceFile' };
   }
   return context.resolveRequest(context, moduleName, platform);
 };
