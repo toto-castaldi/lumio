@@ -12,7 +12,19 @@
 
     <!-- Header -->
     <header class="header">
-      <a href="/" class="logo">Lumio</a>
+      <a href="/" class="logo" aria-label="Lumio home">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"
+             class="logo-icon" role="img" aria-hidden="true">
+          <!-- Lumio logo: tri-color pie + 3 rays -->
+          <path d="M 200 200 L 200 100 A 100 100 0 0 1 286.6 250 Z" fill="#FFA726"/>
+          <path d="M 200 200 L 286.6 250 A 100 100 0 0 1 113.4 250 Z" fill="#FF7061"/>
+          <path d="M 200 200 L 113.4 250 A 100 100 0 0 1 200 100 Z" fill="#9C68D4"/>
+          <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FFA726" transform="translate(200, 200) rotate(-90)"/>
+          <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FF7061" transform="translate(200, 200) rotate(30)"/>
+          <rect x="115" y="-12" width="85" height="24" rx="6" fill="#9C68D4" transform="translate(200, 200) rotate(150)"/>
+        </svg>
+        Lumio
+      </a>
       <button id="lang-toggle" class="lang-toggle" aria-label="Switch language">IT</button>
     </header>
 

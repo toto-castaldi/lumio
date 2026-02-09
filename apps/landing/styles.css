@@ -60,6 +60,14 @@ html[lang="it"] [lang="en"] {
   color: var(--purple-primary);
   text-decoration: none;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
 }
 
 .lang-toggle {
