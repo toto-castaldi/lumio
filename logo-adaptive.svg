@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- Lumio Logo -->
+
+  <!-- Colors: Amber #FFA726, Coral #FF7061, Violet #9C68D4 -->
+
+  <g transform="translate(200, 200) scale(0.65) translate(-200, -200)">
+  <g transform="translate(0, 30)">
+    <!-- Core circle - 3 color segments (pie wedges), radius 100 -->
+    <!-- Amber segment: -90° to 30° -->
+    <path d="M 200 200 L 200 100 A 100 100 0 0 1 286.6 250 Z" fill="#FFA726"/>
+
+    <!-- Coral segment: 30° to 150° -->
+    <path d="M 200 200 L 286.6 250 A 100 100 0 0 1 113.4 250 Z" fill="#FF7061"/>
+
+    <!-- Violet segment: 150° to 270° (-90°) -->
+    <path d="M 200 200 L 113.4 250 A 100 100 0 0 1 200 100 Z" fill="#9C68D4"/>
+
+    <!-- 3 geometric rays (15px gap from circle, touch edge) -->
+    <!-- Amber ray: pointing up (-90°) -->
+    <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FFA726" transform="translate(200, 200) rotate(-90)"/>
+
+    <!-- Coral ray: pointing 30° -->
+    <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FF7061" transform="translate(200, 200) rotate(30)"/>
+
+    <!-- Violet ray: pointing 150° -->
+    <rect x="115" y="-12" width="85" height="24" rx="6" fill="#9C68D4" transform="translate(200, 200) rotate(150)"/>
+
+    <!-- Signature line -->
+    <line x1="100" y1="330" x2="300" y2="330" stroke="#282828" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  </g>
+</svg>
