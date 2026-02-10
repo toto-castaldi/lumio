@@ -44,6 +44,7 @@ Progress: [##############################] 100% (2/2 plans)
 
 All decisions logged in PROJECT.md Key Decisions table.
 
+- **10-01:** Flattened icon.png onto white square background for full opacity; adaptive icon logo sized to ~680px for safe zone
 - **10-02:** Login Lumio text uses colors.text for automatic dark/light adaptation
 - **10-02:** Dashboard header Lumio text uses fixed #ffffff to match headerTintColor convention
 
