@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
@@ -52,6 +53,8 @@ export function StudyScreen() {
   useEffect(() => {
     if (session.state === 'completed' && !hasNavigatedToSummary.current) {
       hasNavigatedToSummary.current = true;
+      // Fire-and-forget: persist last studied timestamp for dashboard display
+      AsyncStorage.setItem('@lumio/lastStudiedAt', new Date().toISOString());
       navigation.replace('StudySummary', {
         totalCards: session.answeredCards.length + session.skippedCount,
         correctCount: session.answeredCards.filter(a => a.isCorrect).length,

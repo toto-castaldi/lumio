@@ -13,7 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getUserStats, getSupabaseClient } from '@lumio/core';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserStats } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { MainTabParamList } from '../navigation/MainNavigator';
@@ -74,18 +75,9 @@ export function DashboardScreen() {
       setRepoCount(stats.repositoryCount);
       setCardCount(stats.cardCount);
 
-      // Fetch last studied timestamp via direct query
-      const { data: sessions } = await getSupabaseClient()
-        .from('study_sessions')
-        .select('started_at')
-        .order('started_at', { ascending: false })
-        .limit(1);
-
-      if (sessions && sessions.length > 0) {
-        setLastStudied(sessions[0].started_at as string);
-      } else {
-        setLastStudied(null);
-      }
+      // Fetch last studied timestamp from local storage
+      const stored = await AsyncStorage.getItem('@lumio/lastStudiedAt');
+      setLastStudied(stored);
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error);
     }
