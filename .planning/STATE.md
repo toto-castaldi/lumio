@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 10 - Branding Consistency (v1.3)
+**Current focus:** Phase 11 - Study Flow Simplification (v1.3)
 
 ## Current Position
 
-Phase: 10 of 12 (Branding Consistency)
-Plan: 2 of 2 in current phase
-Status: Phase 10 complete
-Last activity: 2026-02-10 -- Completed 10-02-PLAN.md
+Phase: 11 of 12 (Study Flow Simplification)
+Plan: 1 of 1 in current phase
+Status: Phase 11 complete
+Last activity: 2026-02-10 -- Completed 11-01-PLAN.md
 
-Progress: [##############################] 100% (2/2 plans)
+Progress: [##############################] 100% (1/1 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31 (20 v1.1 + 9 v1.2 + 2 v1.3)
+- Total plans completed: 32 (20 v1.1 + 9 v1.2 + 3 v1.3)
 
 **By Phase (v1.2):**
 
@@ -35,7 +35,7 @@ Progress: [##############################] 100% (2/2 plans)
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 10. Branding Consistency | 2/2 | Complete |
-| 11. Study Flow Simplification | 0/TBD | Not started |
+| 11. Study Flow Simplification | 1/1 | Complete |
 | 12. Dashboard & Repo Bugfixes | 0/TBD | Not started |
 
 ## Accumulated Context
@@ -47,6 +47,8 @@ All decisions logged in PROJECT.md Key Decisions table.
 - **10-01:** Flattened icon.png onto white square background for full opacity; adaptive icon logo sized to ~680px for safe zone
 - **10-02:** Login Lumio text uses colors.text for automatic dark/light adaptation
 - **10-02:** Dashboard header Lumio text uses fixed #ffffff to match headerTintColor convention
+- **11-01:** Removed review mode entirely for simpler forward-only study flow
+- **11-01:** Applied paddingBottom: staticPadding + insets.bottom pattern for Android navbar clearance
 
 ### Pending Todos
 
@@ -59,9 +61,9 @@ None -- all v1.3 phases are independent (no inter-phase dependencies).
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 10-02-PLAN.md (Phase 10 complete, ready for Phase 11)
+Stopped at: Completed 11-01-PLAN.md (Phase 11 complete, ready for Phase 12)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-10 (Phase 10 complete)*
+*Last updated: 2026-02-10 (Phase 11 complete)*
