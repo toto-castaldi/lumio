@@ -78,10 +78,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. After completing a study session, the dashboard shows the correct date/time of the last session (not "Non ancora")
   2. Public repositories display a public/open icon (not a lock/private icon), regardless of whether the repo was previously private
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md -- Fix dashboard "last studied" display and repository visibility icons
 
 ## Progress
 
@@ -98,7 +98,7 @@ Plans:
 | 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
 | 10. Branding Consistency | v1.3 | 2/2 | Complete | 2026-02-10 |
 | 11. Study Flow Simplification | v1.3 | 1/1 | Complete | 2026-02-10 |
-| 12. Dashboard & Repo Bugfixes | v1.3 | 0/TBD | Not started | - |
+| 12. Dashboard & Repo Bugfixes | v1.3 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
