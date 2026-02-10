@@ -18,7 +18,7 @@ interface RepoListItemProps {
 
 /**
  * Swipeable repository list row.
- * Shows repo name, URL (truncated), and lock icon for private repos.
+ * Shows repo name, URL (truncated), and visibility icon (globe for public, lock for private).
  * Swiping left reveals a delete action button.
  */
 export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
@@ -68,14 +68,12 @@ export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
           >
             {repo.name}
           </Text>
-          {repo.isPrivate && (
-            <Ionicons
-              name="lock-closed"
-              size={14}
-              color={colors.textSecondary}
-              style={styles.lockIcon}
-            />
-          )}
+          <Ionicons
+            name={repo.isPrivate ? "lock-closed" : "globe-outline"}
+            size={14}
+            color={colors.textSecondary}
+            style={styles.visibilityIcon}
+          />
         </View>
         <Text
           style={[styles.url, { color: colors.textSecondary }]}
@@ -102,7 +100,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexShrink: 1,
   },
-  lockIcon: {
+  visibilityIcon: {
     marginLeft: 6,
   },
   url: {
