@@ -1,7 +1,7 @@
 # Requirements: Lumio
 
 **Defined:** 2026-02-10
-**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
+**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
 
 ## v1.3 Requirements
 
@@ -16,7 +16,7 @@ Requirements per milestone v1.3 Bugfix & UX Polish.
 ### Studio UX
 
 - [ ] **STUDY-01**: Nessun toast appare quando l'utente salta una carta
-- [ ] **STUDY-02**: L'utente può solo avanzare durante lo studio (nessun pulsante "Prev")
+- [ ] **STUDY-02**: L'utente puo solo avanzare durante lo studio (nessun pulsante "Prev")
 - [ ] **STUDY-03**: Premere X chiude immediatamente la sessione di studio senza conferma
 
 ### Bugfix
@@ -37,28 +37,28 @@ Nessuno per ora.
 | Feature | Reason |
 |---------|--------|
 | Redesign completo studio flow | Solo fix puntuali, non riscrittura |
-| Nuovo logo/branding | Il logo Lumio esiste già, va solo usato correttamente |
+| Nuovo logo/branding | Il logo Lumio esiste gia, va solo usato correttamente |
 | Modifiche backend/DB | Solo fix lato client |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BRAND-01 | — | Pending |
-| BRAND-02 | — | Pending |
-| BRAND-03 | — | Pending |
-| STUDY-01 | — | Pending |
-| STUDY-02 | — | Pending |
-| STUDY-03 | — | Pending |
-| BUG-01 | — | Pending |
-| BUG-02 | — | Pending |
-| LAYOUT-01 | — | Pending |
+| BRAND-01 | Phase 10 | Pending |
+| BRAND-02 | Phase 10 | Pending |
+| BRAND-03 | Phase 10 | Pending |
+| STUDY-01 | Phase 11 | Pending |
+| STUDY-02 | Phase 11 | Pending |
+| STUDY-03 | Phase 11 | Pending |
+| BUG-01 | Phase 12 | Pending |
+| BUG-02 | Phase 12 | Pending |
+| LAYOUT-01 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-10*
-*Last updated: 2026-02-10 after initial definition*
+*Last updated: 2026-02-10 after roadmap creation*

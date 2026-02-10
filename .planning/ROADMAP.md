@@ -4,6 +4,7 @@
 
 - SHIPPED **v1.1 Lumio Native** -- Phases 1-5 (shipped 2026-02-08)
 - SHIPPED **v1.2 Polish & UX** -- Phases 6-9 (shipped 2026-02-09)
+- IN PROGRESS **v1.3 Bugfix & UX Polish** -- Phases 10-12
 
 ## Phases
 
@@ -32,6 +33,55 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
 </details>
 
+### v1.3 Bugfix & UX Polish (In Progress)
+
+**Milestone Goal:** Fix branding inconsistencies, simplify the study experience, and correct data display bugs across the app.
+
+- [ ] **Phase 10: Branding Consistency** - Launcher icon and in-app logos show the correct Lumio brand
+- [ ] **Phase 11: Study Flow Simplification** - Study sessions are streamlined with no unnecessary friction or layout issues
+- [ ] **Phase 12: Dashboard & Repo Bugfixes** - Dashboard and repository list display accurate data
+
+## Phase Details
+
+### Phase 10: Branding Consistency
+**Goal**: The app presents the Lumio brand correctly at every touchpoint -- launcher, login, and dashboard
+**Depends on**: Nothing (independent of other v1.3 phases)
+**Requirements**: BRAND-01, BRAND-02, BRAND-03
+**Success Criteria** (what must be TRUE):
+  1. The Android home screen and app drawer show the Lumio logo as the launcher icon (not the default Expo icon)
+  2. The Login screen displays the correct Lumio logo image with the text "Lumio" visible
+  3. The Dashboard header displays the correct Lumio logo image with the text "Lumio" visible
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD
+
+### Phase 11: Study Flow Simplification
+**Goal**: The study experience is clean and unobstructed -- no unnecessary toasts, no backward navigation, no confirmation dialogs, and no content hidden behind the navbar
+**Depends on**: Nothing (independent of other v1.3 phases)
+**Requirements**: STUDY-01, STUDY-02, STUDY-03, LAYOUT-01
+**Success Criteria** (what must be TRUE):
+  1. Skipping a card during study produces no toast notification
+  2. The study screen shows only a "Next" button with no "Prev" button visible
+  3. Tapping the X button during a study session closes it immediately without any confirmation dialog
+  4. All card content is fully visible during study -- the Android navigation bar does not overlap or cover any part of the card
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: TBD
+
+### Phase 12: Dashboard & Repo Bugfixes
+**Goal**: The dashboard and repository list display accurate, up-to-date information
+**Depends on**: Nothing (independent of other v1.3 phases)
+**Requirements**: BUG-01, BUG-02
+**Success Criteria** (what must be TRUE):
+  1. After completing a study session, the dashboard shows the correct date/time of the last session (not "Non ancora")
+  2. Public repositories display a public/open icon (not a lock/private icon), regardless of whether the repo was previously private
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -45,8 +95,12 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 | 7. Branding | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
+| 10. Branding Consistency | v1.3 | 0/TBD | Not started | - |
+| 11. Study Flow Simplification | v1.3 | 0/TBD | Not started | - |
+| 12. Dashboard & Repo Bugfixes | v1.3 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
 *v1.1 shipped: 2026-02-08*
 *v1.2 shipped: 2026-02-09*
+*v1.3 roadmap added: 2026-02-10*
