@@ -66,10 +66,10 @@ Plans:
   2. The study screen shows only a "Next" button with no "Prev" button visible
   3. Tapping the X button during a study session closes it immediately without any confirmation dialog
   4. All card content is fully visible during study -- the Android navigation bar does not overlap or cover any part of the card
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 11-01: TBD
+- [ ] 11-01-PLAN.md -- Remove study friction (no toast, no Prev, no quit dialog) and fix Android navbar overlap
 
 ### Phase 12: Dashboard & Repo Bugfixes
 **Goal**: The dashboard and repository list display accurate, up-to-date information
@@ -97,7 +97,7 @@ Plans:
 | 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
 | 10. Branding Consistency | v1.3 | 2/2 | Complete | 2026-02-10 |
-| 11. Study Flow Simplification | v1.3 | 0/TBD | Not started | - |
+| 11. Study Flow Simplification | v1.3 | 0/1 | Not started | - |
 | 12. Dashboard & Repo Bugfixes | v1.3 | 0/TBD | Not started | - |
 
 ---
