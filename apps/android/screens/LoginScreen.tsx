@@ -60,6 +60,9 @@ export function LoginScreen() {
           accessibilityLabel={t('login.lumioLogo')}
         />
 
+        {/* Brand name */}
+        <Text style={[styles.logoText, { color: colors.text }]}>Lumio</Text>
+
         {/* Tagline */}
         <Text style={[styles.tagline, { color: colors.textSecondary }]}>
           {t('login.tagline')}
@@ -112,6 +115,11 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 128,
     height: 128,
+    marginBottom: 8,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: 'bold',
     marginBottom: 8,
   },
   tagline: {
