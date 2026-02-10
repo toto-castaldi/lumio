@@ -54,3 +54,31 @@
 
 ---
 
+
+## v1.3 Bugfix & UX Polish (Shipped: 2026-02-10)
+
+**Delivered:** Fixed branding inconsistencies, simplified study experience, and corrected data display bugs across the app.
+
+**Phases completed:** 10-12 (4 plans total)
+
+**Key accomplishments:**
+
+- Replaced default Expo icons with Lumio tri-color pie logo on launcher, adaptive icon, and splash screen
+- Added "Lumio" brand text on Login screen and Dashboard header with theme-adaptive styling
+- Simplified study flow: forward-only navigation, removed toast/prev/review/quit confirmation (-130 LOC)
+- Fixed Android navbar overlap with safe area bottom insets on study screens
+- Fixed dashboard "last studied" display with AsyncStorage persistence (replaces broken DB query)
+- Fixed repository visibility icons: globe for public repos, lock for private
+
+**Stats:**
+
+- 22 files changed (+1,189 / -196 lines)
+- 3 phases, 4 plans, 7 tasks
+- 1 day (2026-02-10)
+
+**Git range:** `v1.2` → `test(phase-12)` (5 feat + 2 fix commits)
+
+**What's next:** TBD
+
+---
+

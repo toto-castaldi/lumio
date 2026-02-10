@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding, sessioni di studio configurabili, e landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, sessioni di studio configurabili, e landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
 
 ## Core Value
 
@@ -36,17 +36,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Logo Lumio in Login screen, Dashboard header, e landing page — v1.2
 - ✓ Sessioni di studio configurabili (10/20/50/All) con persistenza — v1.2
 - ✓ Internazionalizzazione IT/EN con toggle in Settings e persistenza — v1.2
+- ✓ Icona launcher corretta (logo Lumio tri-color pie) — v1.3
+- ✓ Brand text "Lumio" su Login screen e Dashboard header — v1.3
+- ✓ Studio forward-only: nessun toast skip, nessun Prev, nessuna conferma chiusura — v1.3
+- ✓ Fix navbar Android che copre contenuto card durante studio — v1.3
+- ✓ Fix tracciamento "Ultimo studio" nella dashboard con AsyncStorage — v1.3
+- ✓ Fix icona visibilità repo (globe per pubblici, lock per privati) — v1.3
 
 ### Active
 
-- [ ] Icona launcher corretta (logo Lumio invece di icona Expo generica) — v1.3
-- [ ] Fix logo in Login screen e Dashboard header (immagine errata + aggiungere nome "Lumio") — v1.3
-- [ ] Rimuovere toast quando si salta carta durante studio — v1.3
-- [ ] Rimuovere navigazione "Prev" nello studio (solo avanti) — v1.3
-- [ ] Rimuovere conferma chiusura sessione studio (X chiude direttamente) — v1.3
-- [ ] Fix tracciamento "Ultimo studio" nella dashboard (mostra "Non ancora" dopo sessioni completate) — v1.3
-- [ ] Fix icona lucchetto su repo pubblico (mostra privato se era privato in passato) — v1.3
-- [ ] Fix navbar Android che copre contenuto card durante studio — v1.3
+(None — next milestone requirements TBD)
 
 ### Out of Scope
 
@@ -63,13 +62,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v1.2):**
+**Stato attuale (post v1.3):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase invariato (auth, DB, storage, edge functions, Docora webhook)
-- 5,960 LOC TypeScript/JS (5,506 Android + 454 landing)
+- ~6,100 LOC TypeScript/JS (~5,600 Android + ~450 landing)
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked
 - CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
-- App bilingue IT/EN con branding Lumio, sessioni configurabili, card rendering nativo
+- App bilingue IT/EN con branding Lumio, sessioni configurabili, studio forward-only, card rendering nativo
+- 3 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX)
 
 ## Constraints
 
@@ -89,7 +89,6 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | APK diretto vs Play Store | Velocità rilascio, nessuna review | ✓ Good (per ora) |
 | @lumio/core riusato as-is | Platform-agnostic types/utilities, nessun overhead | ✓ Good |
 | SecureStore per auth tokens | Encryption hardware-backed per sessioni Supabase | ✓ Good |
-| CDN libraries in WebView | LaTeX + code blocks impossibili con RN text components | ⚠️ Revisit (v1.2 moved to native rendering for markdown) |
 | Prev/Next buttons over swipe | ScrollView conflict con QuizCard su device reale | ✓ Good |
 | Bottom-sheet modal over fullscreen | Android nav controls coprono contenuto fullscreen | ✓ Good |
 | Expo config plugin per signing | android/ è gitignored, plugin sopravvive a prebuild | ✓ Good |
@@ -98,6 +97,10 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Preset radio buttons for cards-per-session | Evita decision paralysis di un slider, UX più chiara | ✓ Good — v1.2 |
 | Native markdown rendering (react-native-marked) | WebView card preview tagliato, native è più veloce e affidabile | ✓ Good — v1.2 |
 | KaTeX micro-WebView for LaTeX only | Native text non supporta math, WebView isolato solo per formula | ✓ Good — v1.2 |
+| Pie-only logo mark (no rays/signature) | Rays appeared as artifacts at small sizes, pie is clean at all scales | ✓ Good — v1.3 |
+| Forward-only study (removed review mode) | Simpler UX, -130 LOC, less state to manage | ✓ Good — v1.3 |
+| AsyncStorage for last-studied timestamp | Simpler than DB table, no migration, works offline | ✓ Good — v1.3 |
+| Safe area insets for Android navbar | paddingBottom: static + insets.bottom pattern for consistent clearance | ✓ Good — v1.3 |
 
 ---
-*Last updated: 2026-02-10 after v1.3 milestone start*
+*Last updated: 2026-02-10 after v1.3 milestone complete*
