@@ -4,7 +4,7 @@
 
 - SHIPPED **v1.1 Lumio Native** -- Phases 1-5 (shipped 2026-02-08)
 - SHIPPED **v1.2 Polish & UX** -- Phases 6-9 (shipped 2026-02-09)
-- IN PROGRESS **v1.3 Bugfix & UX Polish** -- Phases 10-12
+- SHIPPED **v1.3 Bugfix & UX Polish** -- Phases 10-12 (shipped 2026-02-10)
 
 ## Phases
 
@@ -33,13 +33,13 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
 </details>
 
-### v1.3 Bugfix & UX Polish (In Progress)
+### v1.3 Bugfix & UX Polish (Shipped 2026-02-10)
 
 **Milestone Goal:** Fix branding inconsistencies, simplify the study experience, and correct data display bugs across the app.
 
 - [x] **Phase 10: Branding Consistency** - Launcher icon and in-app logos show the correct Lumio brand -- completed 2026-02-10
 - [x] **Phase 11: Study Flow Simplification** - Study sessions are streamlined with no unnecessary friction or layout issues -- completed 2026-02-10
-- [ ] **Phase 12: Dashboard & Repo Bugfixes** - Dashboard and repository list display accurate data
+- [x] **Phase 12: Dashboard & Repo Bugfixes** - Dashboard and repository list display accurate data -- completed 2026-02-10
 
 ## Phase Details
 
@@ -81,7 +81,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 12-01-PLAN.md -- Fix dashboard "last studied" display and repository visibility icons
+- [x] 12-01-PLAN.md -- Fix dashboard "last studied" display and repository visibility icons
 
 ## Progress
 
@@ -98,10 +98,11 @@ Plans:
 | 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
 | 10. Branding Consistency | v1.3 | 2/2 | Complete | 2026-02-10 |
 | 11. Study Flow Simplification | v1.3 | 1/1 | Complete | 2026-02-10 |
-| 12. Dashboard & Repo Bugfixes | v1.3 | 0/1 | Not started | - |
+| 12. Dashboard & Repo Bugfixes | v1.3 | 1/1 | Complete | 2026-02-10 |
 
 ---
 *Roadmap created: 2026-01-29*
 *v1.1 shipped: 2026-02-08*
 *v1.2 shipped: 2026-02-09*
 *v1.3 roadmap added: 2026-02-10*
+*v1.3 shipped: 2026-02-10*
