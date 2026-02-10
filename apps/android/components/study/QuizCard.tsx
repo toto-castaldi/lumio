@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import { useHaptics } from '../../hooks/useHaptics';
 import { AnswerOption, type AnswerOptionState } from './AnswerOption';
@@ -32,6 +33,7 @@ export function QuizCard({
   isVoting,
 }: QuizCardProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { correctFeedback, incorrectFeedback } = useHaptics();
 
   const hasAnswered = userAnswer !== null;
@@ -72,7 +74,7 @@ export function QuizCard({
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Card title */}

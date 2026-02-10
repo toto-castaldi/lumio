@@ -9,7 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
@@ -25,6 +25,7 @@ export function StudyScreen() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const navigation = useNavigation<StudyNavProp>();
+  const insets = useSafeAreaInsets();
   const { cardsPerSession } = useStudySettings();
   const {
     session,
@@ -234,7 +235,7 @@ export function StudyScreen() {
 
         {/* Bottom actions */}
         {session.userAnswer !== null && (
-          <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: 16 + insets.bottom }]}>
             <View style={bottomStyles.buttonRow}>
               <TouchableOpacity
                 style={[bottomStyles.nextButton, { backgroundColor: colors.primary, flex: 1 }]}
@@ -447,7 +448,9 @@ const contentStyles = StyleSheet.create({
 
 const bottomStyles = StyleSheet.create({
   container: {
-    padding: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
   },
   buttonRow: {
