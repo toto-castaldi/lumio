@@ -51,10 +51,11 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
   1. The Android home screen and app drawer show the Lumio logo as the launcher icon (not the default Expo icon)
   2. The Login screen displays the correct Lumio logo image with the text "Lumio" visible
   3. The Dashboard header displays the correct Lumio logo image with the text "Lumio" visible
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-PLAN.md -- Generate Lumio launcher icon PNGs from SVG source
+- [ ] 10-02-PLAN.md -- Add "Lumio" text to Login screen and Dashboard header
 
 ### Phase 11: Study Flow Simplification
 **Goal**: The study experience is clean and unobstructed -- no unnecessary toasts, no backward navigation, no confirmation dialogs, and no content hidden behind the navbar
@@ -95,7 +96,7 @@ Plans:
 | 7. Branding | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
-| 10. Branding Consistency | v1.3 | 0/TBD | Not started | - |
+| 10. Branding Consistency | v1.3 | 0/2 | In progress | - |
 | 11. Study Flow Simplification | v1.3 | 0/TBD | Not started | - |
 | 12. Dashboard & Repo Bugfixes | v1.3 | 0/TBD | Not started | - |
 
