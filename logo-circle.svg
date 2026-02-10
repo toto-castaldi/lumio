@@ -6,13 +6,26 @@
 
   <!-- Colors: Amber #FFA726, Coral #FF7061, Violet #9C68D4 -->
 
-  <!-- Pie chart centered at (200,200), radius 140 for good fill -->
-  <!-- Amber segment: -90° to 30° (top-right) -->
-  <path d="M 200 200 L 200 60 A 140 140 0 0 1 321.2 270 Z" fill="#FFA726"/>
+  <!-- Core circle - 3 color segments (pie wedges), radius 100 -->
+  <!-- Amber segment: -90° to 30° -->
+  <path d="M 200 200 L 200 100 A 100 100 0 0 1 286.6 250 Z" fill="#FFA726"/>
 
-  <!-- Coral segment: 30° to 150° (bottom) -->
-  <path d="M 200 200 L 321.2 270 A 140 140 0 0 1 78.8 270 Z" fill="#FF7061"/>
+  <!-- Coral segment: 30° to 150° -->
+  <path d="M 200 200 L 286.6 250 A 100 100 0 0 1 113.4 250 Z" fill="#FF7061"/>
 
-  <!-- Violet segment: 150° to 270° (top-left) -->
-  <path d="M 200 200 L 78.8 270 A 140 140 0 0 1 200 60 Z" fill="#9C68D4"/>
+  <!-- Violet segment: 150° to 270° (-90°) -->
+  <path d="M 200 200 L 113.4 250 A 100 100 0 0 1 200 100 Z" fill="#9C68D4"/>
+
+  <!-- 3 geometric rays (15px gap from circle, touch white edge) -->
+  <!-- Amber ray: pointing up (-90°) -->
+  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FFA726" transform="translate(200, 200) rotate(-90)"/>
+
+  <!-- Coral ray: pointing 30° -->
+  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FF7061" transform="translate(200, 200) rotate(30)"/>
+
+  <!-- Violet ray: pointing 150° -->
+  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#9C68D4" transform="translate(200, 200) rotate(150)"/>
+
+  <!-- Signature line -->
+  <line x1="100" y1="330" x2="300" y2="330" stroke="#282828" stroke-width="6" stroke-linecap="round"/>
 </svg>
