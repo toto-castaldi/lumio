@@ -1,0 +1,64 @@
+# Requirements: Lumio
+
+**Defined:** 2026-02-10
+**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
+
+## v1.3 Requirements
+
+Requirements per milestone v1.3 Bugfix & UX Polish.
+
+### Branding
+
+- [ ] **BRAND-01**: L'icona nel launcher Android mostra il logo Lumio corretto
+- [ ] **BRAND-02**: La Login screen mostra il logo Lumio corretto con il nome "Lumio"
+- [ ] **BRAND-03**: Il Dashboard header mostra il logo Lumio corretto con il nome "Lumio"
+
+### Studio UX
+
+- [ ] **STUDY-01**: Nessun toast appare quando l'utente salta una carta
+- [ ] **STUDY-02**: L'utente può solo avanzare durante lo studio (nessun pulsante "Prev")
+- [ ] **STUDY-03**: Premere X chiude immediatamente la sessione di studio senza conferma
+
+### Bugfix
+
+- [ ] **BUG-01**: La dashboard mostra data/ora dell'ultima sessione di studio completata (non "Non ancora")
+- [ ] **BUG-02**: I repository pubblici mostrano l'icona corretta (non il lucchetto dei privati)
+
+### Layout
+
+- [ ] **LAYOUT-01**: La navbar Android non copre il contenuto della card durante lo studio
+
+## Future Requirements
+
+Nessuno per ora.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Redesign completo studio flow | Solo fix puntuali, non riscrittura |
+| Nuovo logo/branding | Il logo Lumio esiste già, va solo usato correttamente |
+| Modifiche backend/DB | Solo fix lato client |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BRAND-01 | — | Pending |
+| BRAND-02 | — | Pending |
+| BRAND-03 | — | Pending |
+| STUDY-01 | — | Pending |
+| STUDY-02 | — | Pending |
+| STUDY-03 | — | Pending |
+| BUG-01 | — | Pending |
+| BUG-02 | — | Pending |
+| LAYOUT-01 | — | Pending |
+
+**Coverage:**
+- v1.3 requirements: 9 total
+- Mapped to phases: 0
+- Unmapped: 9 ⚠️
+
+---
+*Requirements defined: 2026-02-10*
+*Last updated: 2026-02-10 after initial definition*
