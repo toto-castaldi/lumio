@@ -38,7 +38,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 **Milestone Goal:** Fix branding inconsistencies, simplify the study experience, and correct data display bugs across the app.
 
 - [x] **Phase 10: Branding Consistency** - Launcher icon and in-app logos show the correct Lumio brand -- completed 2026-02-10
-- [ ] **Phase 11: Study Flow Simplification** - Study sessions are streamlined with no unnecessary friction or layout issues
+- [x] **Phase 11: Study Flow Simplification** - Study sessions are streamlined with no unnecessary friction or layout issues -- completed 2026-02-10
 - [ ] **Phase 12: Dashboard & Repo Bugfixes** - Dashboard and repository list display accurate data
 
 ## Phase Details
@@ -69,7 +69,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 11-01-PLAN.md -- Remove study friction (no toast, no Prev, no quit dialog) and fix Android navbar overlap
+- [x] 11-01-PLAN.md -- Remove study friction (no toast, no Prev, no quit dialog) and fix Android navbar overlap
 
 ### Phase 12: Dashboard & Repo Bugfixes
 **Goal**: The dashboard and repository list display accurate, up-to-date information
@@ -97,7 +97,7 @@ Plans:
 | 8. Configurable Study Sessions | v1.2 | 2/2 | Complete | 2026-02-09 |
 | 9. Internationalization | v1.2 | 3/3 | Complete | 2026-02-09 |
 | 10. Branding Consistency | v1.3 | 2/2 | Complete | 2026-02-10 |
-| 11. Study Flow Simplification | v1.3 | 0/1 | Not started | - |
+| 11. Study Flow Simplification | v1.3 | 1/1 | Complete | 2026-02-10 |
 | 12. Dashboard & Repo Bugfixes | v1.3 | 0/TBD | Not started | - |
 
 ---
