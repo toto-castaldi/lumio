@@ -5,13 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
@@ -36,7 +34,6 @@ export function StudyScreen() {
     handleVote,
     handleNext,
     handleSkip,
-    handleGoToCard,
     isSkipping,
     cardsRemaining,
     progress,
@@ -45,34 +42,6 @@ export function StudyScreen() {
 
   // Card preview modal state
   const [isCardPreviewOpen, setIsCardPreviewOpen] = useState(false);
-  // Track whether we're reviewing a previously answered card
-  const [isReviewing, setIsReviewing] = useState(false);
-
-  // ---------------------------------------------------------------------------
-  // Quit confirmation on back press
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (session.state !== 'studying') return;
-
-      e.preventDefault();
-
-      Alert.alert(
-        t('study.endSessionTitle'),
-        t('study.endSessionBody'),
-        [
-          { text: t('study.continueStudying'), style: 'cancel' },
-          {
-            text: t('study.endSession'),
-            style: 'destructive',
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-
-    return unsubscribe;
-  }, [navigation, session.state, t]);
 
   // ---------------------------------------------------------------------------
   // Auto-navigate to StudySummary on session completion
@@ -97,48 +66,19 @@ export function StudyScreen() {
   // ---------------------------------------------------------------------------
   // Navigation helpers
   // ---------------------------------------------------------------------------
-  const canGoNext = session.userAnswer !== null && !isReviewing;
-  const canGoBack = session.answeredCards.length > 0 && !isReviewing;
+  const canGoNext = session.userAnswer !== null;
   const isLastCard = cardsRemaining === 0;
 
   const goToNextCard = () => {
     if (!canGoNext) return;
-    setIsReviewing(false);
-    handleNext();
-  };
-
-  const goToPreviousCard = () => {
-    if (session.answeredCards.length === 0) return;
-
-    if (isReviewing) {
-      const currentReviewIndex = session.answeredCards.findIndex(
-        (a) => a.card.id === session.currentCard?.id,
-      );
-      if (currentReviewIndex > 0) {
-        handleGoToCard(currentReviewIndex - 1);
-      }
-    } else {
-      setIsReviewing(true);
-      handleGoToCard(session.answeredCards.length - 1);
-    }
-  };
-
-  const returnFromReview = () => {
-    if (!isReviewing) return;
-    setIsReviewing(false);
     handleNext();
   };
 
   // ---------------------------------------------------------------------------
-  // Skip handler with toast
+  // Skip handler
   // ---------------------------------------------------------------------------
   const onSkip = async () => {
     await handleSkip();
-    Toast.show({
-      type: 'info',
-      text1: t('study.cardSkipped'),
-      visibilityTime: 1500,
-    });
   };
 
   // ---------------------------------------------------------------------------
@@ -147,8 +87,7 @@ export function StudyScreen() {
   const showSkip =
     session.state === 'studying' &&
     session.currentQuestion &&
-    session.userAnswer === null &&
-    !isReviewing;
+    session.userAnswer === null;
 
   const renderHeader = () => (
     <View style={[headerStyles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -161,7 +100,7 @@ export function StudyScreen() {
       </TouchableOpacity>
 
       <Text style={[headerStyles.title, { color: colors.text }]}>
-        {isReviewing ? t('study.review') : t('study.studyTitle')}
+        {t('study.studyTitle')}
       </Text>
 
       <View style={headerStyles.rightActions}>
@@ -294,21 +233,9 @@ export function StudyScreen() {
         />
 
         {/* Bottom actions */}
-        {session.userAnswer !== null && !isReviewing && (
+        {session.userAnswer !== null && (
           <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <View style={bottomStyles.buttonRow}>
-              {canGoBack && (
-                <TouchableOpacity
-                  style={[bottomStyles.prevButton, { borderColor: colors.border, flex: 1 }]}
-                  onPress={goToPreviousCard}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="arrow-back" size={20} color={colors.text} />
-                  <Text style={[bottomStyles.prevButtonText, { color: colors.text }]}>
-                    {t('study.prevCard')}
-                  </Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 style={[bottomStyles.nextButton, { backgroundColor: colors.primary, flex: 1 }]}
                 onPress={goToNextCard}
@@ -329,36 +256,6 @@ export function StudyScreen() {
                     />
                   </>
                 )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Review mode bottom bar */}
-        {isReviewing && (
-          <View style={[bottomStyles.container, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-            <View style={bottomStyles.buttonRow}>
-              {session.answeredCards.findIndex(a => a.card.id === session.currentCard?.id) > 0 && (
-                <TouchableOpacity
-                  style={[bottomStyles.prevButton, { borderColor: colors.border, flex: 1 }]}
-                  onPress={goToPreviousCard}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="arrow-back" size={20} color={colors.text} />
-                  <Text style={[bottomStyles.prevButtonText, { color: colors.text }]}>
-                    {t('study.prevCard')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[bottomStyles.reviewButton, { borderColor: colors.primary, flex: 1 }]}
-                onPress={returnFromReview}
-                activeOpacity={0.8}
-              >
-                <Text style={[bottomStyles.reviewButtonText, { color: colors.primary }]}>
-                  {t('study.backToCurrentCard')}
-                </Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -413,7 +310,7 @@ export function StudyScreen() {
     session.state === 'studying' &&
     (session.currentCard !== null || session.answeredCards.length > 0);
 
-  const answeredCount = session.answeredCards.length + (session.userAnswer !== null && !isReviewing ? 1 : 0);
+  const answeredCount = session.answeredCards.length + (session.userAnswer !== null ? 1 : 0);
 
   return (
     <SafeAreaView style={[screenStyles.container, { backgroundColor: colors.background }]}>
@@ -558,19 +455,6 @@ const bottomStyles = StyleSheet.create({
     gap: 12,
     alignItems: 'center',
   },
-  prevButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 8,
-  },
-  prevButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -587,19 +471,6 @@ const bottomStyles = StyleSheet.create({
   nextButtonText: {
     color: '#ffffff',
     fontSize: 17,
-    fontWeight: '600',
-  },
-  reviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 2,
-    gap: 8,
-  },
-  reviewButtonText: {
-    fontSize: 16,
     fontWeight: '600',
   },
 });
