@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** v1.3 Bugfix & UX Polish
 
 ## Current Position
 
-Phase: All complete (v1.1 + v1.2 shipped)
-Plan: N/A
-Status: Milestone v1.2 SHIPPED
-Last activity: 2026-02-09 -- Completed v1.2 milestone archival
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-10 — Milestone v1.3 started
 
-Progress: [##############################] 29/29 plans (v1.1: 20 plans, v1.2: 9 plans)
+Progress: [                              ] 0/0 plans
 
 ## Performance Metrics
 
@@ -56,10 +56,10 @@ None -- all milestones shipped.
 
 ## Session Continuity
 
-Last session: 2026-02-09
-Stopped at: v1.2 milestone archived
+Last session: 2026-02-10
+Stopped at: Defining v1.3 requirements
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-09 (v1.2 milestone complete and archived)*
+*Last updated: 2026-02-10 (v1.3 milestone started)*

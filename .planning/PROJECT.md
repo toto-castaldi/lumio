@@ -39,7 +39,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Icona launcher corretta (logo Lumio invece di icona Expo generica) — v1.3
+- [ ] Fix logo in Login screen e Dashboard header (immagine errata + aggiungere nome "Lumio") — v1.3
+- [ ] Rimuovere toast quando si salta carta durante studio — v1.3
+- [ ] Rimuovere navigazione "Prev" nello studio (solo avanti) — v1.3
+- [ ] Rimuovere conferma chiusura sessione studio (X chiude direttamente) — v1.3
+- [ ] Fix tracciamento "Ultimo studio" nella dashboard (mostra "Non ancora" dopo sessioni completate) — v1.3
+- [ ] Fix icona lucchetto su repo pubblico (mostra privato se era privato in passato) — v1.3
+- [ ] Fix navbar Android che copre contenuto card durante studio — v1.3
 
 ### Out of Scope
 
@@ -93,4 +100,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | KaTeX micro-WebView for LaTeX only | Native text non supporta math, WebView isolato solo per formula | ✓ Good — v1.2 |
 
 ---
-*Last updated: 2026-02-09 after v1.2 milestone*
+*Last updated: 2026-02-10 after v1.3 milestone start*
