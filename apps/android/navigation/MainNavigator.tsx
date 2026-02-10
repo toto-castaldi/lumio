@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image } from 'react-native';
+import { Image, View, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
@@ -47,12 +47,16 @@ export function MainNavigator() {
           component={DashboardScreen}
           options={{
             headerTitle: () => (
-              <Image
-                source={require('../assets/logo-header.png')}
-                style={{ width: 28, height: 28 }}
-                resizeMode="contain"
-                accessibilityLabel="Lumio"
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Image
+                  source={require('../assets/logo-header.png')}
+                  style={{ width: 28, height: 28, marginRight: 8 }}
+                  resizeMode="contain"
+                />
+                <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 'bold' }}>
+                  Lumio
+                </Text>
+              </View>
             ),
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons
