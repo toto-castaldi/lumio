@@ -5,7 +5,7 @@
 - SHIPPED **v1.1 Lumio Native** -- Phases 1-5 (shipped 2026-02-08)
 - SHIPPED **v1.2 Polish & UX** -- Phases 6-9 (shipped 2026-02-09)
 - SHIPPED **v1.3 Bugfix & UX Polish** -- Phases 10-12 (shipped 2026-02-10)
-- IN PROGRESS **v1.4 Card Browse & Stats** -- Phases 13-15
+- SHIPPED **v1.4 Card Browse & Stats** -- Phases 13-15 (shipped 2026-02-11)
 
 ## Phases
 
@@ -51,7 +51,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 
 - [x] **Phase 13: UX Fixes** - Fix navbar overlap su card preview e stile impostazioni -- completed 2026-02-11
 - [x] **Phase 14: Card Browse** - Navigazione carte: lista per repo e dettaglio carta -- completed 2026-02-11
-- [ ] **Phase 15: Study Stats** - Registrazione e visualizzazione storico sessioni di studio
+- [x] **Phase 15: Study Stats** - Registrazione e visualizzazione storico sessioni di studio -- completed 2026-02-11
 
 ## Phase Details
 
@@ -92,8 +92,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md -- Database migration, StudySession types, core functions, wire session saving on study completion
-- [ ] 15-02-PLAN.md -- StudyHistoryScreen, tappable dashboard navigation, i18n translations
+- [x] 15-01-PLAN.md -- Database migration, StudySession types, core functions, wire session saving on study completion
+- [x] 15-02-PLAN.md -- StudyHistoryScreen, tappable dashboard navigation, i18n translations
 
 ## Progress
 
@@ -115,7 +115,7 @@ Plans:
 | 12. Dashboard & Repo Bugfixes | v1.3 | 1/1 | Complete | 2026-02-10 |
 | 13. UX Fixes | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
-| 15. Study Stats | v1.4 | 0/2 | Not started | - |
+| 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
 
 ---
 *Roadmap created: 2026-01-29*
@@ -123,3 +123,4 @@ Plans:
 *v1.2 shipped: 2026-02-09*
 *v1.3 shipped: 2026-02-10*
 *v1.4 roadmap created: 2026-02-11*
+*v1.4 shipped: 2026-02-11*
