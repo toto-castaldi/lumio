@@ -30,6 +30,7 @@ import {
   type StudyCard,
   type Repository,
 } from '@lumio/core';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import { useI18n } from '../../hooks/useI18n';
 import { CardContentView } from './CardContentView';
@@ -61,6 +62,7 @@ export function CardPreviewModal({
 }: CardPreviewModalProps) {
   const { colors, isDark } = useTheme();
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
 
   // Animated value for swipe-down dismiss gesture
   const translateY = useRef(new Animated.Value(0)).current;
@@ -170,6 +172,7 @@ export function CardPreviewModal({
               content={content}
               isDark={isDark}
               scrollEnabled={true}
+              contentPaddingBottom={insets.bottom}
             />
           ) : (
             <View style={styles.emptyState}>

@@ -26,6 +26,8 @@ interface CardContentViewProps {
   style?: ViewStyle;
   /** Whether the internal FlatList should scroll (default: false) */
   scrollEnabled?: boolean;
+  /** Extra bottom padding for safe area (e.g. Android system navigation bar) */
+  contentPaddingBottom?: number;
 }
 
 /**
@@ -66,6 +68,7 @@ export function CardContentView({
   isDark,
   style,
   scrollEnabled = false,
+  contentPaddingBottom,
 }: CardContentViewProps) {
   // Memoize renderer and tokenizer to avoid re-creation on every render
   const renderer = useMemo(() => new CardRenderer(isDark), [isDark]);
@@ -98,7 +101,8 @@ export function CardContentView({
         scrollEnabled,
         contentContainerStyle: {
           paddingHorizontal: 16,
-          paddingVertical: 8,
+          paddingTop: 8,
+          paddingBottom: 8 + (contentPaddingBottom ?? 0),
         },
       }}
       renderer={renderer}
