@@ -75,10 +75,10 @@ Plans:
   1. User can tap on a repository in the dashboard and see a scrollable list of all cards in that repository
   2. User can tap on a card in the list to open a full read-only detail view showing the card content (markdown, code, LaTeX, images)
   3. User can navigate back from card detail to card list, and from card list to dashboard
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 14-01: TBD
+- [ ] 14-01-PLAN.md -- Card browse screens with navigation, card list, card detail, and i18n
 
 ### Phase 15: Study Stats
 **Goal**: L'utente puo' vedere il proprio storico sessioni di studio con risultati e tempi
