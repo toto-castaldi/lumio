@@ -50,7 +50,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 **Milestone Goal:** Aggiungere navigazione carte nei repo, statistiche sessioni di studio, e fix UX residui.
 
 - [x] **Phase 13: UX Fixes** - Fix navbar overlap su card preview e stile impostazioni -- completed 2026-02-11
-- [ ] **Phase 14: Card Browse** - Navigazione carte: lista per repo e dettaglio carta
+- [x] **Phase 14: Card Browse** - Navigazione carte: lista per repo e dettaglio carta -- completed 2026-02-11
 - [ ] **Phase 15: Study Stats** - Registrazione e visualizzazione storico sessioni di studio
 
 ## Phase Details
@@ -78,7 +78,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 14-01-PLAN.md -- Card browse screens with navigation, card list, card detail, and i18n
+- [x] 14-01-PLAN.md -- Card browse screens with navigation, card list, card detail, and i18n
 
 ### Phase 15: Study Stats
 **Goal**: L'utente puo' vedere il proprio storico sessioni di studio con risultati e tempi
@@ -113,7 +113,7 @@ Plans:
 | 11. Study Flow Simplification | v1.3 | 1/1 | Complete | 2026-02-10 |
 | 12. Dashboard & Repo Bugfixes | v1.3 | 1/1 | Complete | 2026-02-10 |
 | 13. UX Fixes | v1.4 | 1/1 | Complete | 2026-02-11 |
-| 14. Card Browse | v1.4 | 0/TBD | Not started | - |
+| 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 15. Study Stats | v1.4 | 0/TBD | Not started | - |
 
 ---

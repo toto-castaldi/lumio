@@ -14,8 +14,8 @@ Requirements for v1.4 Card Browse & Stats. Each maps to roadmap phases.
 
 ### Card Browse
 
-- [ ] **BROWSE-01**: Utente puo' vedere la lista delle carte di un repo tappando sul repo
-- [ ] **BROWSE-02**: Utente puo' aprire il dettaglio di una carta in modalita' lettura (riuso CardPreview)
+- [x] **BROWSE-01**: Utente puo' vedere la lista delle carte di un repo tappando sul repo
+- [x] **BROWSE-02**: Utente puo' aprire il dettaglio di una carta in modalita' lettura (riuso CardPreview)
 
 ### Study Stats
 
@@ -45,8 +45,8 @@ Requirements for v1.4 Card Browse & Stats. Each maps to roadmap phases.
 |-------------|-------|--------|
 | UX-01 | Phase 13 | Pending |
 | UX-02 | Phase 13 | Pending |
-| BROWSE-01 | Phase 14 | Pending |
-| BROWSE-02 | Phase 14 | Pending |
+| BROWSE-01 | Phase 14 | Complete |
+| BROWSE-02 | Phase 14 | Complete |
 | STATS-01 | Phase 15 | Pending |
 | STATS-02 | Phase 15 | Pending |
 | STATS-03 | Phase 15 | Pending |
