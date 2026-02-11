@@ -62,10 +62,10 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 **Success Criteria** (what must be TRUE):
   1. During a study session, the card preview content is fully visible and not obscured by the Android navigation bar on any screen
   2. In Settings, the "Connesso come" section has the same uppercase section header style as "ASPETTO" and other section headers
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 13-01: TBD
+- [ ] 13-01-PLAN.md -- Fix card preview navbar overlap and settings ACCOUNT section with avatar
 
 ### Phase 14: Card Browse
 **Goal**: L'utente puo' esplorare le carte di un repository senza avviare una sessione di studio
@@ -112,7 +112,7 @@ Plans:
 | 10. Branding Consistency | v1.3 | 2/2 | Complete | 2026-02-10 |
 | 11. Study Flow Simplification | v1.3 | 1/1 | Complete | 2026-02-10 |
 | 12. Dashboard & Repo Bugfixes | v1.3 | 1/1 | Complete | 2026-02-10 |
-| 13. UX Fixes | v1.4 | 0/TBD | Not started | - |
+| 13. UX Fixes | v1.4 | 0/1 | Not started | - |
 | 14. Card Browse | v1.4 | 0/TBD | Not started | - |
 | 15. Study Stats | v1.4 | 0/TBD | Not started | - |
 
