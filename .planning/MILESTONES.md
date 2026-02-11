@@ -82,3 +82,30 @@
 
 ---
 
+
+## v1.4 Card Browse & Stats (Shipped: 2026-02-11)
+
+**Delivered:** Card browsing within repositories, study session persistence with history viewing, and UX fixes for navbar overlap and settings styling.
+
+**Phases completed:** 13-15 (4 plans total)
+
+**Key accomplishments:**
+
+- Fixed card preview navbar overlap with safe area bottom padding on Android
+- Added ACCOUNT section with Google profile avatar to Settings screen
+- Card browse: tap repo → scrollable card list → full card detail (markdown, code, LaTeX, images)
+- Study session persistence with immutable study_sessions table and RLS policies
+- Study history screen with score color-coding, pull-to-refresh, and tappable dashboard navigation
+
+**Stats:**
+
+- 33 files changed (+3,298 / -44 lines)
+- 3 phases, 4 plans, 9 tasks
+- 1 day (2026-02-11)
+
+**Git range:** `v1.3` → `docs(phase-15)` (5 feat + 1 fix commits)
+
+**What's next:** TBD
+
+---
+

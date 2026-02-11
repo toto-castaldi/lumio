@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, sessioni di studio configurabili, e landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, sessioni di studio configurabili, navigazione carte nei repository, storico sessioni di studio, e landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
 
 ## Core Value
 
@@ -43,17 +43,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Fix tracciamento "Ultimo studio" nella dashboard con AsyncStorage — v1.3
 - ✓ Fix icona visibilità repo (globe per pubblici, lock per privati) — v1.3
 
+- ✓ Fix card preview coperto da navbar durante studio — v1.4
+- ✓ Sezione ACCOUNT con avatar Google in Settings — v1.4
+- ✓ Navigazione carte: tap su repo → lista carte → dettaglio carta — v1.4
+- ✓ Persistenza sessioni di studio con tabella study_sessions — v1.4
+- ✓ Storico sessioni con score color-coding e pull-to-refresh — v1.4
+- ✓ Dashboard "ultimo studio" tappabile per navigare allo storico — v1.4
+
 ### Active
 
-## Current Milestone: v1.4 Card Browse & Stats
-
-**Goal:** Aggiungere navigazione carte nei repo, statistiche sessioni di studio, e fix UX residui.
-
-**Target features:**
-- Fix card preview coperto da navbar Android durante studio
-- Stile "Connesso come" uniforme a "ASPETTO" nelle impostazioni
-- Navigazione carte: tap su repo → lista carte → dettaglio carta (riuso CardPreview)
-- Statistiche sessioni: registrazione risultati, schermata storico ultime 10 sessioni (limite configurabile da backend)
+(No active requirements — ready for next milestone)
 
 ### Out of Scope
 
@@ -67,17 +66,19 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - Traduzione contenuto card — il materiale educativo resta nella lingua originale
 - Supporto lingue RTL — nessuna lingua RTL pianificata
 - Piattaforma di gestione traduzioni (Crowdin etc.) — 2 lingue, ~85 stringhe, singolo sviluppatore
+- Dettaglio per carta nelle statistiche — risultato sessione sufficiente
+- Statistiche con grafici/trend — v1.4 mostra solo lista sessioni, analytics avanzata futura
 
 ## Context
 
-**Stato attuale (post v1.3):**
+**Stato attuale (post v1.4):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
-- Backend Supabase invariato (auth, DB, storage, edge functions, Docora webhook)
-- ~6,100 LOC TypeScript/JS (~5,600 Android + ~450 landing)
+- Backend Supabase: auth, DB, storage, edge functions, Docora webhook + study_sessions table
+- ~9,400 LOC TypeScript/JS (~8,900 Android + ~450 landing)
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked
 - CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
-- App bilingue IT/EN con branding Lumio, sessioni configurabili, studio forward-only, card rendering nativo
-- 3 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX)
+- App bilingue IT/EN con branding Lumio, sessioni configurabili, card browse, study history, studio forward-only
+- 4 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats)
 
 ## Constraints
 
@@ -109,6 +110,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Forward-only study (removed review mode) | Simpler UX, -130 LOC, less state to manage | ✓ Good — v1.3 |
 | AsyncStorage for last-studied timestamp | Simpler than DB table, no migration, works offline | ✓ Good — v1.3 |
 | Safe area insets for Android navbar | paddingBottom: static + insets.bottom pattern for consistent clearance | ✓ Good — v1.3 |
+| contentPaddingBottom prop for reusable safe area | Keeps CardContentView reusable across contexts | ✓ Good — v1.4 |
+| Reuse CardContentView/CardView for card browse | Avoids code duplication, consistent rendering | ✓ Good — v1.4 |
+| .lumioignore filtering in card list via Deck | Consistency between card browse and study sessions | ✓ Good — v1.4 |
+| repository_name nullable TEXT (not FK) | NULL means all repos since study is cross-repo | ✓ Good — v1.4 |
+| Immutable study_sessions (no UPDATE/DELETE RLS) | Prevents tampering with historical session data | ✓ Good — v1.4 |
+| Fire-and-forget session save | Does not block navigation to StudySummary | ✓ Good — v1.4 |
+| platform_config for study_history_limit | Admin-configurable instead of hardcoded | ✓ Good — v1.4 |
+| Score color-coding (green/yellow/red thresholds) | Clear visual feedback: >=70% green, >=40% yellow, else red | ✓ Good — v1.4 |
 
 ---
-*Last updated: 2026-02-11 after v1.4 milestone started*
+*Last updated: 2026-02-11 after v1.4 milestone*
