@@ -50,6 +50,9 @@ export {
   getPreGeneratedQuestion,
   voteQuestion,
   getStudyCardsWithQuestions,
+  // Study sessions (Phase 15)
+  saveStudySession,
+  getStudyHistory,
 } from './supabase/study';
 
 // Export markdown configuration and utilities

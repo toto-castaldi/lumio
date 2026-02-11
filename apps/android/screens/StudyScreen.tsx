@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { saveStudySession } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
@@ -53,16 +54,31 @@ export function StudyScreen() {
   useEffect(() => {
     if (session.state === 'completed' && !hasNavigatedToSummary.current) {
       hasNavigatedToSummary.current = true;
+
+      const totalCards = session.answeredCards.length + session.skippedCount;
+      const correctCount = session.answeredCards.filter(a => a.isCorrect).length;
+      const incorrectCount = session.answeredCards.filter(a => !a.isCorrect).length;
+      const timeSpentSeconds = Math.floor(
+        (Date.now() - session.startedAt.getTime()) / 1000,
+      );
+
+      // Fire-and-forget: persist session to database
+      saveStudySession({
+        correctCount,
+        totalCount: totalCards,
+        skippedCount: session.skippedCount,
+        durationSeconds: timeSpentSeconds,
+      }).catch(err => console.error('Failed to save study session:', err));
+
       // Fire-and-forget: persist last studied timestamp for dashboard display
       AsyncStorage.setItem('@lumio/lastStudiedAt', new Date().toISOString());
+
       navigation.replace('StudySummary', {
-        totalCards: session.answeredCards.length + session.skippedCount,
-        correctCount: session.answeredCards.filter(a => a.isCorrect).length,
-        incorrectCount: session.answeredCards.filter(a => !a.isCorrect).length,
+        totalCards,
+        correctCount,
+        incorrectCount,
         skippedCount: session.skippedCount,
-        timeSpentSeconds: Math.floor(
-          (Date.now() - session.startedAt.getTime()) / 1000,
-        ),
+        timeSpentSeconds,
       });
     }
   }, [session.state, session.answeredCards, session.skippedCount, session.startedAt, navigation]);

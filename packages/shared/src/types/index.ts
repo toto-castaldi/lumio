@@ -246,3 +246,29 @@ export interface QuestionUserVote {
 export interface StudyCard extends Card {
   questionCount: number;
 }
+
+// =============================================================================
+// STUDY SESSIONS (Phase 15 - Study Stats)
+// =============================================================================
+
+// Completed study session (stored in public.study_sessions table)
+export interface StudySession {
+  id: string;
+  userId: string;
+  repositoryName: string | null;  // null = all repositories
+  correctCount: number;
+  totalCount: number;
+  skippedCount: number;
+  durationSeconds: number;
+  completedAt: string;
+  createdAt: string;
+}
+
+// Options for saving a study session
+export interface SaveStudySessionOptions {
+  repositoryName?: string | null;
+  correctCount: number;
+  totalCount: number;
+  skippedCount: number;
+  durationSeconds: number;
+}

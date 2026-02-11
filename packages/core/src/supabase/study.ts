@@ -10,6 +10,8 @@ import type {
   VoteQuestionResponse,
   QuestionVote,
   StudyCard,
+  StudySession,
+  SaveStudySessionOptions,
 } from '@lumio/shared';
 
 /**
@@ -287,4 +289,125 @@ export async function getStudyCardsWithQuestions(): Promise<StudyCard[]> {
 
   const cards = await response.json();
   return (cards as Record<string, unknown>[]).map(mapStudyCard);
+}
+
+// =============================================================================
+// STUDY SESSIONS (Phase 15 - Study Stats)
+// =============================================================================
+
+/**
+ * Map database study session row to StudySession type
+ */
+function mapStudySession(row: Record<string, unknown>): StudySession {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    repositoryName: row.repository_name as string | null,
+    correctCount: row.correct_count as number,
+    totalCount: row.total_count as number,
+    skippedCount: row.skipped_count as number,
+    durationSeconds: row.duration_seconds as number,
+    completedAt: row.completed_at as string,
+    createdAt: row.created_at as string,
+  };
+}
+
+/**
+ * Save a completed study session to the database
+ * @param options - Session result data
+ */
+export async function saveStudySession(
+  options: SaveStudySessionOptions
+): Promise<StudySession> {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const userId = await getUserId();
+  if (!userId) {
+    throw new Error('User ID not found');
+  }
+
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(`${supabaseUrl}/rest/v1/study_sessions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: getSupabaseAnonKey(),
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      repository_name: options.repositoryName ?? null,
+      correct_count: options.correctCount,
+      total_count: options.totalCount,
+      skipped_count: options.skippedCount,
+      duration_seconds: options.durationSeconds,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to save study session');
+  }
+
+  const [row] = await response.json();
+  return mapStudySession(row);
+}
+
+/**
+ * Get the user's study session history
+ * Returns the most recent sessions, limited by platform_config study_history_limit
+ * @param limit - Override the default limit (optional, falls back to platform_config)
+ */
+export async function getStudyHistory(
+  limit?: number
+): Promise<StudySession[]> {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  // Fetch the configured limit from platform_config if not overridden
+  let effectiveLimit = limit;
+  if (!effectiveLimit) {
+    const supabaseUrl = getSupabaseUrl();
+    const configResponse = await fetch(
+      `${supabaseUrl}/rest/v1/platform_config?key=eq.study_history_limit&select=value`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: getSupabaseAnonKey(),
+        },
+      }
+    );
+    if (configResponse.ok) {
+      const configs = await configResponse.json();
+      if (configs.length > 0) {
+        effectiveLimit = Number(configs[0].value) || 10;
+      }
+    }
+    if (!effectiveLimit) effectiveLimit = 10;
+  }
+
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/study_sessions?select=*&order=completed_at.desc&limit=${effectiveLimit}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: getSupabaseAnonKey(),
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch study history');
+  }
+
+  const rows = await response.json();
+  return (rows as Record<string, unknown>[]).map(mapStudySession);
 }
