@@ -2,19 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-10)
+See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** v1.4 Card Browse & Stats
 
 ## Current Position
 
-Phase: 12 of 12 (all milestones complete)
-Plan: N/A
-Status: v1.3 milestone archived -- planning next milestone
-Last activity: 2026-02-10 -- Archived v1.3 milestone
-
-Progress: [##############################] 100% (33/33 plans across 3 milestones)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-11 — Milestone v1.4 started
 
 ## Performance Metrics
 
@@ -39,10 +37,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-10
-Stopped at: Archived v1.3 milestone, ready for /gsd:new-milestone
+Last session: 2026-02-11
+Stopped at: Milestone v1.4 started, defining requirements
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-10 (v1.3 milestone archived)*
+*Last updated: 2026-02-11 (v1.4 milestone started)*

@@ -45,7 +45,15 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(None — next milestone requirements TBD)
+## Current Milestone: v1.4 Card Browse & Stats
+
+**Goal:** Aggiungere navigazione carte nei repo, statistiche sessioni di studio, e fix UX residui.
+
+**Target features:**
+- Fix card preview coperto da navbar Android durante studio
+- Stile "Connesso come" uniforme a "ASPETTO" nelle impostazioni
+- Navigazione carte: tap su repo → lista carte → dettaglio carta (riuso CardPreview)
+- Statistiche sessioni: registrazione risultati, schermata storico ultime 10 sessioni (limite configurabile da backend)
 
 ### Out of Scope
 
@@ -75,7 +83,7 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 - **Platform**: Solo Android
 - **Distribution**: APK diretto via GitHub Releases
-- **Backend**: Nessuna modifica alle Edge Functions o schema DB
+- **Backend**: Modifiche DB per statistiche sessioni; Edge Functions invariate dove possibile
 - **Build**: Expo prebuild + Gradle (no EAS Build)
 
 ## Key Decisions
@@ -103,4 +111,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Safe area insets for Android navbar | paddingBottom: static + insets.bottom pattern for consistent clearance | ✓ Good — v1.3 |
 
 ---
-*Last updated: 2026-02-10 after v1.3 milestone complete*
+*Last updated: 2026-02-11 after v1.4 milestone started*
