@@ -148,16 +148,21 @@ export function DashboardScreen() {
         />
       </View>
 
-      {/* Last studied card */}
+      {/* Last studied card - tappable to navigate to Study History */}
       <View style={styles.lastStudiedRow}>
-        <StatCard
-          icon="time-outline"
-          iconColor="#F59E0B"
-          iconBgColor={isDark ? '#78350f' : '#FEF3C7'}
-          label={t('dashboard.lastStudied')}
-          value={formatLastStudied(lastStudied, t)}
-          isLoading={isLoading}
-        />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('StudyHistory')}
+          activeOpacity={0.7}
+        >
+          <StatCard
+            icon="time-outline"
+            iconColor="#F59E0B"
+            iconBgColor={isDark ? '#78350f' : '#FEF3C7'}
+            label={t('dashboard.lastStudied')}
+            value={formatLastStudied(lastStudied, t)}
+            isLoading={isLoading}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Study CTA button */}

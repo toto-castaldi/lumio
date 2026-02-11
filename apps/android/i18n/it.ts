@@ -123,6 +123,14 @@ const it: Translations = {
     cardsCount: '%{count} schede',
     failedToLoad: 'Impossibile caricare le schede',
   },
+  history: {
+    title: 'Storico studio',
+    emptyTitle: 'Nessuna sessione',
+    emptySubtitle: 'Completa una sessione di studio per vedere lo storico qui.',
+    allRepos: 'Tutti i repository',
+    score: '%{correct}/%{total}',
+    failedToLoad: 'Impossibile caricare lo storico',
+  },
   navigation: {
     repositories: 'Repository',
     settings: 'Impostazioni',

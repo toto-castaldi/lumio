@@ -10,6 +10,7 @@ import { StudyScreen } from '../screens/StudyScreen';
 import { StudySummaryScreen } from '../screens/StudySummaryScreen';
 import { CardListScreen } from '../screens/CardListScreen';
 import { CardDetailScreen } from '../screens/CardDetailScreen';
+import { StudyHistoryScreen } from '../screens/StudyHistoryScreen';
 
 /**
  * Root stack param list for modal screens (Study, StudySummary)
@@ -28,6 +29,7 @@ export type RootStackParamList = {
   };
   CardList: { repoId: string; repoName: string };
   CardDetail: { card: Card; repository: Repository };
+  StudyHistory: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -92,6 +94,15 @@ export function AppNavigator() {
           headerStyle: { backgroundColor: colors.primary },
           headerTintColor: '#ffffff',
         })}
+      />
+      <Stack.Screen
+        name="StudyHistory"
+        component={StudyHistoryScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: '#ffffff',
+        }}
       />
     </Stack.Navigator>
   );

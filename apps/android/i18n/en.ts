@@ -120,6 +120,14 @@ const en = {
     cardsCount: '%{count} cards',
     failedToLoad: 'Failed to load cards',
   },
+  history: {
+    title: 'Study History',
+    emptyTitle: 'No sessions yet',
+    emptySubtitle: 'Complete a study session to see your history here.',
+    allRepos: 'All repositories',
+    score: '%{correct}/%{total}',
+    failedToLoad: 'Failed to load study history',
+  },
   navigation: {
     repositories: 'Repositories',
     settings: 'Settings',
