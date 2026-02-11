@@ -13,6 +13,7 @@ interface RepoListItemProps {
     isPrivate: boolean;
     syncStatus?: string;
   };
+  onPress: () => void;
   onDelete: (id: string, name: string) => void;
 }
 
@@ -21,7 +22,7 @@ interface RepoListItemProps {
  * Shows repo name, URL (truncated), and visibility icon (globe for public, lock for private).
  * Swiping left reveals a delete action button.
  */
-export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
+export function RepoListItem({ repo, onPress, onDelete }: RepoListItemProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const swipeableRef = useRef<Swipeable>(null);
@@ -52,7 +53,7 @@ export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
       rightThreshold={40}
       overshootRight={false}
     >
-      <View
+      <TouchableOpacity
         style={[
           styles.container,
           {
@@ -60,6 +61,8 @@ export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
             borderBottomColor: colors.border,
           },
         ]}
+        onPress={onPress}
+        activeOpacity={0.7}
       >
         <View style={styles.row}>
           <Text
@@ -81,7 +84,7 @@ export function RepoListItem({ repo, onDelete }: RepoListItemProps) {
         >
           {repo.url}
         </Text>
-      </View>
+      </TouchableOpacity>
     </Swipeable>
   );
 }

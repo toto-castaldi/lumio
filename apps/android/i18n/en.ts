@@ -114,6 +114,12 @@ const en = {
     cardContent: 'Card Content',
     noCardContent: 'No card content to display',
   },
+  cardList: {
+    emptyTitle: 'No cards yet',
+    emptySubtitle: 'This repository has no cards or they are still syncing.',
+    cardsCount: '%{count} cards',
+    failedToLoad: 'Failed to load cards',
+  },
   navigation: {
     repositories: 'Repositories',
     settings: 'Settings',

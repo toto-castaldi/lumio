@@ -1,14 +1,19 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { Card, Repository } from '@lumio/core';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../hooks/useTheme';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { StudyScreen } from '../screens/StudyScreen';
 import { StudySummaryScreen } from '../screens/StudySummaryScreen';
+import { CardListScreen } from '../screens/CardListScreen';
+import { CardDetailScreen } from '../screens/CardDetailScreen';
 
 /**
  * Root stack param list for modal screens (Study, StudySummary)
+ * and card browsing screens (CardList, CardDetail)
  * that appear over the main tab navigator.
  */
 export type RootStackParamList = {
@@ -21,6 +26,8 @@ export type RootStackParamList = {
     skippedCount: number;
     timeSpentSeconds: number;
   };
+  CardList: { repoId: string; repoName: string };
+  CardDetail: { card: Card; repository: Repository };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,6 +43,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  */
 export function AppNavigator() {
   const { state } = useAuth();
+  const { colors } = useTheme();
 
   // Show loading indicator while checking auth state
   if (state === 'loading') {
@@ -64,6 +72,26 @@ export function AppNavigator() {
         name="StudySummary"
         component={StudySummaryScreen}
         options={{ presentation: 'card', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="CardList"
+        component={CardListScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          headerTitle: route.params.repoName,
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: '#ffffff',
+        })}
+      />
+      <Stack.Screen
+        name="CardDetail"
+        component={CardDetailScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          headerTitle: route.params.card.title,
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: '#ffffff',
+        })}
       />
     </Stack.Navigator>
   );

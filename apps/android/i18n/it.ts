@@ -117,6 +117,12 @@ const it: Translations = {
     cardContent: 'Contenuto scheda',
     noCardContent: 'Nessun contenuto della scheda da visualizzare',
   },
+  cardList: {
+    emptyTitle: 'Nessuna scheda',
+    emptySubtitle: 'Questo repository non ha schede o sono ancora in sincronizzazione.',
+    cardsCount: '%{count} schede',
+    failedToLoad: 'Impossibile caricare le schede',
+  },
   navigation: {
     repositories: 'Repository',
     settings: 'Impostazioni',

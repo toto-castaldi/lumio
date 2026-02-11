@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
 import {
   getUserRepositories,
@@ -13,6 +15,7 @@ import {
   deleteRepository,
   type Repository,
 } from '@lumio/core';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { RepoListItem } from '../components/RepoListItem';
@@ -29,6 +32,7 @@ import { EmptyState } from '../components/EmptyState';
 export function ReposScreen() {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -169,7 +173,11 @@ export function ReposScreen() {
         data={repositories}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <RepoListItem repo={item} onDelete={handleDeleteRepo} />
+          <RepoListItem
+            repo={item}
+            onPress={() => navigation.navigate('CardList', { repoId: item.id, repoName: item.name })}
+            onDelete={handleDeleteRepo}
+          />
         )}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
