@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 15 of 15 (Study Stats)
-Plan: 1 of 2 in current phase (COMPLETE)
-Status: Plan 15-01 complete -- ready for Plan 15-02
-Last activity: 2026-02-11 -- Phase 15 Plan 01 completed (study session persistence: table, types, core functions, wiring)
+Phase: 15 of 15 (Study Stats) -- COMPLETE
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 15 complete -- all plans shipped (v1.4 Study Stats milestone complete)
+Last activity: 2026-02-11 -- Phase 15 Plan 02 completed (study history screen, dashboard navigation, i18n)
 
-Progress: [=============================-] 97% (14.5/15 phases)
+Progress: [==============================] 100% (15/15 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36 (20 v1.1 + 9 v1.2 + 4 v1.3 + 3 v1.4)
-- Total milestones shipped: 3
+- Total plans completed: 37 (20 v1.1 + 9 v1.2 + 4 v1.3 + 4 v1.4)
+- Total milestones shipped: 4
 - Timeline: 14 days (2026-01-29 to 2026-02-11)
 
 ## Accumulated Context
@@ -37,6 +37,9 @@ All decisions logged in PROJECT.md Key Decisions table (18 entries).
 - [15-01] repository_name is nullable TEXT (not FK) -- NULL means all repos since current study is cross-repo
 - [15-01] study_sessions are immutable -- no UPDATE/DELETE RLS policies
 - [15-01] saveStudySession is fire-and-forget -- does not block navigation to StudySummary
+- [15-02] Score color coding: green >= 70%, yellow >= 40%, red otherwise
+- [15-02] Dashboard Last Studied card wrapped in TouchableOpacity for navigation (not modifying shared StatCard)
+- [15-02] Session date formatted with toLocaleDateString for locale-aware display
 
 ### Pending Todos
 
@@ -49,9 +52,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 15-01-PLAN.md (study session persistence -- ready for Plan 15-02)
+Stopped at: Completed 15-02-PLAN.md (Phase 15 complete -- all v1.4 plans shipped)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-11 (Phase 15 Plan 01 complete)*
+*Last updated: 2026-02-11 (Phase 15 complete -- v1.4 Study Stats milestone shipped)*
