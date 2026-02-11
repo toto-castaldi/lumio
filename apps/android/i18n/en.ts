@@ -84,7 +84,7 @@ const en = {
     returnToDashboard: 'Return to Dashboard',
   },
   settings: {
-    signedInAs: 'Signed in as',
+    account: 'Account',
     appearance: 'Appearance',
     system: 'System',
     light: 'Light',

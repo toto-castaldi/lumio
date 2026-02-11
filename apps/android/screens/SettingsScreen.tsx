@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -43,6 +44,10 @@ export function SettingsScreen() {
   const { cardsPerSession, setCardsPerSession } = useStudySettings();
   const version = getVersionString();
 
+  // Google profile data from Supabase user metadata
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const displayName = user?.user_metadata?.full_name as string | undefined;
+
   // Option arrays inside component body so t() picks up current locale
   const themeOptions: OptionItem<ThemePreference>[] = [
     { value: 'system', label: t('settings.system'), icon: 'phone-portrait-outline' },
@@ -83,14 +88,30 @@ export function SettingsScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* User info section */}
+      {/* Account section */}
+      <Text style={[styles.sectionHeader, { color: colors.textSecondary, marginTop: 16 }]}>
+        {t('settings.account')}
+      </Text>
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {t('settings.signedInAs')}
-        </Text>
-        <Text style={[styles.email, { color: colors.text }]}>
-          {user?.email ?? t('common.unknownUser')}
-        </Text>
+        <View style={styles.accountRow}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarFallback, { backgroundColor: colors.primaryLight }]}>
+              <Ionicons name="person" size={24} color={colors.primary} />
+            </View>
+          )}
+          <View style={styles.accountInfo}>
+            {displayName && (
+              <Text style={[styles.accountName, { color: colors.text }]}>
+                {displayName}
+              </Text>
+            )}
+            <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>
+              {user?.email ?? t('common.unknownUser')}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Appearance section */}
@@ -247,13 +268,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: 20,
   },
-  label: {
-    fontSize: 14,
-    marginBottom: 4,
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
-  email: {
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  avatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountInfo: {
+    flex: 1,
+  },
+  accountName: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  accountEmail: {
+    fontSize: 14,
+    marginTop: 2,
   },
   optionRow: {
     flexDirection: 'row',

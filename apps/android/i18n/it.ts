@@ -87,7 +87,7 @@ const it: Translations = {
     returnToDashboard: 'Torna alla Dashboard',
   },
   settings: {
-    signedInAs: 'Connesso come',
+    account: 'Account',
     appearance: 'Aspetto',
     system: 'Sistema',
     light: 'Chiaro',
