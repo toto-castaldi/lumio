@@ -89,10 +89,11 @@ Plans:
   2. User can tap on "ultimo studio" in the dashboard to navigate to a session history screen
   3. The session history screen displays the last N sessions (N configured by backend, default 10) with date, repo, score, and duration for each
   4. If the user has no study sessions yet, the history screen shows an appropriate empty state
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: TBD
+- [ ] 15-01-PLAN.md -- Database migration, StudySession types, core functions, wire session saving on study completion
+- [ ] 15-02-PLAN.md -- StudyHistoryScreen, tappable dashboard navigation, i18n translations
 
 ## Progress
 
@@ -114,7 +115,7 @@ Plans:
 | 12. Dashboard & Repo Bugfixes | v1.3 | 1/1 | Complete | 2026-02-10 |
 | 13. UX Fixes | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
-| 15. Study Stats | v1.4 | 0/TBD | Not started | - |
+| 15. Study Stats | v1.4 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
