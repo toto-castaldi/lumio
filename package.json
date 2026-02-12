@@ -1,7 +1,7 @@
 {
   "name": "lumio",
   "private": true,
-  "version": "1.4.1",
+  "version": "1.5.1",
   "pnpm": {
     "overrides": {
       "react": "19.1.0"
