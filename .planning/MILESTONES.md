@@ -109,3 +109,26 @@
 
 ---
 
+
+## v1.5 Study UX Fixes (Shipped: 2026-02-12)
+
+**Delivered:** Fixed study screen layout waste and dark mode readability issues for a comfortable study experience in both themes.
+
+**Phases completed:** 16 (1 plan total)
+
+**Key accomplishments:**
+- Next-card button pinned to screen bottom with absolute positioning — no wasted vertical space
+- Dark mode contrast fixes: emerald-900/red-900 backgrounds for answer options (correct/incorrect)
+- Dark mode-aware explanation panel backgrounds and borders for proper readability
+
+**Stats:**
+- 8 files changed (+203 / -21 lines)
+- 1 phase, 1 plan, 2 tasks
+- 1 day (2026-02-12)
+
+**Git range:** `v1.4` → `c64e7c6` (2 fix commits + 1 docs commit)
+
+**What's next:** TBD
+
+---
+

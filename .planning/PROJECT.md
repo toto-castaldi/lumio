@@ -50,15 +50,12 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Storico sessioni con score color-coding e pull-to-refresh — v1.4
 - ✓ Dashboard "ultimo studio" tappabile per navigare allo storico — v1.4
 
+- ✓ Pulsante "Scheda successiva" ancorato in basso senza spreco di spazio — v1.5
+- ✓ Contrasto dark mode su opzioni risposta e pannello spiegazione — v1.5
+
 ### Active
 
-## Current Milestone: v1.5 Study UX Fixes
-
-**Goal:** Fix study screen layout waste and dark mode readability issues.
-
-**Target features:**
-- Fix "Scheda successiva" button floating too high, wasting vertical space
-- Fix dark mode illegible text in answer options and explanation box
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -77,14 +74,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v1.4):**
+**Stato attuale (post v1.5):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase: auth, DB, storage, edge functions, Docora webhook + study_sessions table
-- ~9,400 LOC TypeScript/JS (~8,900 Android + ~450 landing)
+- ~9,600 LOC TypeScript/JS (~9,100 Android + ~450 landing)
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked
 - CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
 - App bilingue IT/EN con branding Lumio, sessioni configurabili, card browse, study history, studio forward-only
-- 4 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats)
+- 5 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes)
 
 ## Constraints
 
@@ -124,6 +121,9 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Fire-and-forget session save | Does not block navigation to StudySummary | ✓ Good — v1.4 |
 | platform_config for study_history_limit | Admin-configurable instead of hardcoded | ✓ Good — v1.4 |
 | Score color-coding (green/yellow/red thresholds) | Clear visual feedback: >=70% green, >=40% yellow, else red | ✓ Good — v1.4 |
+| Absolute positioning for bottom button | Simpler than flex restructure, works with ScrollView | ✓ Good — v1.5 |
+| Dark mode emerald-900/red-900 backgrounds | High contrast with white text on correct/incorrect answers | ✓ Good — v1.5 |
+| bottomInset prop for QuizCard | Scroll padding behind floating button, keeps component reusable | ✓ Good — v1.5 |
 
 ---
-*Last updated: 2026-02-12 after v1.5 milestone started*
+*Last updated: 2026-02-12 after v1.5 milestone completed*
