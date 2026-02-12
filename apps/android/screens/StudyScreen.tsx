@@ -241,7 +241,8 @@ export function StudyScreen() {
     }
 
     // Height of the bottom button area so QuizCard content isn't hidden behind it
-    const bottomButtonHeight = 100 + insets.bottom;
+    // SafeAreaView already accounts for insets.bottom, so no need to add it here
+    const bottomButtonHeight = 80;
 
     return (
       <View style={{ flex: 1 }}>
@@ -258,7 +259,7 @@ export function StudyScreen() {
 
         {/* Bottom actions — absolutely positioned at the bottom of the screen */}
         {session.userAnswer !== null && (
-          <View style={[bottomStyles.container, { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: 16 + insets.bottom }]}>
+          <View style={[bottomStyles.container, { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <View style={bottomStyles.buttonRow}>
               <TouchableOpacity
                 style={[bottomStyles.nextButton, { backgroundColor: colors.primary, flex: 1 }]}
