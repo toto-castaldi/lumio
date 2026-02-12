@@ -73,10 +73,10 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   1. The "next card" button sits flush at the bottom of the study screen with no large gap above it
   2. Answer option text is clearly readable against colored backgrounds (red/green) in dark mode
   3. Explanation box text has proper contrast and is legible in dark mode
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: TBD
+- [ ] 16-01-PLAN.md — Pin next-card button to bottom, fix dark mode contrast on answer options and explanation panel
 
 ## Progress
 
@@ -100,7 +100,7 @@ Phase 16 is the only phase in v1.5.
 | 13. UX Fixes | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
-| 16. Study Screen Polish | v1.5 | 0/? | Not started | - |
+| 16. Study Screen Polish | v1.5 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
