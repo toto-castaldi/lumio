@@ -52,7 +52,13 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(No active requirements — ready for next milestone)
+## Current Milestone: v1.5 Study UX Fixes
+
+**Goal:** Fix study screen layout waste and dark mode readability issues.
+
+**Target features:**
+- Fix "Scheda successiva" button floating too high, wasting vertical space
+- Fix dark mode illegible text in answer options and explanation box
 
 ### Out of Scope
 
@@ -120,4 +126,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Score color-coding (green/yellow/red thresholds) | Clear visual feedback: >=70% green, >=40% yellow, else red | ✓ Good — v1.4 |
 
 ---
-*Last updated: 2026-02-11 after v1.4 milestone*
+*Last updated: 2026-02-12 after v1.5 milestone started*
