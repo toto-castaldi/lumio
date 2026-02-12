@@ -15,6 +15,8 @@ interface QuizCardProps {
   onAnswer: (answer: string) => void;
   onVote: (vote: QuestionVote) => void;
   isVoting: boolean;
+  /** Extra bottom padding to prevent content from being hidden behind an absolute-positioned button */
+  bottomInset?: number;
 }
 
 /**
@@ -31,6 +33,7 @@ export function QuizCard({
   onAnswer,
   onVote,
   isVoting,
+  bottomInset = 0,
 }: QuizCardProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -74,7 +77,7 @@ export function QuizCard({
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
+      contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom + bottomInset }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Card title */}

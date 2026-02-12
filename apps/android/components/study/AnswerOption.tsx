@@ -18,7 +18,7 @@ interface AnswerOptionProps {
  * Shows a circular label badge (A/B/C/D) on the left and option text on the right.
  */
 export function AnswerOption({ label, text, onPress, state, disabled }: AnswerOptionProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   // Derive colors from state
   const borderColor = (() => {
@@ -33,8 +33,8 @@ export function AnswerOption({ label, text, onPress, state, disabled }: AnswerOp
 
   const backgroundColor = (() => {
     switch (state) {
-      case 'correct': return '#ecfdf5';  // green-50
-      case 'incorrect': return '#fef2f2'; // red-50
+      case 'correct': return isDark ? '#064e3b' : '#ecfdf5';
+      case 'incorrect': return isDark ? '#7f1d1d' : '#fef2f2';
       default: return colors.surface;
     }
   })();

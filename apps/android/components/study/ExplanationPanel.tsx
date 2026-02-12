@@ -25,12 +25,16 @@ export function ExplanationPanel({
   onVote,
   isVoting,
 }: ExplanationPanelProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useI18n();
 
   const accentColor = isCorrect ? '#10b981' : '#ef4444';
-  const bgColor = isCorrect ? '#ecfdf5' : '#fef2f2';
-  const borderColor = isCorrect ? '#a7f3d0' : '#fecaca';
+  const bgColor = isCorrect
+    ? (isDark ? '#064e3b' : '#ecfdf5')
+    : (isDark ? '#7f1d1d' : '#fef2f2');
+  const borderColor = isCorrect
+    ? (isDark ? '#065f46' : '#a7f3d0')
+    : (isDark ? '#991b1b' : '#fecaca');
   const resultText = isCorrect ? t('components.correct') : t('components.incorrect');
   const resultIcon = isCorrect ? 'checkmark-circle' : 'close-circle';
 
