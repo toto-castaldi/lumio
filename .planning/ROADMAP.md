@@ -61,7 +61,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 
 **Milestone Goal:** Fix study screen layout waste and dark mode readability issues.
 
-- [ ] **Phase 16: Study Screen Polish** - Fix button positioning and dark mode contrast
+- [x] **Phase 16: Study Screen Polish** - Fix button positioning and dark mode contrast -- completed 2026-02-12
 
 ## Phase Details
 
@@ -76,7 +76,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md — Pin next-card button to bottom, fix dark mode contrast on answer options and explanation panel
+- [x] 16-01-PLAN.md — Pin next-card button to bottom, fix dark mode contrast on answer options and explanation panel
 
 ## Progress
 
@@ -100,7 +100,7 @@ Phase 16 is the only phase in v1.5.
 | 13. UX Fixes | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
-| 16. Study Screen Polish | v1.5 | 0/1 | Not started | - |
+| 16. Study Screen Polish | v1.5 | 1/1 | Complete | 2026-02-12 |
 
 ---
 *Roadmap created: 2026-01-29*
