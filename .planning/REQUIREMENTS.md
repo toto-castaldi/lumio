@@ -1,7 +1,7 @@
 # Requirements: Lumio
 
 **Defined:** 2026-02-12
-**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
+**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
 
 ## v1.5 Requirements
 
@@ -29,14 +29,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STUDY-01 | — | Pending |
-| STUDY-02 | — | Pending |
+| STUDY-01 | Phase 16 | Pending |
+| STUDY-02 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 2 total
-- Mapped to phases: 0
-- Unmapped: 2 ⚠️
+- Mapped to phases: 2
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after initial definition*
+*Last updated: 2026-02-12 after roadmap creation*

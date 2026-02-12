@@ -6,6 +6,7 @@
 - SHIPPED **v1.2 Polish & UX** -- Phases 6-9 (shipped 2026-02-09)
 - SHIPPED **v1.3 Bugfix & UX Polish** -- Phases 10-12 (shipped 2026-02-10)
 - SHIPPED **v1.4 Card Browse & Stats** -- Phases 13-15 (shipped 2026-02-11)
+- IN PROGRESS **v1.5 Study UX Fixes** -- Phase 16
 
 ## Phases
 
@@ -56,7 +57,31 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 
 </details>
 
+### v1.5 Study UX Fixes (In Progress)
+
+**Milestone Goal:** Fix study screen layout waste and dark mode readability issues.
+
+- [ ] **Phase 16: Study Screen Polish** - Fix button positioning and dark mode contrast
+
+## Phase Details
+
+### Phase 16: Study Screen Polish
+**Goal**: Users have a comfortable, readable study experience in both light and dark mode with no wasted screen space
+**Depends on**: Nothing (standalone fixes on existing study screen)
+**Requirements**: STUDY-01, STUDY-02
+**Success Criteria** (what must be TRUE):
+  1. The "next card" button sits flush at the bottom of the study screen with no large gap above it
+  2. Answer option text is clearly readable against colored backgrounds (red/green) in dark mode
+  3. Explanation box text has proper contrast and is legible in dark mode
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phase 16 is the only phase in v1.5.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -75,6 +100,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 13. UX Fixes | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
+| 16. Study Screen Polish | v1.5 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
@@ -82,3 +108,4 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 *v1.2 shipped: 2026-02-09*
 *v1.3 shipped: 2026-02-10*
 *v1.4 shipped: 2026-02-11*
+*v1.5 roadmap added: 2026-02-12*
