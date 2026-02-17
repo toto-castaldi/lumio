@@ -55,7 +55,15 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v1.6 Sync Error Handling
+
+**Goal:** Gestire i fallimenti di sync Docora (webhook sync_failed), mostrare errori repo nell'app, e permettere l'aggiornamento del token per repo privati.
+
+**Target features:**
+- Gestione webhook sync_failed nel backend
+- Visualizzazione errori sync nella lista repository dell'app
+- Bottom-sheet modale per dettagli errore e aggiornamento token PAT
+- Edge function per proxy PATCH token verso Docora API
 
 ### Out of Scope
 
@@ -82,6 +90,7 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
 - App bilingue IT/EN con branding Lumio, sessioni configurabili, card browse, study history, studio forward-only
 - 5 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes)
+- Docora webhook sync_failed: circuit breaker notification with error details and retry info
 
 ## Constraints
 
@@ -126,4 +135,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | bottomInset prop for QuizCard | Scroll padding behind floating button, keeps component reusable | ✓ Good — v1.5 |
 
 ---
-*Last updated: 2026-02-12 after v1.5 milestone completed*
+*Last updated: 2026-02-17 after v1.6 milestone started*
