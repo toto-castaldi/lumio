@@ -41,6 +41,13 @@ interface DocoraWebhookPayload {
   timestamp: string;
 }
 
+interface DocoraErrorPayload {
+  repository: DocoraRepository;
+  error_type: string;
+  error_message: string;
+  timestamp: string;
+}
+
 interface CardFrontmatter {
   title: string;
   tags: string[];
@@ -529,6 +536,9 @@ interface LumioRepository {
   format_version: number;
   sync_status: string;
   sync_error_message?: string;
+  sync_error_type?: string;
+  is_auth_error?: boolean;
+  sync_failed_at?: string;
 }
 
 async function findRepositoryByDocoraId(
@@ -688,12 +698,17 @@ async function handleCreate(
     content = file.content;
   }
 
+  // Log recovery if repo was previously in failed state
+  if (repo.sync_status === 'failed') {
+    console.log(`[handleCreate] RECOVERY: repo ${repo.id} transitioning from failed -> synced`);
+  }
+
   // README.md - extract deck metadata (no validation)
   if (fileName.toLowerCase() === "readme.md") {
     const { frontmatter } = parseFrontmatter(content);
     const deckMeta = extractDeckMetadata(frontmatter);
 
-    // Update repository with deck metadata
+    // Update repository with deck metadata and clear any error state
     await serviceClient
       .from("repositories")
       .update({
@@ -701,6 +716,9 @@ async function handleCreate(
         format_version: deckMeta.lumio_format_version,
         sync_status: "synced",
         sync_error_message: null,
+        sync_error_type: null,
+        is_auth_error: false,
+        sync_failed_at: null,
       })
       .eq("id", repo.id);
 
@@ -760,12 +778,15 @@ async function handleCreate(
       return { success: true, message: `Card received: ${filePath}` };
     }
 
-    // Mark repository as synced (first card received = sync working)
+    // Mark repository as synced and clear any error state (auto-recovery)
     await serviceClient
       .from("repositories")
       .update({
         sync_status: "synced",
         sync_error_message: null,
+        sync_error_type: null,
+        is_auth_error: false,
+        sync_failed_at: null,
       })
       .eq("id", repo.id);
 
@@ -796,6 +817,11 @@ async function handleUpdate(
       success: false,
       message: `Repository not found: ${repository.repository_id}`,
     };
+  }
+
+  // Log recovery if repo was previously in failed state
+  if (repo.sync_status === 'failed') {
+    console.log(`[handleUpdate] RECOVERY: repo ${repo.id} transitioning from failed -> synced`);
   }
 
   // Decode content
@@ -835,6 +861,7 @@ async function handleUpdate(
     const { frontmatter } = parseFrontmatter(content);
     const deckMeta = extractDeckMetadata(frontmatter);
 
+    // Update repository with deck metadata and clear any error state
     await serviceClient
       .from("repositories")
       .update({
@@ -842,6 +869,9 @@ async function handleUpdate(
         format_version: deckMeta.lumio_format_version,
         sync_status: "synced",
         sync_error_message: null,
+        sync_error_type: null,
+        is_auth_error: false,
+        sync_failed_at: null,
       })
       .eq("id", repo.id);
 
@@ -946,12 +976,15 @@ async function handleUpdate(
         return { success: true, message: `Card received: ${filePath}` };
       }
 
-      // Mark repository as synced
+      // Mark repository as synced and clear any error state (auto-recovery)
       await serviceClient
         .from("repositories")
         .update({
           sync_status: "synced",
           sync_error_message: null,
+          sync_error_type: null,
+          is_auth_error: false,
+          sync_failed_at: null,
         })
         .eq("id", repo.id);
 
@@ -1024,6 +1057,51 @@ async function handleDelete(
   return { success: true, message: `Ignored file type: ${filePath}` };
 }
 
+/**
+ * Handle SYNC_FAILED webhook - Docora reports a sync failure for a repository
+ */
+async function handleSyncFailed(
+  serviceClient: ReturnType<typeof createClient>,
+  payload: DocoraErrorPayload
+): Promise<{ success: boolean; message: string }> {
+  const { repository, error_type, error_message } = payload;
+
+  // Find Lumio repository by Docora ID
+  const repo = await findRepositoryByDocoraId(
+    serviceClient,
+    repository.repository_id
+  );
+
+  // Unknown repos: ignore silently, return 200 OK (per locked decision)
+  if (!repo) {
+    console.log("[handleSyncFailed] Unknown repository, ignoring:", repository.repository_id);
+    return { success: true, message: "Unknown repository, ignored" };
+  }
+
+  // Determine if this is an auth error (check if error_type contains "auth")
+  const isAuthError = error_type.toLowerCase().includes("auth");
+
+  // Update repository with failure details (idempotent -- always overwrite per locked decision)
+  const { error: updateError } = await serviceClient
+    .from("repositories")
+    .update({
+      sync_status: "failed",
+      sync_error_type: error_type,
+      sync_error_message: error_message,
+      is_auth_error: isAuthError,
+      sync_failed_at: new Date().toISOString(),
+    })
+    .eq("id", repo.id);
+
+  if (updateError) {
+    console.error("[handleSyncFailed] DB update error:", updateError.message);
+    return { success: false, message: `Failed to store error: ${updateError.message}` };
+  }
+
+  console.log(`[handleSyncFailed] Stored failure for repo ${repo.id}: type=${error_type}, is_auth=${isAuthError}`);
+  return { success: true, message: `Sync failure recorded: ${error_type}` };
+}
+
 // =============================================================================
 // REQUEST HANDLER
 // =============================================================================
@@ -1088,8 +1166,15 @@ serve(async (req) => {
       });
     }
 
-    // Parse payload
-    const payload: DocoraWebhookPayload = JSON.parse(rawBody);
+    // Get action from URL path (before parsing payload, since sync_failed has different shape)
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const action = pathParts[pathParts.length - 1]; // Last part: create, update, delete, sync_failed
+    console.log("[docora-webhook] Action:", action, "Path parts:", pathParts);
+
+    // Parse payload (sync_failed has a different shape than file-based payloads)
+    const parsedBody = JSON.parse(rawBody);
+    const payload: DocoraWebhookPayload = parsedBody;
     const fileChunk = payload.file?.chunk;
     console.log("[docora-webhook] Payload:", {
       repository_id: payload.repository?.repository_id,
@@ -1098,12 +1183,6 @@ serve(async (req) => {
       has_chunk: !!fileChunk,
       chunk_info: fileChunk ? `${fileChunk.index + 1}/${fileChunk.total} (id: ${fileChunk.id})` : 'none',
     });
-
-    // Get action from URL path
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    const action = pathParts[pathParts.length - 1]; // Last part: create, update, delete
-    console.log("[docora-webhook] Action:", action, "Path parts:", pathParts);
 
     const serviceClient = createServiceSupabaseClient();
 
@@ -1121,6 +1200,10 @@ serve(async (req) => {
       case "delete":
         console.log("[docora-webhook] Calling handleDelete");
         result = await handleDelete(serviceClient, payload);
+        break;
+      case "sync_failed":
+        console.log("[docora-webhook] Calling handleSyncFailed");
+        result = await handleSyncFailed(serviceClient, parsedBody as DocoraErrorPayload);
         break;
       default:
         console.log("[docora-webhook] ERROR: Unknown action:", action);
