@@ -1,7 +1,7 @@
 # Requirements: Lumio
 
 **Defined:** 2026-02-17
-**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
+**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
 
 ## v1.6 Requirements
 
@@ -51,22 +51,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SYNC-01 | — | Pending |
-| SYNC-02 | — | Pending |
-| SYNC-03 | — | Pending |
-| TOKEN-01 | — | Pending |
-| TOKEN-02 | — | Pending |
-| ERRDSP-01 | — | Pending |
-| ERRDSP-02 | — | Pending |
-| TOKUI-01 | — | Pending |
-| TOKUI-02 | — | Pending |
-| TOKUI-03 | — | Pending |
+| SYNC-01 | Phase 17 | Pending |
+| SYNC-02 | Phase 17 | Pending |
+| SYNC-03 | Phase 17 | Pending |
+| TOKEN-01 | Phase 19 | Pending |
+| TOKEN-02 | Phase 19 | Pending |
+| ERRDSP-01 | Phase 18 | Pending |
+| ERRDSP-02 | Phase 18 | Pending |
+| TOKUI-01 | Phase 19 | Pending |
+| TOKUI-02 | Phase 19 | Pending |
+| TOKUI-03 | Phase 19 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-17*
-*Last updated: 2026-02-17 after initial definition*
+*Last updated: 2026-02-17 after roadmap creation*
