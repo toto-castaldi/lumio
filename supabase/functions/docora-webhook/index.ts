@@ -909,6 +909,18 @@ async function handleUpdate(
         mimeType
       );
 
+      // Mark repository as synced and clear any error state (auto-recovery)
+      await serviceClient
+        .from("repositories")
+        .update({
+          sync_status: "synced",
+          sync_error_message: null,
+          sync_error_type: null,
+          is_auth_error: false,
+          sync_failed_at: null,
+        })
+        .eq("id", repo.id);
+
       return { success: true, message: `Image updated: ${filePath}` };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
@@ -951,6 +963,18 @@ async function handleUpdate(
         .from("card_assets")
         .delete()
         .eq("card_id", existingCard.id);
+
+      // Mark repository as synced and clear any error state (auto-recovery)
+      await serviceClient
+        .from("repositories")
+        .update({
+          sync_status: "synced",
+          sync_error_message: null,
+          sync_error_type: null,
+          is_auth_error: false,
+          sync_failed_at: null,
+        })
+        .eq("id", repo.id);
 
       return { success: true, message: `Card updated: ${filePath}` };
     } else {
