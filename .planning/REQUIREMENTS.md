@@ -9,9 +9,9 @@ Requirements for v1.6 Sync Error Handling. Each maps to roadmap phases.
 
 ### Sync Error Handling (Backend)
 
-- [ ] **SYNC-01**: Backend handles Docora `sync_failed` webhook with HMAC validation
-- [ ] **SYNC-02**: Backend stores sync failure details (error type, message, circuit breaker status) in repositories table
-- [ ] **SYNC-03**: Backend resets `sync_status` to `synced` when a successful create/update webhook arrives for a previously failed repo
+- [x] **SYNC-01**: Backend handles Docora `sync_failed` webhook with HMAC validation
+- [x] **SYNC-02**: Backend stores sync failure details (error type, message, circuit breaker status) in repositories table
+- [x] **SYNC-03**: Backend resets `sync_status` to `synced` when a successful create/update webhook arrives for a previously failed repo
 
 ### Token Update (Backend)
 
@@ -51,9 +51,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SYNC-01 | Phase 17 | Pending |
-| SYNC-02 | Phase 17 | Pending |
-| SYNC-03 | Phase 17 | Pending |
+| SYNC-01 | Phase 17 | Complete |
+| SYNC-02 | Phase 17 | Complete |
+| SYNC-03 | Phase 17 | Complete |
 | TOKEN-01 | Phase 19 | Pending |
 | TOKEN-02 | Phase 19 | Pending |
 | ERRDSP-01 | Phase 18 | Pending |

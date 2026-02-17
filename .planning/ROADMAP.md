@@ -71,7 +71,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 
 **Milestone Goal:** Handle Docora sync failures gracefully -- show errors in the app and let users fix expired PAT tokens without leaving the repository list.
 
-- [ ] **Phase 17: Sync Failure Backend** - Webhook handler for sync_failed events with DB error storage and auto-recovery
+- [x] **Phase 17: Sync Failure Backend** - Webhook handler for sync_failed events with DB error storage and auto-recovery (completed 2026-02-17)
 - [ ] **Phase 18: Sync Error Display** - Error indicators and messages visible in the repository list
 - [ ] **Phase 19: Token Update Flow** - Bottom-sheet modal for error details and PAT token refresh
 
@@ -85,7 +85,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
   1. When Docora sends a `sync_failed` webhook, the backend validates HMAC and processes the event without error
   2. The repository record stores the failure details (error type, error message, circuit breaker status) and `sync_status` is set to `failed`
   3. When a successful `create`/`update` webhook arrives for a previously failed repository, `sync_status` resets to `synced` and error fields are cleared
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 17-01-PLAN.md — Sync failure webhook handler, DB migration, and auto-recovery logic
@@ -140,7 +140,7 @@ Phases execute in numeric order: 17 -> 18 -> 19
 | 14. Card Browse | v1.4 | 1/1 | Complete | 2026-02-11 |
 | 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
 | 16. Study Screen Polish | v1.5 | 1/1 | Complete | 2026-02-12 |
-| 17. Sync Failure Backend | v1.6 | 0/1 | Not started | - |
+| 17. Sync Failure Backend | 1/1 | Complete   | 2026-02-17 | - |
 | 18. Sync Error Display | v1.6 | 0/1 | Not started | - |
 | 19. Token Update Flow | v1.6 | 0/1 | Not started | - |
 

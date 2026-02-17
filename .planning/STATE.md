@@ -10,25 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 17 of 19 (Sync Failure Backend)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-17 -- Roadmap created for v1.6
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Phase 17 complete
+Last activity: 2026-02-17 -- Phase 17 Plan 01 executed
 
-Progress (v1.6): [..........] 0% (0/3 plans)
-Progress (overall): 38/41 plans across 6 milestones
+Progress (v1.6): [###.......] 33% (1/3 plans)
+Progress (overall): 39/41 plans across 6 milestones
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38 (20 v1.1 + 9 v1.2 + 4 v1.3 + 4 v1.4 + 1 v1.5)
+- Total plans completed: 39 (20 v1.1 + 9 v1.2 + 4 v1.3 + 4 v1.4 + 1 v1.5 + 1 v1.6)
 - Total milestones shipped: 5
-- Timeline: 15 days (2026-01-29 to 2026-02-12)
+- Timeline: 20 days (2026-01-29 to 2026-02-17)
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (29 entries).
+
+- Phase 17: Used boolean is_auth_error flag computed in webhook handler rather than raw string checks in app
+- Phase 17: Unknown repos in sync_failed return 200 OK silently to prevent Docora retries
+- Phase 17: Error field clearing pattern -- every sync_status='synced' update must also clear all error fields
 
 ### Pending Todos
 
@@ -41,9 +45,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/17-sync-failure-backend/17-CONTEXT.md
+Stopped at: Completed 17-01-PLAN.md
+Resume file: .planning/phases/17-sync-failure-backend/17-01-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-17 (Phase 17 context gathered)*
+*Last updated: 2026-02-17 (Phase 17 Plan 01 complete)*
