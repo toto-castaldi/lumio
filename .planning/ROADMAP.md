@@ -85,10 +85,11 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
   1. When Docora sends a `sync_failed` webhook, the backend validates HMAC and processes the event without error
   2. The repository record stores the failure details (error type, error message, circuit breaker status) and `sync_status` is set to `failed`
   3. When a successful `create`/`update` webhook arrives for a previously failed repository, `sync_status` resets to `synced` and error fields are cleared
-**Plans:** 1/1 plans complete
+**Plans:** 2 plans (1 complete + 1 gap closure)
 
 Plans:
-- [ ] 17-01-PLAN.md — Sync failure webhook handler, DB migration, and auto-recovery logic
+- [x] 17-01-PLAN.md — Sync failure webhook handler, DB migration, and auto-recovery logic
+- [ ] 17-02-PLAN.md — Gap closure: add auto-recovery to handleUpdate existing-card and image-file paths
 
 ### Phase 18: Sync Error Display
 **Goal**: Users can see which repositories have sync problems directly in the repository list
