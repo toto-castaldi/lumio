@@ -2,7 +2,7 @@
 export type LLMProvider = 'openai' | 'anthropic';
 
 // Sync status for repositories
-export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'error';
+export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'error' | 'failed';
 
 // Platform types
 export type Platform = 'web' | 'mobile';
@@ -51,6 +51,9 @@ export interface Repository {
   formatVersion: number;
   syncStatus: SyncStatus;
   syncErrorMessage?: string;
+  syncErrorType?: string;
+  isAuthError: boolean;
+  syncFailedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

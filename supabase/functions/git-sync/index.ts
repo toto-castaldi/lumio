@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 // Types
-type SyncStatus = "pending" | "syncing" | "synced" | "error";
+type SyncStatus = "pending" | "syncing" | "synced" | "error" | "failed";
 
 interface Repository {
   id: string;
@@ -23,6 +23,9 @@ interface Repository {
   format_version: number;
   sync_status: SyncStatus;
   sync_error_message?: string;
+  sync_error_type?: string;
+  is_auth_error: boolean;
+  sync_failed_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -58,6 +58,9 @@ function mapRepository(dbRepo: Record<string, unknown>): Repository {
     formatVersion: dbRepo.format_version as number,
     syncStatus: dbRepo.sync_status as Repository['syncStatus'],
     syncErrorMessage: dbRepo.sync_error_message as string | undefined,
+    syncErrorType: dbRepo.sync_error_type as string | undefined,
+    isAuthError: (dbRepo.is_auth_error as boolean) ?? false,
+    syncFailedAt: dbRepo.sync_failed_at as string | undefined,
     createdAt: dbRepo.created_at as string,
     updatedAt: dbRepo.updated_at as string,
   };

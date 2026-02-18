@@ -23,6 +23,8 @@ export const lightColors = {
   primaryLight: '#DBEAFE',
   danger: '#ef4444',
   dangerLight: '#FEE2E2',
+  warning: '#f59e0b',
+  warningLight: '#FEF3C7',
   border: '#e5e7eb',
   card: '#ffffff',
 };
@@ -39,6 +41,8 @@ export const darkColors: Colors = {
   primaryLight: '#1e3a5f',
   danger: '#f87171',
   dangerLight: '#7f1d1d',
+  warning: '#fbbf24',
+  warningLight: '#78350f',
   border: '#374151',
   card: '#1f2937',
 };

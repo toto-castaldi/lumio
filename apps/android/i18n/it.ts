@@ -131,6 +131,13 @@ const it: Translations = {
     score: '%{correct}/%{total}',
     failedToLoad: 'Impossibile caricare lo storico',
   },
+  syncStatus: {
+    pending: 'In attesa di sincronizzazione...',
+    syncing: 'Sincronizzazione...',
+    authError: 'Autenticazione fallita',
+    syncError: 'Sincronizzazione fallita',
+    unknownError: 'Errore di sincronizzazione',
+  },
   navigation: {
     repositories: 'Repository',
     settings: 'Impostazioni',

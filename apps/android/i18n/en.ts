@@ -128,6 +128,13 @@ const en = {
     score: '%{correct}/%{total}',
     failedToLoad: 'Failed to load study history',
   },
+  syncStatus: {
+    pending: 'Waiting for sync...',
+    syncing: 'Syncing...',
+    authError: 'Authentication failed',
+    syncError: 'Sync failed',
+    unknownError: 'Sync error occurred',
+  },
   navigation: {
     repositories: 'Repositories',
     settings: 'Settings',
