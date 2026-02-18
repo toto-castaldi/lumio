@@ -135,6 +135,24 @@ const en = {
     syncError: 'Sync failed',
     unknownError: 'Sync error occurred',
   },
+  tokenUpdate: {
+    errorDetails: 'Error Details',
+    authErrorTitle: 'Authentication Failed',
+    authErrorDescription:
+      'The access token for this repository is expired or invalid. Enter a new Personal Access Token (PAT) to resume syncing.',
+    syncErrorTitle: 'Sync Failed',
+    syncErrorDescription:
+      'This repository encountered a sync error. The issue may resolve automatically on the next sync attempt.',
+    errorMessage: 'Error: %{message}',
+    newTokenLabel: 'New Personal Access Token',
+    newTokenPlaceholder: 'ghp_...',
+    updateToken: 'Update Token',
+    updating: 'Updating...',
+    tokenUpdated: 'Token updated',
+    tokenUpdatedBody:
+      'The repository will sync on the next cycle.',
+    tokenUpdateFailed: 'Failed to update token',
+  },
   navigation: {
     repositories: 'Repositories',
     settings: 'Settings',

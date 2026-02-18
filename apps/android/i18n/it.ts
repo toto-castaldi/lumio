@@ -138,6 +138,24 @@ const it: Translations = {
     syncError: 'Sincronizzazione fallita',
     unknownError: 'Errore di sincronizzazione',
   },
+  tokenUpdate: {
+    errorDetails: 'Dettagli errore',
+    authErrorTitle: 'Autenticazione fallita',
+    authErrorDescription:
+      'Il token di accesso per questo repository è scaduto o non valido. Inserisci un nuovo Personal Access Token (PAT) per riprendere la sincronizzazione.',
+    syncErrorTitle: 'Sincronizzazione fallita',
+    syncErrorDescription:
+      'Questo repository ha riscontrato un errore di sincronizzazione. Il problema potrebbe risolversi automaticamente al prossimo tentativo.',
+    errorMessage: 'Errore: %{message}',
+    newTokenLabel: 'Nuovo Personal Access Token',
+    newTokenPlaceholder: 'ghp_...',
+    updateToken: 'Aggiorna token',
+    updating: 'Aggiornamento...',
+    tokenUpdated: 'Token aggiornato',
+    tokenUpdatedBody:
+      'Il repository si sincronizzerà al prossimo ciclo.',
+    tokenUpdateFailed: 'Impossibile aggiornare il token',
+  },
   navigation: {
     repositories: 'Repository',
     settings: 'Impostazioni',

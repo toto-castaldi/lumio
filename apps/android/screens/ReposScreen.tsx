@@ -21,6 +21,7 @@ import { useI18n } from '../hooks/useI18n';
 import { RepoListItem } from '../components/RepoListItem';
 import { AddRepoForm } from '../components/AddRepoForm';
 import { EmptyState } from '../components/EmptyState';
+import { RepoErrorModal } from '../components/RepoErrorModal';
 
 /**
  * Repository management screen.
@@ -38,6 +39,7 @@ export function ReposScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [showPatPrompt, setShowPatPrompt] = useState(false);
+  const [errorRepo, setErrorRepo] = useState<Repository | null>(null);
 
   const fetchRepos = useCallback(async () => {
     try {
@@ -175,7 +177,13 @@ export function ReposScreen() {
         renderItem={({ item }) => (
           <RepoListItem
             repo={item}
-            onPress={() => navigation.navigate('CardList', { repoId: item.id, repoName: item.name })}
+            onPress={() => {
+              if (item.syncStatus === 'failed') {
+                setErrorRepo(item);
+              } else {
+                navigation.navigate('CardList', { repoId: item.id, repoName: item.name });
+              }
+            }}
             onDelete={handleDeleteRepo}
           />
         )}
@@ -191,6 +199,15 @@ export function ReposScreen() {
             subtitle={t('repos.emptySubtitle')}
           />
         }
+      />
+      <RepoErrorModal
+        visible={!!errorRepo}
+        onClose={() => setErrorRepo(null)}
+        repo={errorRepo}
+        onTokenUpdated={() => {
+          setErrorRepo(null);
+          fetchRepos();
+        }}
       />
     </View>
   );
