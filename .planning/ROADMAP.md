@@ -73,7 +73,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 
 - [x] **Phase 17: Sync Failure Backend** - Webhook handler for sync_failed events with DB error storage and auto-recovery (completed 2026-02-17)
 - [x] **Phase 18: Sync Error Display** - Error indicators and messages visible in the repository list (completed 2026-02-18)
-- [ ] **Phase 19: Token Update Flow** - Bottom-sheet modal for error details and PAT token refresh
+- [x] **Phase 19: Token Update Flow** - Bottom-sheet modal for error details and PAT token refresh (completed 2026-02-18)
 
 ## Phase Details
 
@@ -143,7 +143,7 @@ Phases execute in numeric order: 17 -> 18 -> 19
 | 16. Study Screen Polish | v1.5 | 1/1 | Complete | 2026-02-12 |
 | 17. Sync Failure Backend | v1.6 | Complete    | 2026-02-17 | 2026-02-17 |
 | 18. Sync Error Display | v1.6 | 1/1 | Complete | 2026-02-18 |
-| 19. Token Update Flow | v1.6 | 1/1 | Complete | 2026-02-18 |
+| 19. Token Update Flow | v1.6 | Complete    | 2026-02-18 | 2026-02-18 |
 
 ---
 *Roadmap created: 2026-01-29*
