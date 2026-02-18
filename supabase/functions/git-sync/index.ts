@@ -177,6 +177,29 @@ async function docoraAddRepository(
 }
 
 /**
+ * Update the access token for a repository in Docora
+ */
+async function docoraUpdateToken(docoraRepositoryId: string, githubToken: string): Promise<void> {
+  if (!DOCORA_TOKEN_AUTHENTICATION) {
+    throw new Error("DOCORA_TOKEN_AUTHENTICATION not configured");
+  }
+
+  const response = await fetch(`${DOCORA_API_URL}/api/repositories/${docoraRepositoryId}/token`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${DOCORA_TOKEN_AUTHENTICATION}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ github_token: githubToken }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Docora API error (${response.status}): ${errorText}`);
+  }
+}
+
+/**
  * Unregister a repository from Docora monitoring
  */
 async function docoraDeleteRepository(docoraRepositoryId: string): Promise<void> {
@@ -675,6 +698,88 @@ serve(async (req) => {
         const allCards = await getAllCards(supabase, userId);
         return new Response(
           JSON.stringify({ success: true, cards: allCards }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      case "update_token": {
+        const { repositoryId, accessToken } = body;
+        if (!repositoryId) {
+          return new Response(
+            JSON.stringify({ error: "Missing repositoryId" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+        if (!accessToken) {
+          return new Response(
+            JSON.stringify({ error: "Missing accessToken" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Verify user owns this repository via user_repositories join
+        const { data: userRepo, error: urError } = await supabase
+          .from("user_repositories")
+          .select("repository_id")
+          .eq("user_id", userId)
+          .eq("repository_id", repositoryId)
+          .single();
+
+        if (urError || !userRepo) {
+          return new Response(
+            JSON.stringify({ error: "Repository not found" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 404,
+            }
+          );
+        }
+
+        // Get docora_repository_id from repositories table
+        const { data: repo, error: repoError } = await supabase
+          .from("repositories")
+          .select("docora_repository_id")
+          .eq("id", repositoryId)
+          .single();
+
+        if (repoError || !repo?.docora_repository_id) {
+          return new Response(
+            JSON.stringify({ error: "Repository not registered with Docora" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Proxy token update to Docora
+        await docoraUpdateToken(repo.docora_repository_id, accessToken);
+
+        // Optimistically clear sync error state (TOKEN-02)
+        await supabase
+          .from("repositories")
+          .update({
+            sync_status: "synced",
+            sync_error_message: null,
+            sync_error_type: null,
+            is_auth_error: false,
+            sync_failed_at: null,
+          })
+          .eq("id", repositoryId);
+
+        console.log(`[git-sync] Token updated for repository ${repositoryId}, error state cleared`);
+
+        return new Response(
+          JSON.stringify({ success: true }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,

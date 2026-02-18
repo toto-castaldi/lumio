@@ -131,6 +131,16 @@ export async function getUserStats(): Promise<UserStats> {
 }
 
 /**
+ * Update the access token (PAT) for a repository
+ * Proxies the update to Docora and clears sync error state
+ * @param repositoryId - UUID of the repository
+ * @param accessToken - New Personal Access Token
+ */
+export async function updateRepositoryToken(repositoryId: string, accessToken: string): Promise<void> {
+  await callGitSync('update_token', { repositoryId, accessToken });
+}
+
+/**
  * Map database card to frontend Card type
  */
 function mapCard(dbCard: Record<string, unknown>): Card {

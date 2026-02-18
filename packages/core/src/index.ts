@@ -29,6 +29,7 @@ export {
   getUserRepositories,
   getUserStats,
   getRepositoryCards,
+  updateRepositoryToken,
 } from './supabase/repositories';
 
 // Export card assets functions
