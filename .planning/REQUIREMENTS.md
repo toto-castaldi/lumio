@@ -20,8 +20,8 @@ Requirements for v1.6 Sync Error Handling. Each maps to roadmap phases.
 
 ### Error Display (App)
 
-- [ ] **ERRDSP-01**: User sees error indicator on repos with sync failures in the repository list
-- [ ] **ERRDSP-02**: User sees error details (error message from Docora) in the repo error state
+- [x] **ERRDSP-01**: User sees error indicator on repos with sync failures in the repository list
+- [x] **ERRDSP-02**: User sees error details (error message from Docora) in the repo error state
 
 ### Token Refresh (App)
 
@@ -56,8 +56,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYNC-03 | Phase 17 | Complete |
 | TOKEN-01 | Phase 19 | Pending |
 | TOKEN-02 | Phase 19 | Pending |
-| ERRDSP-01 | Phase 18 | Pending |
-| ERRDSP-02 | Phase 18 | Pending |
+| ERRDSP-01 | Phase 18 | Complete |
+| ERRDSP-02 | Phase 18 | Complete |
 | TOKUI-01 | Phase 19 | Pending |
 | TOKUI-02 | Phase 19 | Pending |
 | TOKUI-03 | Phase 19 | Pending |
