@@ -113,10 +113,10 @@ Plans:
   2. For auth-related errors, the modal presents a text input for entering a new PAT token
   3. Submitting a new PAT calls the backend, which proxies the update to Docora API
   4. After successful token update, the repository error state clears immediately in the UI without requiring a manual refresh
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 19-01: Token update edge function and error detail modal
+- [ ] 19-01-PLAN.md — Token update edge function action, @lumio/core export, bottom-sheet error modal, and ReposScreen integration
 
 ## Progress
 
