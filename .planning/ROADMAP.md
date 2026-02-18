@@ -142,7 +142,7 @@ Phases execute in numeric order: 17 -> 18 -> 19
 | 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
 | 16. Study Screen Polish | v1.5 | 1/1 | Complete | 2026-02-12 |
 | 17. Sync Failure Backend | v1.6 | Complete    | 2026-02-17 | 2026-02-17 |
-| 18. Sync Error Display | 1/1 | Complete   | 2026-02-18 | - |
+| 18. Sync Error Display | 1/1 | Complete    | 2026-02-18 | - |
 | 19. Token Update Flow | v1.6 | 0/1 | Not started | - |
 
 ---
