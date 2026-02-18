@@ -99,10 +99,10 @@ Plans:
   1. A repository with `sync_status = failed` shows a visible error indicator (icon/badge) in the repository list
   2. The error message from Docora is displayed to the user so they understand what went wrong
   3. Repositories with `sync_status = synced` show no error indicator (clean state)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 18-01: Repository list error indicators and messages
+- [ ] 18-01-PLAN.md — Sync error indicators, messages, and status display in RepoListItem
 
 ### Phase 19: Token Update Flow
 **Goal**: Users can fix auth-related sync failures by updating their PAT token from within the app
