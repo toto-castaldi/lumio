@@ -7,7 +7,7 @@
 - SHIPPED **v1.3 Bugfix & UX Polish** -- Phases 10-12 (shipped 2026-02-10)
 - SHIPPED **v1.4 Card Browse & Stats** -- Phases 13-15 (shipped 2026-02-11)
 - SHIPPED **v1.5 Study UX Fixes** -- Phase 16 (shipped 2026-02-12)
-- IN PROGRESS **v1.6 Sync Error Handling** -- Phases 17-19
+- SHIPPED **v1.6 Sync Error Handling** -- Phases 17-19 (shipped 2026-02-18)
 
 ## Phases
 
@@ -67,7 +67,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 
 </details>
 
-### v1.6 Sync Error Handling (In Progress)
+### v1.6 Sync Error Handling (SHIPPED 2026-02-18)
 
 **Milestone Goal:** Handle Docora sync failures gracefully -- show errors in the app and let users fix expired PAT tokens without leaving the repository list.
 
@@ -99,10 +99,10 @@ Plans:
   1. A repository with `sync_status = failed` shows a visible error indicator (icon/badge) in the repository list
   2. The error message from Docora is displayed to the user so they understand what went wrong
   3. Repositories with `sync_status = synced` show no error indicator (clean state)
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 
 Plans:
-- [ ] 18-01-PLAN.md — Sync error indicators, messages, and status display in RepoListItem
+- [x] 18-01-PLAN.md — Sync error indicators, messages, and status display in RepoListItem
 
 ### Phase 19: Token Update Flow
 **Goal**: Users can fix auth-related sync failures by updating their PAT token from within the app
@@ -113,10 +113,10 @@ Plans:
   2. For auth-related errors, the modal presents a text input for entering a new PAT token
   3. Submitting a new PAT calls the backend, which proxies the update to Docora API
   4. After successful token update, the repository error state clears immediately in the UI without requiring a manual refresh
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 
 Plans:
-- [ ] 19-01-PLAN.md — Token update edge function action, @lumio/core export, bottom-sheet error modal, and ReposScreen integration
+- [x] 19-01-PLAN.md — Token update edge function action, @lumio/core export, bottom-sheet error modal, and ReposScreen integration
 
 ## Progress
 
@@ -142,8 +142,8 @@ Phases execute in numeric order: 17 -> 18 -> 19
 | 15. Study Stats | v1.4 | 2/2 | Complete | 2026-02-11 |
 | 16. Study Screen Polish | v1.5 | 1/1 | Complete | 2026-02-12 |
 | 17. Sync Failure Backend | v1.6 | Complete    | 2026-02-17 | 2026-02-17 |
-| 18. Sync Error Display | 1/1 | Complete    | 2026-02-18 | - |
-| 19. Token Update Flow | v1.6 | 0/1 | Not started | - |
+| 18. Sync Error Display | v1.6 | 1/1 | Complete | 2026-02-18 |
+| 19. Token Update Flow | v1.6 | 1/1 | Complete | 2026-02-18 |
 
 ---
 *Roadmap created: 2026-01-29*
@@ -153,3 +153,4 @@ Phases execute in numeric order: 17 -> 18 -> 19
 *v1.4 shipped: 2026-02-11*
 *v1.5 shipped: 2026-02-12*
 *v1.6 roadmap created: 2026-02-17*
+*v1.6 shipped: 2026-02-18*
