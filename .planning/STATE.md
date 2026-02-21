@@ -5,14 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** v1.7 GSD Versioning — versione da .planning/STATE.md
 
 ## Current Position
 
-Phase: None active
-Plan: None active
-Status: v1.6 milestone completed and archived
-Last activity: 2026-02-21 -- v1.6 validated, tagged, deployed to production
+Milestone: v1.7
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-21 — Milestone v1.7 started
 
 Progress (overall): 42/42 plans across 6 milestones
 
@@ -40,9 +41,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v1.6 milestone archived, ready for /gsd:new-milestone
+Stopped at: v1.7 milestone started, defining requirements
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-21 (v1.6 milestone archived)*
+*Last updated: 2026-02-21 (v1.7 milestone started)*

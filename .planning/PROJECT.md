@@ -64,7 +64,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(Nessun requisito attivo — milestone v1.6 completata, prossima milestone da definire)
+**Current Milestone: v1.7 GSD Versioning**
+
+**Goal:** La versione dell'app e del sito viene da .planning/STATE.md (GSD milestone), eliminando tutti i meccanismi di versioning automatico esistenti.
+
+**Target features:**
+- Versione estratta da STATE.md al build time
+- Rimozione husky, commitlint, commitizen, release-please, auto-release CI, git tags
+- Versione visibile nella landing page
 
 ### Out of Scope
 
@@ -144,4 +151,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Optimistic error clearing after token update | Immediate UI feedback without waiting for next sync cycle | ✓ Good — v1.6 |
 
 ---
-*Last updated: 2026-02-21 after v1.6 milestone completed*
+*Last updated: 2026-02-21 after v1.7 milestone started*
