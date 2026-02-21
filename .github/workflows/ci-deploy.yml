@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Extract version from STATE.md
+        run: node scripts/extract-version.cjs
+
       - name: Build packages
         run: pnpm build:packages
 
@@ -71,6 +74,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Extract version from STATE.md
+        id: version
+        run: |
+          VERSION=$(node scripts/extract-version.cjs)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build packages
         run: pnpm build:packages
 
@@ -87,7 +96,7 @@ jobs:
 
       - name: Build release APK
         working-directory: apps/android/android
-        run: ./gradlew app:assembleRelease -PversionCode=${{ github.run_number }} -PversionName=0.0.0
+        run: ./gradlew app:assembleRelease -PversionCode=${{ github.run_number }} -PversionName=${{ steps.version.outputs.version }}
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -180,10 +189,10 @@ jobs:
         with:
           ref: main
 
-      - name: Extract version info
+      - name: Extract version from STATE.md
         id: version
         run: |
-          VERSION=$(grep -oP 'VERSION = "\K[^"]+' packages/shared/src/version.ts)
+          VERSION=$(node scripts/extract-version.cjs)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
           echo "git_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
