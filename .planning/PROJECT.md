@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, sessioni di studio configurabili, navigazione carte nei repository, storico sessioni di studio, e landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, sessioni di studio configurabili, navigazione carte nei repository, storico sessioni di studio, gestione errori sync con aggiornamento token in-app, e landing page per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema.
 
 ## Core Value
 
@@ -53,17 +53,18 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Pulsante "Scheda successiva" ancorato in basso senza spreco di spazio — v1.5
 - ✓ Contrasto dark mode su opzioni risposta e pannello spiegazione — v1.5
 
+- ✓ Webhook handler per Docora sync_failed con validazione HMAC — v1.6
+- ✓ Storage dettagli errore sync (tipo, messaggio, is_auth_error) nel DB — v1.6
+- ✓ Auto-recovery: campi errore azzerati su sync riuscito — v1.6
+- ✓ Indicatori errore nella lista repo (ambra auth, rosso sistema) — v1.6
+- ✓ Messaggio errore Docora visibile sotto URL del repo — v1.6
+- ✓ Bottom-sheet modale errore con input PAT condizionale per errori auth — v1.6
+- ✓ Edge function proxy per aggiornamento token PAT verso Docora API — v1.6
+- ✓ Clearing ottimistico errore UI dopo aggiornamento token — v1.6
+
 ### Active
 
-## Current Milestone: v1.6 Sync Error Handling
-
-**Goal:** Gestire i fallimenti di sync Docora (webhook sync_failed), mostrare errori repo nell'app, e permettere l'aggiornamento del token per repo privati.
-
-**Target features:**
-- Gestione webhook sync_failed nel backend
-- Visualizzazione errori sync nella lista repository dell'app
-- Bottom-sheet modale per dettagli errore e aggiornamento token PAT
-- Edge function per proxy PATCH token verso Docora API
+(Nessun requisito attivo — milestone v1.6 completata, prossima milestone da definire)
 
 ### Out of Scope
 
@@ -79,18 +80,20 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - Piattaforma di gestione traduzioni (Crowdin etc.) — 2 lingue, ~85 stringhe, singolo sviluppatore
 - Dettaglio per carta nelle statistiche — risultato sessione sufficiente
 - Statistiche con grafici/trend — v1.4 mostra solo lista sessioni, analytics avanzata futura
+- Auto-retry sync dall'app — Docora gestisce circuit breaker e retry internamente
+- Trigger sync manuale — Docora controlla la schedulazione sync
+- Push notification per errori sync — rimandato a milestone futura
+- UI circuit breaker (timer cooldown, conteggio retry) — over-engineering, messaggio errore sufficiente
 
 ## Context
 
-**Stato attuale (post v1.5):**
+**Stato attuale (post v1.6):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase: auth, DB, storage, edge functions, Docora webhook + study_sessions table
-- ~9,600 LOC TypeScript/JS (~9,100 Android + ~450 landing)
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked
 - CI/CD: auto-release → lint → build-apk → deploy-landing → deploy-migrations → deploy-functions
-- App bilingue IT/EN con branding Lumio, sessioni configurabili, card browse, study history, studio forward-only
-- 5 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes)
-- Docora webhook sync_failed: circuit breaker notification with error details and retry info
+- App bilingue IT/EN con branding Lumio, sessioni configurabili, card browse, study history, studio forward-only, sync error handling con token update in-app
+- 6 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling)
 
 ## Constraints
 
@@ -133,6 +136,12 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Absolute positioning for bottom button | Simpler than flex restructure, works with ScrollView | ✓ Good — v1.5 |
 | Dark mode emerald-900/red-900 backgrounds | High contrast with white text on correct/incorrect answers | ✓ Good — v1.5 |
 | bottomInset prop for QuizCard | Scroll padding behind floating button, keeps component reusable | ✓ Good — v1.5 |
+| is_auth_error boolean flag in webhook handler | Cleaner than raw string check in app, ready for conditional UI | ✓ Good — v1.6 |
+| Unknown repos in sync_failed return 200 OK | Prevents Docora retries for repos not in our DB | ✓ Good — v1.6 |
+| Error field clearing pattern on every synced update | Consistent auto-recovery across all 6 webhook success paths | ✓ Good — v1.6 |
+| Amber for auth errors, red for system errors | Visual distinction: user-fixable vs auto-recoverable | ✓ Good — v1.6 |
+| 50% sheet height for error modal | Simpler content than card preview (80%), appropriate sizing | ✓ Good — v1.6 |
+| Optimistic error clearing after token update | Immediate UI feedback without waiting for next sync cycle | ✓ Good — v1.6 |
 
 ---
-*Last updated: 2026-02-17 after v1.6 milestone started*
+*Last updated: 2026-02-21 after v1.6 milestone completed*

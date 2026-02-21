@@ -132,3 +132,31 @@
 
 ---
 
+
+## v1.6 Sync Error Handling (Shipped: 2026-02-21)
+
+**Delivered:** Graceful sync failure handling end-to-end -- from Docora webhook to user-facing error display and in-app PAT token refresh.
+
+**Phases completed:** 17-19 (4 plans total)
+
+**Key accomplishments:**
+
+- Webhook handler for Docora `sync_failed` events with HMAC validation, error storage, and auto-recovery on successful syncs
+- Amber/red error indicators in repo list: auth errors (user-fixable) vs system errors (auto-recoverable)
+- Bottom-sheet error modal with conditional PAT input for auth errors, info-only for system errors
+- Edge function proxy for Docora PATCH token update with optimistic UI error clearing
+- Full i18n support (IT/EN) for all sync error and token update strings
+
+**Stats:**
+
+- 16 files changed
+- 3 phases, 4 plans, 6 tasks
+- 2 days (2026-02-17 to 2026-02-18), validated 2026-02-21
+- UAT: 10/10 tests passed, 17/17 automated verification checks
+
+**Git range:** `v1.5` → `v1.6` (8 feat commits + 1 test commit)
+
+**What's next:** TBD
+
+---
+
