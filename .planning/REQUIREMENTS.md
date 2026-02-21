@@ -22,7 +22,7 @@ Requirements for milestone v1.7 GSD Versioning. Each maps to roadmap phases.
 - [x] **VER-02**: CI estrae la versione da `.planning/STATE.md` al build time e aggiorna `version.ts`
 - [x] **VER-03**: Landing page mostra la versione corrente
 - [x] **VER-04**: Edge function `/version` usa la versione estratta da STATE.md
-- [ ] **VER-05**: Documentazione `docs/VERSIONING.md` aggiornata con il nuovo flusso
+- [x] **VER-05**: Documentazione `docs/VERSIONING.md` aggiornata con il nuovo flusso
 
 ## Future Requirements
 
@@ -53,7 +53,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VER-02 | Phase 21 | Complete |
 | VER-03 | Phase 22 | Complete |
 | VER-04 | Phase 22 | Complete |
-| VER-05 | Phase 22 | Pending |
+| VER-05 | Phase 22 | Complete |
 
 **Coverage:**
 - v1.7 requirements: 11 total
