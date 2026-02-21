@@ -145,9 +145,7 @@ lumio/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci-deploy.yml       # CI/CD unificato (auto-release, lint, typecheck, deploy)
-│
-├── .release-please-manifest.json # Versione corrente (tracking)
+│       └── ci-deploy.yml       # CI/CD unificato (lint, typecheck, deploy)
 │
 ├── conf/
 │   └── nginx-lumio.conf        # Virtual host Nginx per produzione
@@ -840,57 +838,18 @@ main (production)
 | `develop` | Dev | ✅ Yes |
 | `feature/*` | - | ❌ No (solo CI) |
 
-### 6.3 Versioning con Auto-Release
+### 6.3 Versioning
 
-Il progetto usa un **job custom `auto-release`** per il versioning completamente automatico, integrato nel workflow `ci-deploy.yml`.
+Il sistema di versioning legacy (auto-release, release-please, conventional commits) è stato rimosso nella fase 20 di v1.7.
 
-**Come funziona:**
-1. Ogni push su `main` → `auto-release` analizza i commit dall'ultimo tag
-2. Se ci sono commit `feat:` o `fix:` → bump automatico, tag Git, push
-3. I job di deploy fanno `git pull` per avere la versione aggiornata
-4. **Nessuna PR richiesta** - release completamente automatiche
+**Stato attuale:**
+- La versione è un valore statico in `packages/shared/src/version.ts`
+- Il CI non crea tag Git o commit di release
+- Il build APK usa un placeholder `0.0.0` per versionName
 
-**Flusso nel workflow:**
-```
-push main
-    │
-    ▼
-auto-release (analizza feat/fix commits)
-    │
-    ├── Se ci sono commit releasabili:
-    │   ├── Calcola nuova versione
-    │   ├── Aggiorna package.json, version.ts
-    │   ├── Commit "chore(release): vX.Y.Z"
-    │   └── Crea e pusha tag
-    │
-    ▼
-lint-and-typecheck
-    │
-    ├──────────────┬──────────────┐
-    ▼              ▼              ▼
-build-web    build-mobile   deploy-migrations
-    │              │              │
-    ▼              ▼              ▼
-deploy-web   deploy-mobile  deploy-functions
-(git pull)   (git pull)     (git pull)
-```
+La fase 21 collegherà `.planning/STATE.md` come unica fonte di verità per la versione.
 
-I deploy fanno `git pull origin main` per catturare la versione aggiornata.
-
-**File aggiornati automaticamente:**
-- `package.json` (campo `version`)
-- `packages/shared/src/version.ts`
-- `.release-please-manifest.json` (tracking)
-
-**Conventional Commits:**
-
-| Tipo | Bump |
-|------|------|
-| `feat:` | MINOR (0.x.0) |
-| `fix:` | PATCH (0.0.x) |
-| `feat!:` o `fix!:` | MAJOR (x.0.0) |
-
-> Per dettagli completi vedere [docs/VERSIONING.md](./VERSIONING.md)
+> Per dettagli vedere [docs/VERSIONING.md](./VERSIONING.md)
 
 ---
 
