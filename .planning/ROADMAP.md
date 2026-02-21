@@ -85,7 +85,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 
 - [x] **Phase 20: Cleanup Legacy Versioning** - Remove all automated versioning tooling (gap closure in progress) (completed 2026-02-21)
 - [x] **Phase 21: GSD Version Pipeline** - STATE.md milestone field parsed by CI into version.ts (completed 2026-02-21)
-- [ ] **Phase 22: Version Display & Docs** - Landing page and edge function show GSD version; docs updated
+- [x] **Phase 22: Version Display & Docs** - Landing page and edge function show GSD version; docs updated (completed 2026-02-21)
 
 ## Phase Details
 
@@ -141,7 +141,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 |-------|-----------|----------------|--------|-----------|
 | 20. Cleanup Legacy Versioning | 3/3 | Complete    | 2026-02-21 | - |
 | 21. GSD Version Pipeline | 1/1 | Complete    | 2026-02-21 | - |
-| 22. Version Display & Docs | v1.7 | 0/2 | Not started | - |
+| 22. Version Display & Docs | 2/2 | Complete   | 2026-02-21 | - |
 
 ---
 *Roadmap created: 2026-01-29*
