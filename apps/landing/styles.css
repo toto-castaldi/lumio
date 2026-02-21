@@ -262,6 +262,14 @@ html[lang="it"] [lang="en"] {
   margin-top: 2rem;
 }
 
+.version-badge {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
 .footer p {
   font-size: 0.85rem;
   color: var(--text-secondary);
