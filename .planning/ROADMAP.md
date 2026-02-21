@@ -139,7 +139,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 20. Cleanup Legacy Versioning | 3/3 | Complete    | 2026-02-21 | - |
-| 21. GSD Version Pipeline | 1/1 | Complete   | 2026-02-21 | - |
+| 21. GSD Version Pipeline | 1/1 | Complete    | 2026-02-21 | - |
 | 22. Version Display & Docs | v1.7 | 0/? | Not started | - |
 
 ---
