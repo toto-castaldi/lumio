@@ -5,17 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v1.7 GSD Versioning — versione da .planning/STATE.md
+**Current focus:** v1.7 GSD Versioning -- Phase 20 Cleanup Legacy Versioning
 
 ## Current Position
 
 Milestone: v1.7
-Phase: Not started (defining requirements)
+Phase: 20 of 22 (Cleanup Legacy Versioning)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-02-21 — Milestone v1.7 started
+Status: Ready to plan
+Last activity: 2026-02-21 — Roadmap created for v1.7
 
-Progress (overall): 42/42 plans across 6 milestones
+Progress (v1.7): [░░░░░░░░░░] 0%
+Progress (overall): 42/42 plans across 6 milestones + v1.7 in progress
 
 ## Performance Metrics
 
@@ -41,9 +42,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v1.7 milestone started, defining requirements
+Stopped at: v1.7 roadmap created, Phase 20 ready to plan
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-21 (v1.7 milestone started)*
+*Last updated: 2026-02-21 (v1.7 roadmap created)*
