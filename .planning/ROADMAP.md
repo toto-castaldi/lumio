@@ -113,10 +113,10 @@ Plans:
   1. STATE.md contains a `Milestone: v1.7` field that CI can parse to extract the version string
   2. CI build step reads STATE.md, extracts the milestone version, and writes it to `version.ts`
   3. The Android app displays the version derived from STATE.md (visible in Settings screen)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 21-01: TBD
+- [ ] 21-01-PLAN.md — Create version extraction script and wire CI to derive version from STATE.md
 
 ### Phase 22: Version Display & Docs
 **Goal**: The GSD-derived version is visible on all public surfaces and the new versioning flow is documented
@@ -139,7 +139,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 20. Cleanup Legacy Versioning | 3/3 | Complete    | 2026-02-21 | - |
-| 21. GSD Version Pipeline | v1.7 | 0/? | Not started | - |
+| 21. GSD Version Pipeline | v1.7 | 0/1 | Not started | - |
 | 22. Version Display & Docs | v1.7 | 0/? | Not started | - |
 
 ---
