@@ -98,10 +98,11 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
   2. No commitlint, commitizen, or release-please configuration files exist in the repository
   3. CI workflow runs without any auto-release job or git tag creation step
   4. CHANGELOG.md no longer exists in the repository root
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 20-01: TBD
+- [ ] 20-01-PLAN.md — Remove local tooling (husky, commitlint, commitizen, release-please configs, CHANGELOG)
+- [ ] 20-02-PLAN.md — Remove CI auto-release job, delete git tags, update docs
 
 ### Phase 21: GSD Version Pipeline
 **Goal**: The app version is derived from STATE.md at build time -- a single source of truth replaces the old multi-tool chain
@@ -136,7 +137,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Cleanup Legacy Versioning | v1.7 | 0/? | Not started | - |
+| 20. Cleanup Legacy Versioning | v1.7 | 0/2 | Not started | - |
 | 21. GSD Version Pipeline | v1.7 | 0/? | Not started | - |
 | 22. Version Display & Docs | v1.7 | 0/? | Not started | - |
 
