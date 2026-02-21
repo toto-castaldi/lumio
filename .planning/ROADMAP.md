@@ -126,10 +126,11 @@ Plans:
   1. The landing page at lumio.toto-castaldi.com displays the current version matching STATE.md milestone
   2. The `/version` edge function returns the version string derived from STATE.md
   3. `docs/VERSIONING.md` documents the new GSD-based versioning flow (STATE.md as source, CI extraction, consumers)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 22-01: TBD
+- [ ] 22-01-PLAN.md — Landing page version display with CI injection
+- [ ] 22-02-PLAN.md — Document GSD versioning flow in docs/VERSIONING.md
 
 ## Progress
 
@@ -140,7 +141,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 |-------|-----------|----------------|--------|-----------|
 | 20. Cleanup Legacy Versioning | 3/3 | Complete    | 2026-02-21 | - |
 | 21. GSD Version Pipeline | 1/1 | Complete    | 2026-02-21 | - |
-| 22. Version Display & Docs | v1.7 | 0/? | Not started | - |
+| 22. Version Display & Docs | v1.7 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
