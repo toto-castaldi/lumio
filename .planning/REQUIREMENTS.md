@@ -18,8 +18,8 @@ Requirements for milestone v1.7 GSD Versioning. Each maps to roadmap phases.
 
 ### Versioning
 
-- [ ] **VER-01**: STATE.md contiene un campo `Milestone:` parsabile dal CI
-- [ ] **VER-02**: CI estrae la versione da `.planning/STATE.md` al build time e aggiorna `version.ts`
+- [x] **VER-01**: STATE.md contiene un campo `Milestone:` parsabile dal CI
+- [x] **VER-02**: CI estrae la versione da `.planning/STATE.md` al build time e aggiorna `version.ts`
 - [ ] **VER-03**: Landing page mostra la versione corrente
 - [ ] **VER-04**: Edge function `/version` usa la versione estratta da STATE.md
 - [ ] **VER-05**: Documentazione `docs/VERSIONING.md` aggiornata con il nuovo flusso
@@ -49,8 +49,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLEAN-04 | Phase 20 | Complete |
 | CLEAN-05 | Phase 20 | Complete |
 | CLEAN-06 | Phase 20 | Complete |
-| VER-01 | Phase 21 | Pending |
-| VER-02 | Phase 21 | Pending |
+| VER-01 | Phase 21 | Complete |
+| VER-02 | Phase 21 | Complete |
 | VER-03 | Phase 22 | Pending |
 | VER-04 | Phase 22 | Pending |
 | VER-05 | Phase 22 | Pending |
