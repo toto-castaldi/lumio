@@ -83,7 +83,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 
 **Milestone Goal:** App and landing page version derived from .planning/STATE.md, replacing all legacy versioning infrastructure (husky, commitlint, commitizen, release-please, auto-release CI, git tags).
 
-- [x] **Phase 20: Cleanup Legacy Versioning** - Remove all automated versioning tooling (completed 2026-02-21)
+- [ ] **Phase 20: Cleanup Legacy Versioning** - Remove all automated versioning tooling (gap closure in progress)
 - [ ] **Phase 21: GSD Version Pipeline** - STATE.md milestone field parsed by CI into version.ts
 - [ ] **Phase 22: Version Display & Docs** - Landing page and edge function show GSD version; docs updated
 
@@ -98,11 +98,12 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
   2. No commitlint, commitizen, or release-please configuration files exist in the repository
   3. CI workflow runs without any auto-release job or git tag creation step
   4. CHANGELOG.md no longer exists in the repository root
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Remove local tooling (husky, commitlint, commitizen, release-please configs, CHANGELOG)
-- [ ] 20-02-PLAN.md — Remove CI auto-release job, delete git tags, update docs
+- [x] 20-01-PLAN.md — Remove local tooling (husky, commitlint, commitizen, release-please configs, CHANGELOG)
+- [x] 20-02-PLAN.md — Remove CI auto-release job, delete git tags, update docs
+- [ ] 20-03-PLAN.md — Update TECHNICAL-ARCHITECTURE.md to remove stale legacy versioning references (gap closure)
 
 ### Phase 21: GSD Version Pipeline
 **Goal**: The app version is derived from STATE.md at build time -- a single source of truth replaces the old multi-tool chain
@@ -137,7 +138,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Cleanup Legacy Versioning | 2/2 | Complete   | 2026-02-21 | - |
+| 20. Cleanup Legacy Versioning | v1.7 | 2/3 | Gap closure | - |
 | 21. GSD Version Pipeline | v1.7 | 0/? | Not started | - |
 | 22. Version Display & Docs | v1.7 | 0/? | Not started | - |
 
