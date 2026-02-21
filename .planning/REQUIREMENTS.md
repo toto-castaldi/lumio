@@ -9,12 +9,12 @@ Requirements for milestone v1.7 GSD Versioning. Each maps to roadmap phases.
 
 ### Cleanup
 
-- [ ] **CLEAN-01**: Rimuovere husky hooks (`.husky/` directory e dipendenza)
-- [ ] **CLEAN-02**: Rimuovere commitlint (`.commitlintrc.json` e dipendenza)
-- [ ] **CLEAN-03**: Rimuovere commitizen config da `package.json`
-- [ ] **CLEAN-04**: Rimuovere release-please config (`.release-please-config.json`, `.release-please-manifest.json`)
+- [x] **CLEAN-01**: Rimuovere husky hooks (`.husky/` directory e dipendenza)
+- [x] **CLEAN-02**: Rimuovere commitlint (`.commitlintrc.json` e dipendenza)
+- [x] **CLEAN-03**: Rimuovere commitizen config da `package.json`
+- [x] **CLEAN-04**: Rimuovere release-please config (`.release-please-config.json`, `.release-please-manifest.json`)
 - [ ] **CLEAN-05**: Rimuovere auto-release job e git tag creation dal CI workflow
-- [ ] **CLEAN-06**: Rimuovere `CHANGELOG.md`
+- [x] **CLEAN-06**: Rimuovere `CHANGELOG.md`
 
 ### Versioning
 
@@ -43,12 +43,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLEAN-01 | Phase 20 | Pending |
-| CLEAN-02 | Phase 20 | Pending |
-| CLEAN-03 | Phase 20 | Pending |
-| CLEAN-04 | Phase 20 | Pending |
+| CLEAN-01 | Phase 20 | Complete |
+| CLEAN-02 | Phase 20 | Complete |
+| CLEAN-03 | Phase 20 | Complete |
+| CLEAN-04 | Phase 20 | Complete |
 | CLEAN-05 | Phase 20 | Pending |
-| CLEAN-06 | Phase 20 | Pending |
+| CLEAN-06 | Phase 20 | Complete |
 | VER-01 | Phase 21 | Pending |
 | VER-02 | Phase 21 | Pending |
 | VER-03 | Phase 22 | Pending |
