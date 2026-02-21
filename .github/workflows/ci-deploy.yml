@@ -11,97 +11,12 @@ permissions:
 
 jobs:
   # ============================================
-  # Auto Release - Version bump on main
-  # ============================================
-
-  auto-release:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore(release)')
-    outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
-      released: ${{ steps.bump.outputs.released }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump version
-        id: bump
-        run: |
-          # Get last v* tag (ignore legacy lumio-v* tags) or default to v0.0.0
-          LAST_TAG=$(git tag -l "v*" --sort=-v:refname | head -1)
-          LAST_TAG=${LAST_TAG:-v0.0.0}
-          echo "Last tag: $LAST_TAG"
-
-          # Count feat/fix commits since last tag
-          FEAT_COUNT=$(git log ${LAST_TAG}..HEAD --oneline | grep -cE "^[a-f0-9]+ feat" || echo "0")
-          FIX_COUNT=$(git log ${LAST_TAG}..HEAD --oneline | grep -cE "^[a-f0-9]+ fix" || echo "0")
-          BREAKING=$(git log ${LAST_TAG}..HEAD --oneline | grep -cE "^[a-f0-9]+ (feat|fix)!:" || echo "0")
-
-          echo "Commits since $LAST_TAG: feat=$FEAT_COUNT, fix=$FIX_COUNT, breaking=$BREAKING"
-
-          # No releasable commits
-          if [ "$FEAT_COUNT" -eq 0 ] && [ "$FIX_COUNT" -eq 0 ]; then
-            echo "No releasable commits (feat/fix) since $LAST_TAG"
-            echo "released=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Parse current version
-          CURRENT_VERSION=${LAST_TAG#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-
-          # Calculate new version
-          if [ "$BREAKING" -gt 0 ]; then
-            MAJOR=$((MAJOR + 1))
-            MINOR=0
-            PATCH=0
-          elif [ "$FEAT_COUNT" -gt 0 ]; then
-            MINOR=$((MINOR + 1))
-            PATCH=0
-          else
-            PATCH=$((PATCH + 1))
-          fi
-
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "New version: $NEW_VERSION"
-
-          # Update package.json
-          sed -i "s/\"version\": \".*\"/\"version\": \"${NEW_VERSION}\"/" package.json
-
-          # Update version.ts
-          sed -i "s/VERSION = \".*\"/VERSION = \"${NEW_VERSION}\"/" packages/shared/src/version.ts
-
-          # Update manifest
-          echo "{" > .release-please-manifest.json
-          echo "  \".\": \"${NEW_VERSION}\"" >> .release-please-manifest.json
-          echo "}" >> .release-please-manifest.json
-
-          # Commit, tag and push
-          git add package.json packages/shared/src/version.ts .release-please-manifest.json
-          git commit -m "chore(release): v${NEW_VERSION}"
-          git tag "v${NEW_VERSION}"
-          git push origin main
-          git push origin "v${NEW_VERSION}"
-
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "released=true" >> $GITHUB_OUTPUT
-          echo "Released v${NEW_VERSION}"
-
-  # ============================================
   # CI Jobs - Run on all pushes and PRs
   # ============================================
 
   lint-and-typecheck:
     runs-on: ubuntu-latest
-    needs: auto-release
-    if: always() && !startsWith(github.event.head_commit.message, 'docs:') && !startsWith(github.event.head_commit.message, 'docs(')
+    if: "!startsWith(github.event.head_commit.message, 'docs:') && !startsWith(github.event.head_commit.message, 'docs(')"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -125,16 +40,12 @@ jobs:
 
   build-apk:
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, auto-release]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success' && needs.auto-release.outputs.released == 'true'
+    needs: [lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
-
-      - name: Pull latest changes
-        run: git pull origin main
 
       - uses: actions/setup-java@v4
         with:
@@ -176,7 +87,7 @@ jobs:
 
       - name: Build release APK
         working-directory: apps/android/android
-        run: ./gradlew app:assembleRelease -PversionCode=${{ github.run_number }} -PversionName=${{ needs.auto-release.outputs.new_version }}
+        run: ./gradlew app:assembleRelease -PversionCode=${{ github.run_number }} -PversionName=0.0.0
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -188,20 +99,14 @@ jobs:
       - name: Rename APK
         run: cp apps/android/android/app/build/outputs/apk/release/app-release.apk lumio.apk
 
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.auto-release.outputs.new_version }}
-          files: lumio.apk
-
   # ============================================
   # Deploy Jobs - Only on push to main
   # ============================================
 
   deploy-landing:
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, auto-release]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
+    needs: [lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -227,8 +132,8 @@ jobs:
 
   deploy-migrations:
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, auto-release]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
+    needs: [lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -268,16 +173,12 @@ jobs:
 
   deploy-functions:
     runs-on: ubuntu-latest
-    needs: [deploy-migrations, auto-release]
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.deploy-migrations.result == 'success'
+    needs: [deploy-migrations]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.deploy-migrations.result == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
-
-      - name: Pull latest changes
-        run: git pull origin main
 
       - name: Extract version info
         id: version
