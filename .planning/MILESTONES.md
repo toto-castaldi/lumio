@@ -160,3 +160,35 @@
 
 ---
 
+
+## v1.7 GSD Versioning (Shipped: 2026-02-21)
+
+**Delivered:** Replaced all legacy versioning infrastructure with a single source of truth: `.planning/STATE.md` drives version across APK, landing page, edge functions, and docs.
+
+**Phases completed:** 20-22 (6 plans total)
+
+**Key accomplishments:**
+
+- Removed all legacy versioning tooling (husky, commitlint, commitizen, release-please, CHANGELOG, 53 git tags)
+- Created `extract-version.cjs` pipeline: STATE.md -> version.ts -> all consumers at build time
+- CI wired to derive APK versionName, edge function LUMIO_VERSION, and landing page version from STATE.md
+- Landing page footer shows live version badge via CI-time sed injection
+- Complete `docs/VERSIONING.md` documenting the GSD-based versioning flow
+- Updated TECHNICAL-ARCHITECTURE.md to reflect current CI/CD state (gap closure)
+
+**Stats:**
+
+- 34 files changed (+1,846 / -1,974 lines) — net -128 lines (cleanup milestone)
+- 3 phases, 6 plans
+- 1 day (2026-02-21)
+
+**Git range:** `d3e0057` → `0fc1cb3` (29 commits)
+
+**Tech debt (non-blocking):**
+- `COMMIT_SHA` fallback in version.ts is dead code (CI only sets `GIT_SHA`)
+- Double-slicing of git SHA in `getFullVersionString()` is redundant
+
+**What's next:** TBD
+
+---
+
