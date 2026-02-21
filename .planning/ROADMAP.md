@@ -83,7 +83,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 
 **Milestone Goal:** App and landing page version derived from .planning/STATE.md, replacing all legacy versioning infrastructure (husky, commitlint, commitizen, release-please, auto-release CI, git tags).
 
-- [ ] **Phase 20: Cleanup Legacy Versioning** - Remove all automated versioning tooling
+- [x] **Phase 20: Cleanup Legacy Versioning** - Remove all automated versioning tooling (completed 2026-02-21)
 - [ ] **Phase 21: GSD Version Pipeline** - STATE.md milestone field parsed by CI into version.ts
 - [ ] **Phase 22: Version Display & Docs** - Landing page and edge function show GSD version; docs updated
 
@@ -137,7 +137,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Cleanup Legacy Versioning | 1/2 | In Progress|  | - |
+| 20. Cleanup Legacy Versioning | 2/2 | Complete   | 2026-02-21 | - |
 | 21. GSD Version Pipeline | v1.7 | 0/? | Not started | - |
 | 22. Version Display & Docs | v1.7 | 0/? | Not started | - |
 

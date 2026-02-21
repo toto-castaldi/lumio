@@ -13,7 +13,7 @@ Requirements for milestone v1.7 GSD Versioning. Each maps to roadmap phases.
 - [x] **CLEAN-02**: Rimuovere commitlint (`.commitlintrc.json` e dipendenza)
 - [x] **CLEAN-03**: Rimuovere commitizen config da `package.json`
 - [x] **CLEAN-04**: Rimuovere release-please config (`.release-please-config.json`, `.release-please-manifest.json`)
-- [ ] **CLEAN-05**: Rimuovere auto-release job e git tag creation dal CI workflow
+- [x] **CLEAN-05**: Rimuovere auto-release job e git tag creation dal CI workflow
 - [x] **CLEAN-06**: Rimuovere `CHANGELOG.md`
 
 ### Versioning
@@ -47,7 +47,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLEAN-02 | Phase 20 | Complete |
 | CLEAN-03 | Phase 20 | Complete |
 | CLEAN-04 | Phase 20 | Complete |
-| CLEAN-05 | Phase 20 | Pending |
+| CLEAN-05 | Phase 20 | Complete |
 | CLEAN-06 | Phase 20 | Complete |
 | VER-01 | Phase 21 | Pending |
 | VER-02 | Phase 21 | Pending |
