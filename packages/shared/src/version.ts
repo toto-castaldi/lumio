@@ -1,8 +1,8 @@
 /**
  * Lumio Version - Single Source of Truth
  *
- * Questa versione viene aggiornata automaticamente da release-please.
- * NON modificare manualmente.
+ * Version will be derived from .planning/STATE.md in Phase 21.
+ * For now, this is a static placeholder.
  */
 export const VERSION = "1.6.2";
 
