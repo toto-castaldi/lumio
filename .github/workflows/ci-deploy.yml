@@ -120,6 +120,15 @@ jobs:
         with:
           ref: main
 
+      - name: Extract version from STATE.md
+        id: version
+        run: |
+          VERSION=$(node scripts/extract-version.cjs)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Inject version into landing page
+        run: sed -i "s/__LUMIO_VERSION__/${{ steps.version.outputs.version }}/g" apps/landing/index.html
+
       - name: Deploy to DigitalOcean
         uses: appleboy/scp-action@v0.1.7
         with:
