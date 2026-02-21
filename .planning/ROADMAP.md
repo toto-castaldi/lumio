@@ -141,7 +141,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 |-------|-----------|----------------|--------|-----------|
 | 20. Cleanup Legacy Versioning | 3/3 | Complete    | 2026-02-21 | - |
 | 21. GSD Version Pipeline | 1/1 | Complete    | 2026-02-21 | - |
-| 22. Version Display & Docs | 2/2 | Complete   | 2026-02-21 | - |
+| 22. Version Display & Docs | 2/2 | Complete    | 2026-02-21 | - |
 
 ---
 *Roadmap created: 2026-01-29*
