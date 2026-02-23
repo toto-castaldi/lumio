@@ -13,7 +13,7 @@ Milestone: v1.7 (completed)
 Phase: All complete
 Plan: All complete
 Status: Milestone shipped
-Last activity: 2026-02-22 — v1.7 milestone archived
+Last activity: 2026-02-23 - Completed quick task 1: Fix version consistency
 
 Progress (overall): 54/54 plans across 7 milestones shipped
 
@@ -37,6 +37,12 @@ None.
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Fix version consistency: sync root package.json, add APK upload to CI, show build ref v1.7+42.abc1234 in apps | 2026-02-23 | 8e265b7 | [1-fix-version-consistency-sync-root-packag](./quick/1-fix-version-consistency-sync-root-packag/) |
 
 ## Session Continuity
 
