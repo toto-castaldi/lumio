@@ -137,7 +137,10 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Inject version into landing page
-        run: sed -i "s/__LUMIO_VERSION__/${{ steps.version.outputs.version }}/g" apps/landing/index.html
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          DISPLAY_VERSION="${{ steps.version.outputs.version }}+${{ github.run_number }}.${SHORT_SHA}"
+          sed -i "s/__LUMIO_VERSION__/${DISPLAY_VERSION}/g" apps/landing/index.html
 
       - name: Deploy to DigitalOcean
         uses: appleboy/scp-action@v0.1.7
