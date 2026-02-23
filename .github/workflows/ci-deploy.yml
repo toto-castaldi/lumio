@@ -107,6 +107,16 @@ jobs:
       - name: Rename APK
         run: cp apps/android/android/app/build/outputs/apk/release/app-release.apk lumio.apk
 
+      - name: Rename APK with version
+        run: mv lumio.apk "lumio-v${{ steps.version.outputs.version }}+${{ github.run_number }}.${GITHUB_SHA::7}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumio-apk-v${{ steps.version.outputs.version }}-build${{ github.run_number }}
+          path: lumio-v*.apk
+          retention-days: 30
+
   # ============================================
   # Deploy Jobs - Only on push to main
   # ============================================
