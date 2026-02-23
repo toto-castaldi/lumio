@@ -4,18 +4,20 @@
  *
  * This file is generated at build time by scripts/extract-version.cjs.
  * The version is extracted from .planning/STATE.md Milestone field.
+ * Build metadata is baked in as string literals (React Native has no process.env).
  */
 export const VERSION = "1.7";
 
 /**
- * Build info populated at build time by CI.
- * In local development, uses default fallback values.
+ * Build info baked in at generation time.
+ * CI sets BUILD_NUMBER, GIT_SHA, BUILD_DATE env vars before running this script.
+ * Local dev gets fallback values: "dev", "local", current timestamp.
  */
 export const BUILD_INFO = {
   version: VERSION,
-  buildNumber: process.env.BUILD_NUMBER || "dev",
-  gitSha: process.env.COMMIT_SHA || process.env.GIT_SHA || "local",
-  buildDate: process.env.BUILD_DATE || new Date().toISOString(),
+  buildNumber: "dev",
+  gitSha: "local",
+  buildDate: "2026-02-23T14:26:16.071Z",
 } as const;
 
 export type BuildInfo = typeof BUILD_INFO;
