@@ -24,6 +24,7 @@ const VERSION_TS_PATH = path.join(
   "src",
   "version.ts"
 );
+const PACKAGE_JSON_PATH = path.join(ROOT, "package.json");
 
 // 1. Read STATE.md
 if (!fs.existsSync(STATE_PATH)) {
@@ -81,9 +82,30 @@ export function getVersionString(): string {
 export function getFullVersionString(): string {
   return \`v\${BUILD_INFO.version} (\${BUILD_INFO.buildNumber}-\${BUILD_INFO.gitSha.slice(0, 7)})\`;
 }
+
+/**
+ * Display version with build reference for app UI
+ * Format: v1.7+42.abc1234 (CI) or v1.7+dev (local)
+ */
+export function getDisplayVersion(): string {
+  if (BUILD_INFO.buildNumber === "dev") {
+    return \`v\${BUILD_INFO.version}+dev\`;
+  }
+  return \`v\${BUILD_INFO.version}+\${BUILD_INFO.buildNumber}.\${BUILD_INFO.gitSha.slice(0, 7)}\`;
+}
 `;
 
 fs.writeFileSync(VERSION_TS_PATH, versionTs, "utf-8");
 
-// 4. Print version to stdout
+// 4. Sync root package.json version
+const packageJsonContent = fs.readFileSync(PACKAGE_JSON_PATH, "utf-8");
+const packageJson = JSON.parse(packageJsonContent);
+packageJson.version = version;
+fs.writeFileSync(
+  PACKAGE_JSON_PATH,
+  JSON.stringify(packageJson, null, 2) + "\n",
+  "utf-8"
+);
+
+// 5. Print version to stdout
 console.log(version);

@@ -4,6 +4,7 @@ export {
   BUILD_INFO,
   getVersionString,
   getFullVersionString,
+  getDisplayVersion,
   type BuildInfo,
 } from './version';
 

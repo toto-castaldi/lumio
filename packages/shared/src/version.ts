@@ -33,3 +33,14 @@ export function getVersionString(): string {
 export function getFullVersionString(): string {
   return `v${BUILD_INFO.version} (${BUILD_INFO.buildNumber}-${BUILD_INFO.gitSha.slice(0, 7)})`;
 }
+
+/**
+ * Display version with build reference for app UI
+ * Format: v1.7+42.abc1234 (CI) or v1.7+dev (local)
+ */
+export function getDisplayVersion(): string {
+  if (BUILD_INFO.buildNumber === "dev") {
+    return `v${BUILD_INFO.version}+dev`;
+  }
+  return `v${BUILD_INFO.version}+${BUILD_INFO.buildNumber}.${BUILD_INFO.gitSha.slice(0, 7)}`;
+}
