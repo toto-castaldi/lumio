@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
-import { getVersionString } from '@lumio/shared';
+import { getDisplayVersion } from '@lumio/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
@@ -42,7 +42,7 @@ export function SettingsScreen() {
   const { colors, preference, setPreference } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const { cardsPerSession, setCardsPerSession } = useStudySettings();
-  const version = getVersionString();
+  const version = getDisplayVersion();
 
   // Google profile data from Supabase user metadata
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
