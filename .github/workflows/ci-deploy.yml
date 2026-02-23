@@ -80,9 +80,14 @@ jobs:
         run: |
           VERSION=$(node scripts/extract-version.cjs)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "git_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Build packages
         run: pnpm build:packages
+        env:
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          GIT_SHA: ${{ steps.version.outputs.git_sha }}
 
       - name: Expo prebuild
         working-directory: apps/android
@@ -91,6 +96,8 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          GIT_SHA: ${{ steps.version.outputs.git_sha }}
 
       - name: Decode keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > apps/android/android/app/release.keystore
@@ -105,6 +112,8 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          GIT_SHA: ${{ steps.version.outputs.git_sha }}
 
       - name: Rename APK
         run: cp apps/android/android/app/build/outputs/apk/release/app-release.apk lumio.apk
