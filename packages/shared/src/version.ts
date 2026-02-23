@@ -13,12 +13,17 @@ export const VERSION = "1.7";
  * CI sets BUILD_NUMBER, GIT_SHA, BUILD_DATE env vars before running this script.
  * Local dev gets fallback values: "dev", "local", current timestamp.
  */
-export const BUILD_INFO = {
+export const BUILD_INFO: {
+  readonly version: string;
+  readonly buildNumber: string;
+  readonly gitSha: string;
+  readonly buildDate: string;
+} = {
   version: VERSION,
   buildNumber: "dev",
   gitSha: "local",
-  buildDate: "2026-02-23T14:26:16.071Z",
-} as const;
+  buildDate: "2026-02-23T14:32:17.773Z",
+};
 
 export type BuildInfo = typeof BUILD_INFO;
 
