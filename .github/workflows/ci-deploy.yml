@@ -44,6 +44,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-and-typecheck]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -116,6 +118,34 @@ jobs:
           name: lumio-apk-v${{ steps.version.outputs.version }}-build${{ github.run_number }}
           path: lumio-v*.apk
           retention-days: 30
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-apk]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-apk.result == 'success'
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lumio-apk-v${{ needs.build-apk.outputs.version }}-build${{ github.run_number }}
+
+      - name: Prepare short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Rename APK to lumio.apk
+        run: mv lumio-v*.apk lumio.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build-apk.outputs.version }}
+          name: v${{ needs.build-apk.outputs.version }}
+          body: "Lumio v${{ needs.build-apk.outputs.version }} - Build #${{ github.run_number }} (${{ steps.sha.outputs.short }})"
+          files: lumio.apk
+          make_latest: true
+          draft: false
+          prerelease: false
 
   # ============================================
   # Deploy Jobs - Only on push to main
