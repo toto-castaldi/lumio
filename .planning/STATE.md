@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** v2.0 Spaced Repetition
 
 ## Current Position
 
-Milestone: v1.7 (completed)
-Phase: All complete
-Plan: All complete
-Status: Milestone shipped
-Last activity: 2026-02-23 - Completed quick task 4: Fix version.ts hardcode build metadata as string literals
+Milestone: v2.0
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-25 — Milestone v2.0 started
 
 Progress (overall): 54/54 plans across 7 milestones shipped
 

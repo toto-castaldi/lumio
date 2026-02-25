@@ -70,7 +70,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(No active milestone — run `/gsd:new-milestone` to start next)
+## Current Milestone: v2.0 Spaced Repetition
+
+**Goal:** Trasformare lo studio da selezione casuale a ripetizione spaziata intelligente.
+
+**Target features:**
+- Ripetizione spaziata con scheduling basato su risposte (giusto → più tardi, sbagliato → prima)
+- Mix intelligente sessioni: carte scadute + nuove, proporzionate automaticamente
+- Dashboard counter "carte da ripassare oggi"
+- Indicatore ripasso/nuova durante studio
+- Fix storico sessioni: numero carte al posto di "tutti i repository"
 
 ### Out of Scope
 
@@ -155,4 +164,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | STATE.md as single source of truth for version | One file drives APK, landing, edge function, shared package | ✓ Good — v1.7 |
 
 ---
-*Last updated: 2026-02-22 after v1.7 milestone completed*
+*Last updated: 2026-02-25 after v2.0 milestone started*
