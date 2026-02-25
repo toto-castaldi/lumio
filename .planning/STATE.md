@@ -2,25 +2,26 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-22)
+See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.0 Spaced Repetition
+**Current focus:** v2.0 Spaced Repetition -- Phase 23: SRS Schema & Algorithm
 
 ## Current Position
 
 Milestone: v2.0
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-25 — Milestone v2.0 started
+Phase: 23 of 26 (SRS Schema & Algorithm)
+Plan: — (ready to plan)
+Status: Ready to plan
+Last activity: 2026-02-25 — v2.0 roadmap created (4 phases, 9 requirements mapped)
 
-Progress (overall): 54/54 plans across 7 milestones shipped
+Progress (v2.0): [░░░░░░░░░░] 0%
+Progress (overall): 54/54 plans across 7 milestones shipped, v2.0 starting
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 54 (20 v1.1 + 9 v1.2 + 4 v1.3 + 4 v1.4 + 1 v1.5 + 4 v1.6 + 6 v1.7 + 6 archive/docs)
+- Total plans completed: 54 (across v1.1 - v1.7)
 - Total milestones shipped: 7
 - Timeline: 25 days (2026-01-29 to 2026-02-22)
 
@@ -29,6 +30,15 @@ Progress (overall): 54/54 plans across 7 milestones shipped
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (39 entries).
+
+Key decisions for v2.0:
+- SM-2 algorithm via `supermemo ^2.0.23` (not FSRS -- binary quiz input loses FSRS advantage)
+- `card_review_schedule` table name (canonical, agreed across research)
+- `DATE` type for `next_review_at` (not `TIMESTAMPTZ`) to avoid timezone flip bugs
+- Grade 4 = correct (EF unchanged), Grade 1 = incorrect (EF -0.54), floor 1.3, ceiling 2.5
+- SM-2 runs client-side in `@lumio/core/src/srs/sm2.ts` (no edge function -- avoids 50-200ms latency)
+- Due cards bypass `cardsPerSession` cap; cap applies only to new cards
+- No schedule write on skip -- skipped cards remain "new" for future sessions
 
 ### Pending Todos
 
@@ -49,10 +59,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed quick-4 (Fix version.ts hardcode build metadata)
+Last session: 2026-02-25
+Stopped at: v2.0 roadmap created -- Phase 23 ready to plan
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-23 (quick task 3 completed)*
+*Last updated: 2026-02-25 (v2.0 roadmap created)*

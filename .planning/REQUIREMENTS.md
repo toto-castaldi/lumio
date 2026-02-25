@@ -47,21 +47,21 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRS-01 | — | Pending |
-| SRS-02 | — | Pending |
-| SRS-03 | — | Pending |
-| SRS-04 | — | Pending |
-| SRS-05 | — | Pending |
-| SRS-06 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| HIST-01 | — | Pending |
+| SRS-01 | Phase 24 | Pending |
+| SRS-02 | Phase 24 | Pending |
+| SRS-03 | Phase 23 | Pending |
+| SRS-04 | Phase 23 | Pending |
+| SRS-05 | Phase 23 | Pending |
+| SRS-06 | Phase 23 | Pending |
+| DASH-01 | Phase 25 | Pending |
+| DASH-02 | Phase 25 | Pending |
+| HIST-01 | Phase 26 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 — traceability updated after v2.0 roadmap creation*
