@@ -1,274 +1,200 @@
 # Feature Landscape
 
-**Domain:** i18n, logo/branding, configurable study sessions, bottom-sheet bugfix, dynamic versioning for React Native (Expo) study flashcard app
-**Researched:** 2026-02-08
+**Domain:** Spaced repetition system and study history UX fix for Lumio v2.0
+**Researched:** 2026-02-25
+**Confidence:** HIGH (SM-2 is thoroughly documented, Anki is open-source reference, existing codebase reviewed in detail)
 
 ## Table Stakes
 
-Features users expect. Missing = product feels incomplete.
+Features users expect from any spaced repetition flashcard app. Missing = product feels like "just another random quiz" instead of a learning system.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| i18n: IT/EN toggle in Settings | App has Italian PRD and Italian developer. Target audience includes Italian students. Currently all-English UI feels exclusionary for the primary audience. | Medium | ~82 user-facing strings across 16 files. Pattern mirrors existing theme toggle (AsyncStorage persistence, context provider, Settings radio group). |
-| Logo on Login screen | LoginScreen currently says `<Text>Lumio</Text>` with a comment "Logo placeholder - will be replaced with actual logo." Missing logo makes the app feel unfinished. | Low | SVG files exist at repo root (`logo.svg`, `logo-circle.svg`). Need PNG conversion or `react-native-svg`. |
-| Dynamic version display | Settings screen hardcodes `Lumio v1.0.0` while the actual release is v1.1.4. Version exists in `@lumio/shared` (`packages/shared/src/version.ts`) with `getVersionString()` but the Android app does not import it. | Low | One-line import change. |
-| Bottom-sheet preview bugfix | Card preview content is reported cut off at the top. WebView inside ScrollView inside bottom-sheet Modal has known Android rendering issues with height calculation. | Low-Medium | Root cause is likely the WebView height reporting via `postMessage` with a 100ms timeout that fires before CDN resources (KaTeX, highlight.js) finish loading. |
+| Feature | Why Expected | Complexity | Dependencies on Existing | Notes |
+|---------|--------------|------------|--------------------------|-------|
+| Per-card scheduling based on answer correctness | Core of spaced repetition. Correct = see later, wrong = see sooner. Every SRS app (Anki, Quizlet, RemNote, Mochi) does this. Without it, Lumio is just a random quiz. | **Med** | New `card_progress` table; modify `useStudySession` hook to query due cards instead of random selection from `selectRandomCard()` | SM-2 uses 0-5 grade scale but Lumio has binary correct/wrong from multiple choice. Map correct to grade 4 (EF unchanged, interval advances), wrong to grade 1 (EF decreases, interval resets to 1 day). Simpler than full SM-2 but preserves the core scheduling benefit. |
+| Due cards queue (review before new) | Users expect to review cards that are "due" before seeing new material. Anki's default gathering order: learning cards, then reviews, then new cards. Without this, spaced repetition intervals are meaningless. | **Med** | Replaces random `selectRandomCard()` in `useStudySession`; needs new RPC function to get due cards ordered by `next_review_at` | Current hook picks randomly from all cards with `const randomIndex = Math.floor(Math.random() * unseenCards.length)`. Must change to: 1) fetch due cards (`next_review_at <= now`), 2) fill remaining session slots with new cards (cards with no `card_progress` row). |
+| Dashboard "cards due today" counter | Users need to know at a glance how many cards need review. Anki, RemNote, Mochi all show this prominently on their home screen. It is the primary motivator to study. | **Low** | New RPC function `get_due_card_count(p_user_id)`; modify `DashboardScreen.tsx` to show count alongside existing repo/card `StatCard` components | Simple count query: cards joined with `card_progress` WHERE `next_review_at <= NOW()` for user's subscribed repositories. Returns a single integer. |
+| Session mix: due cards + new cards | A pure review-only session is boring; a pure new-cards session is overwhelming. The mix is standard in every SRS app. Anki offers configurable new/review ordering. | **Med** | Builds on due cards queue; modify session card selection in `useStudySession` to prioritize due then fill with new | Lumio approach: fill session with due cards first (most overdue first), pad remaining slots with new cards up to the session limit (10/20/50/All presets already exist). Simpler than Anki's three-queue system. |
+| Review/New indicator during study | Users need to know if the current card is a review (seen before, being reinforced) or new (first encounter). Provides learning context and sets expectations. | **Low** | Check if card has a `card_progress` row; show small badge/label near `ProgressBar` component or in `QuizCard` header area | Small UI addition: colored text badge "Ripasso"/"Review" or "Nuova"/"New" near the progress bar. No new screens or navigation changes. |
+| Study history: show card count instead of "All repositories" | Current bug: `StudyHistoryScreen` shows `item.repositoryName ?? t('history.allRepos')` which always renders "All repositories" / "Tutti i repository" because `repository_name` is always null (sessions are cross-repo). Meaningless text confuses users. | **Low** | Modify display logic in `StudyHistoryScreen.tsx` to show `total_count` (which already exists and is correctly saved) instead of the null `repository_name` | The `study_sessions.total_count` column contains the actual card count. Replace the repo label with something like "10 cards" / "10 carte". Alternatively, show `correct_count/total_count` more prominently and drop the repo column entirely. |
 
 ## Differentiators
 
-Features that set the product apart. Not expected, but valued.
+Features that set Lumio apart from basic SRS implementations. Not expected by all users, but valued.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Configurable cards-per-session | Users with large card decks get exhausted studying ALL cards. A configurable limit (e.g., 10, 20, 50, All) lets users control session length. Standard in Anki, Quizlet, and every major flashcard app. | Low | `useStudySession` currently loads all filtered cards and picks random unseen ones. Adding a `maxCards` parameter to cap session length is straightforward. Persist in AsyncStorage alongside theme/language. |
-| Logo on Dashboard header | Brand reinforcement in the primary screen. Small logo icon in navigation header. | Low | Reuse same logo asset from Login screen. |
-| Session length display before starting | Show "X cards available, study Y" before starting, where Y is the configured limit. Helps user set expectations. | Low | Already shows "X cards available" in the ready state. Add the limit display. |
-| Language-aware date formatting | Once i18n is in place, "2 hours ago" should become "2 ore fa" in Italian. | Low | Use `Intl.RelativeTimeFormat` (available in Hermes) or i18next formatting plugins. Affects `formatLastStudied()` in DashboardScreen and `formatDuration()` in StudySummaryScreen. |
+| Feature | Value Proposition | Complexity | Dependencies on Existing | Notes |
+|---------|-------------------|------------|--------------------------|-------|
+| Automatic new/review proportioning | Unlike Anki's manual "new cards per day" setting (default 20), Lumio auto-calculates: if many cards are due, fewer new cards get mixed in; if few are due, more new cards appear. Zero configuration required from user. | **Low** | Uses session card count preset (10/20/50/All) already built in v1.2; proportioning logic is just: `dueCards.slice(0, limit)` then fill remaining with new cards | Eliminates Anki's most confusing setting. Lumio already has cards-per-session presets. The proportioning is implicit: take `min(dueCount, sessionLimit)` due cards, fill remaining with new. No settings UI needed. |
+| Easiness factor per card (adaptive difficulty) | Cards that are consistently hard get shorter review intervals; consistently easy cards get much longer intervals. More sophisticated than simple fixed-ratio doubling. Matches how memory actually works. | **Med** | `easiness_factor` column in `card_progress` table; SM-2 EF formula applied on each answer | EF starts at 2.5. Correct (grade 4): EF unchanged. Wrong (grade 1): EF decreases by 0.54 (min 1.3). Next interval = `previous_interval * EF`. This is the core SM-2 math, well-proven over 35+ years. |
+| Overdue card priority boost | Cards significantly overdue (e.g., due 5 days ago but user skipped studying) surface first in the session queue. Prevents important forgotten cards from being buried behind barely-due cards. | **Low** | Sort due cards by `next_review_at ASC` (most overdue first) in the RPC query | Simple `ORDER BY` in the database function. Most overdue cards naturally surface first. No additional logic or UI needed. |
+| No "ease hell" (EF floor at 1.3) | Anki's notorious problem: EF drops too low over time and cards become annoying daily reviews forever ("ease hell"). Lumio prevents this with SM-2's built-in EF minimum of 1.3, meaning even consistently-wrong cards never get stuck at sub-daily intervals. | **Low** | Built into EF formula as `EF = max(EF', 1.3)` | SM-2 specification already includes this floor. Just enforce it in the update logic. |
 
 ## Anti-Features
 
-Features to explicitly NOT build.
+Features to explicitly NOT build for v2.0.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Auto-detect device locale on first launch | Only two languages (IT/EN). Auto-detection adds edge cases (system set to French, Spanish, etc.). Users who want Italian will toggle it explicitly. | Default to English. Provide clear IT/EN toggle in Settings. |
-| Per-screen language switching | Over-engineered for a 2-language app. | Single global toggle that applies everywhere instantly. |
-| Full localization infrastructure (Crowdin, Lokalise) | Only 2 languages, ~82 strings, single developer. Translation management platforms are overkill. | JSON files (`en.json`, `it.json`) in a `locales/` folder. Developer maintains both directly. |
-| Animated logo / splash screen customization | Complexity with native module rebuilds. Expo splash screen works fine as-is with current `splash-icon.png`. | Static logo on Login screen only. Keep existing splash assets. |
-| Cards-per-session as a slider | Continuous values (1-500) create decision paralysis. Nobody wants exactly 37 cards. | Preset options: 10, 20, 50, All. Simple radio buttons matching the existing theme toggle pattern. |
-| RTL language support | No RTL languages planned. Adding RTL support adds complexity to every layout component. | Only support LTR languages (IT, EN). |
-| AI-translated card content | Card content is educational material that must remain in its original language. Translating quiz questions changes the learning context. | Only translate UI chrome (buttons, labels, navigation). Card content and AI-generated questions stay as-authored. |
-| react-native-svg for logo rendering | Adds native dependency requiring `prebuild --clean` and APK reinstall. Known event handling issues in Expo SDK 54. | Convert SVG to PNG at multiple densities. Use standard `<Image>` component. |
+| Full SM-2 grade scale (0-5 buttons) | Lumio uses multiple choice with binary correct/wrong outcome. Asking users to self-rate recall quality ("Easy"/"Good"/"Hard"/"Again") after answering a multiple choice question is redundant and confusing. The MC answer IS the assessment. | Map correct to grade 4, wrong to grade 1. Binary mapping. No extra buttons after answering. |
+| FSRS algorithm | FSRS is demonstrably superior to SM-2 (20-30% fewer reviews for same retention per benchmarks). However, FSRS requires ML model training and 400+ reviews per user to calibrate effectively. Overkill for v2.0 with a small user base. | Start with simplified SM-2. Can upgrade to FSRS in a future milestone when review data exists. The `card_progress` table schema is compatible with future FSRS migration. |
+| Custom interval settings per user | Anki exposes graduating interval, easy interval, learning steps, new cards/day, max reviews/day, etc. These are power-user features that create decision paralysis and support burden for a solo developer. | Use sensible SM-2 defaults: I(1)=1 day, I(2)=6 days, EF=2.5 initial. Store defaults in `platform_config` table (already exists) for admin tuning if needed. |
+| Separate "learning" card state | Anki has three states: New, Learning, Review. "Learning" cards are in-progress (seen today but not yet graduated to Review). This adds state machine complexity for marginal UX benefit. | Two states only: **New** (no `card_progress` row exists) and **Review** (has `card_progress` row). A card becomes Review after its first answer. Simpler mental model for users and developers. |
+| Undo/Reschedule button | Letting users manually reschedule or undo answers undermines the algorithm's integrity and adds significant UI complexity (undo stack, confirmation dialogs). | Trust the algorithm. If a card keeps coming back frequently, the EF naturally adjusts. The existing forward-only study flow (v1.3 decision) aligns with this. |
+| Push notifications for due cards | Out of scope per PROJECT.md. Requires notification permission, background services, FCM setup, and notification content localization. | Dashboard counter is sufficient for v2.0. User opens app, sees "X cards due today," and studies. |
+| Per-card statistics detail | Out of scope per PROJECT.md. Individual card history (review timeline, EF curve, interval history) is complex UI with low value for most users. | Session-level stats are sufficient. Individual card mastery is implicit in the scheduling algorithm. |
+| Streak/gamification | Explicitly excluded in PRD section 5.2. Distracts from core learning value. | Due card counter provides natural daily motivation without artificial gamification mechanics. |
+| Spaced repetition for skipped cards | Currently skipped cards increment `skipped_count` but have no progress tracked. Making skipped cards count as "wrong" would penalize users for skipping unknown content. | Skipped cards remain untracked in `card_progress`. They stay as "new" cards and will appear in future sessions naturally. |
 
 ## Feature Dependencies
 
 ```
-i18n Context Provider
-  |-> i18n toggle in Settings (requires provider wrapping app)
-  |-> All screen string extraction (requires provider available)
-  |-> Language-aware date formatting (requires current locale)
+card_progress table (DB migration)
+    |
+    +---> Per-card scheduling logic (SM-2 formula in RPC)
+    |         |
+    |         +---> Due cards query (get_due_cards_for_study RPC)
+    |         |         |
+    |         |         +---> Session card selection rewrite (useStudySession)
+    |         |         |         |
+    |         |         |         +---> Automatic due/new proportioning
+    |         |         |         |
+    |         |         |         +---> Review/New indicator during study
+    |         |         |
+    |         |         +---> Dashboard "cards due" counter (get_due_card_count RPC)
+    |         |
+    |         +---> Easiness factor tracking (column in card_progress)
+    |         |
+    |         +---> Overdue priority boost (ORDER BY in query)
 
-Logo SVG-to-PNG asset preparation
-  |-> Logo on Login screen (requires renderable PNG asset)
-  |-> Logo on Dashboard header (same asset, smaller size)
-
-Cards-per-session setting
-  |-> AsyncStorage persistence (same pattern as theme/language)
-  |-> useStudySession hook modification (accepts maxCards param)
-  |-> Settings UI for session length (new settings section)
-  |-> "Study Y of X" display on ready screen (requires setting value)
-
-Bottom-sheet bugfix
-  |-> No dependencies. Self-contained fix in CardPreviewModal + CardContentView.
-
-Dynamic version
-  |-> No dependencies. Import from @lumio/shared already available in monorepo.
+Study history display fix -- INDEPENDENT, no dependencies on card_progress
 ```
 
-## Detailed Feature Specifications
+## SM-2 Algorithm Specification for Lumio
 
-### 1. i18n: IT/EN Language Toggle
+Since Lumio uses multiple choice (not self-rated recall), the SM-2 adaptation works as follows:
 
-**Current state:** All ~82 user-facing strings are hardcoded in English across 16 `.tsx` files. The app's PRD is written in Italian and the developer is Italian, but the UI is English-only.
+### Grade Mapping (Binary from MC)
 
-**Expected behavior:**
-- Settings screen gets a new "Language" section (below Appearance, above Logout) with two options: English, Italiano
-- Toggle persists to AsyncStorage (key: `@lumio/language`)
-- On app launch, load persisted language; default to `en` if none stored
-- All UI strings update immediately on toggle (no app restart required)
-- Card content, question text, and explanations are NOT translated (they come from AI/repos)
-- Navigation headers, screen titles, buttons, empty states, toasts, and alerts all translate
+| MC Result | SM-2 Grade (q) | EF Change | Interval Effect |
+|-----------|-----------------|-----------|-----------------|
+| Correct answer | 4 | EF' = EF + 0.0 (no change) | I(n) = I(n-1) * EF (advances) |
+| Wrong answer | 1 | EF' = EF - 0.54 (significant decrease, min 1.3) | Resets to I(1) = 1 day |
 
-**Implementation pattern:** Mirror the existing ThemeContext/ThemeProvider architecture:
-1. `lib/i18n.ts` - translation JSON objects for EN/IT, i18n initialization, AsyncStorage persistence helpers
-2. `contexts/I18nContext.tsx` - provider with `locale` state, `setLocale()`, `t()` helper
-3. `hooks/useI18n.ts` - convenience hook returning `{ t, locale, setLocale }`
-4. String extraction across all screens and components
+### Core Formulas
 
-**String count estimate by screen:**
+**EF update formula:** `EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))`
+- Correct (q=4): `EF' = EF + (0.1 - 1 * (0.08 + 1 * 0.02)) = EF + 0.0` (unchanged)
+- Wrong (q=1): `EF' = EF + (0.1 - 4 * (0.08 + 4 * 0.02)) = EF - 0.54`
+- **Floor:** `EF = max(EF', 1.3)`
 
-| Screen/Component | Approx. Strings | Notes |
-|-----------------|-----------------|-------|
-| LoginScreen | 4 | tagline, button label, error, config warning |
-| DashboardScreen | 10 | stat labels, empty state, CTA, relative time |
-| ReposScreen | 12 | form labels, validation errors, toasts, empty state, delete alert |
-| SettingsScreen | 10 | section headers, theme options, language options, logout button, version |
-| StudyScreen | 15 | all states (loading, ready, no_cards, studying, completed), navigation buttons, header titles |
-| StudySummaryScreen | 8 | title, stat labels, button, duration format |
-| Components | 12 | EmptyState, AddRepoForm, ExplanationPanel, RepoListItem, CardPreviewModal |
-| Navigation | 5 | tab screen titles, header titles |
-| Toasts/Alerts | 8 | success/error/info messages |
-| **Total** | **~84** | Conservative estimate; actual count may vary by 5-10 |
+**Interval formula:**
+- I(1) = 1 day (first review after wrong answer, or first review of new card)
+- I(2) = 6 days
+- For n > 2: I(n) = round(I(n-1) * EF)
+- On wrong answer: reset repetition_count to 0, interval back to I(1) = 1
 
-**Library recommendation:** `i18next` + `react-i18next` because:
-- Most popular React Native i18n library (HIGH confidence, verified via Expo docs and npm download stats)
-- Built-in React hooks (`useTranslation`) that fit the app's existing hooks-based architecture
-- Language detector plugins for AsyncStorage persistence (`i18next-react-native-async-storage`)
-- String interpolation for dynamic values (`{{count}} cards available`)
-- The app already uses the same React context + hooks pattern extensively (ThemeContext, AuthContext)
-- Alternative `i18n-js` (recommended by Expo official docs) is simpler but lacks hooks integration and has a less active ecosystem
+**Initial values:** EF = 2.5, interval = 0 days, repetition_count = 0
 
-**Confidence:** HIGH - well-established pattern, i18next is the dominant React i18n library
+### Concrete Example Walkthrough
 
-### 2. Logo/Branding Integration
+Card first seen and answered correctly:
+1. repetition_count: 0 -> 1, interval: 0 -> 1 day, EF: 2.5 (unchanged), next_review: tomorrow
+2. Reviewed tomorrow, correct: rep 1 -> 2, interval: 1 -> 6 days, EF: 2.5, next: +6 days
+3. Reviewed in 6 days, correct: rep 2 -> 3, interval: 6 -> 15 days (6 * 2.5), next: +15 days
+4. Reviewed in 15 days, wrong: rep 3 -> 0, interval: 15 -> 1 day, EF: 2.5 -> 1.96, next: tomorrow
+5. Reviewed tomorrow, correct: rep 0 -> 1, interval: 0 -> 1, EF: 1.96, next: tomorrow
+6. Reviewed, correct: rep 1 -> 2, interval: 1 -> 6, EF: 1.96, next: +6 days
+7. Reviewed, correct: rep 2 -> 3, interval: 6 -> 12 (6 * 1.96), next: +12 days
 
-**Current state:** LoginScreen renders `<Text style={[styles.logo, { color: colors.primary }]}>Lumio</Text>` as a text placeholder. SVG logo files exist at repo root:
-- `logo.svg` (400x400, transparent background, tri-color pie chart with 3 rays + signature line)
-- `logo-circle.svg` (400x400, white circle background variant)
-- Brand colors: Amber `#FFA726`, Coral `#FF7061`, Violet `#9C68D4`
+### Proposed card_progress Table
 
-**Expected behavior:**
-- Login screen: Replace text "Lumio" with the actual logo image (~120x120 px) with "Lumio" text below it as the app name
-- Logo should work on both light and dark backgrounds
-
-**Implementation approach -- PNG conversion (recommended):**
-
-| Approach | Pros | Cons | Verdict |
-|----------|------|------|---------|
-| Convert SVG to PNG assets | No new dependencies, standard `<Image>` component, works on all devices | Loses vector quality at different densities, need @1x/@2x/@3x variants | **Use this** |
-| `react-native-svg` + `SvgXml` | Renders SVG directly, vector quality | New native dependency requiring `prebuild --clean` + APK reinstall. Known SDK 54 press event regressions. | Avoid |
-| `expo-image` with SVG | Modern image component | May not render complex SVG paths with transforms correctly | Not recommended |
-
-**Why `logo-circle.svg` as source:** The white circle background variant works on both light and dark backgrounds. The transparent variant (`logo.svg`) has a dark signature line (`stroke="#282828"`) that disappears on dark mode.
-
-**Asset preparation steps:**
-1. Export `logo-circle.svg` to PNG at 120px, 240px, 360px
-2. Place as `assets/logo.png`, `assets/logo@2x.png`, `assets/logo@3x.png`
-3. Use `<Image source={require('../assets/logo.png')} style={{ width: 120, height: 120 }} />`
-
-**Confidence:** HIGH - PNG images in React Native are trivial and universally supported
-
-### 3. Configurable Cards-Per-Session
-
-**Current state:** `useStudySession` hook loads ALL filtered cards from all repositories via `getStudyCardsWithQuestions()`, then presents them in random order via `selectRandomCard()`. Session ends when `loadNextQuestion()` returns null (all cards seen). For users with large decks (100+ cards), sessions become exhaustingly long.
-
-**Expected behavior:**
-- Settings screen gets a new "Study" section with session length options
-- Options: 10, 20, 50, All (matching standard flashcard app patterns)
-- Default: All (preserves current behavior, no breaking change)
-- Setting persists to AsyncStorage (key: `@lumio/cards-per-session`)
-- Study "ready" screen shows "X cards available, studying Y" when limit is set
-- Progress bar adjusts to show progress against the limit, not total deck size
-- Session completes when limit is reached OR all cards are seen (whichever comes first)
-
-**Key changes in `useStudySession.ts`:**
-
-Current completion logic:
-```
-const totalCards = session.cards.length;
-const seenCount = seenCardIds.current.size;
-const cardsRemaining = Math.max(0, totalCards - seenCount);
-const progress = totalCards > 0 ? seenCount / totalCards : 0;
+```sql
+CREATE TABLE card_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    easiness_factor REAL NOT NULL DEFAULT 2.5,
+    interval_days INTEGER NOT NULL DEFAULT 0,
+    repetition_count INTEGER NOT NULL DEFAULT 0,
+    next_review_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, card_id)
+);
 ```
 
-New completion logic:
+### Session Card Selection Algorithm (Pseudocode)
+
 ```
-const effectiveTotal = maxCards > 0 ? Math.min(maxCards, totalCards) : totalCards;
-const cardsRemaining = Math.max(0, effectiveTotal - seenCount);
-const progress = effectiveTotal > 0 ? seenCount / effectiveTotal : 0;
+1. Fetch due cards:
+   SELECT c.*, cp.* FROM cards c
+   JOIN card_progress cp ON cp.card_id = c.id
+   WHERE cp.user_id = :user_id
+     AND cp.next_review_at <= NOW()
+     AND c.is_active = TRUE
+   ORDER BY cp.next_review_at ASC  -- most overdue first
+
+2. Fetch new cards (never reviewed by this user):
+   SELECT c.* FROM cards c
+   JOIN user_repositories ur ON ur.repository_id = c.repository_id
+   WHERE ur.user_id = :user_id
+     AND c.is_active = TRUE
+     AND c.id NOT IN (SELECT card_id FROM card_progress WHERE user_id = :user_id)
+   ORDER BY RANDOM()
+
+3. Build session queue:
+   session = due_cards.slice(0, sessionLimit)
+   remaining = sessionLimit - session.length
+   session += new_cards.slice(0, remaining)
+
+4. For each card answered:
+   IF no card_progress row exists:
+     CREATE row with defaults (EF=2.5, rep=0, interval=0)
+   Apply SM-2 formula based on correct/wrong:
+     IF correct AND rep < 2: increment rep, set interval per I(1)/I(2) rules
+     IF correct AND rep >= 2: increment rep, interval = round(interval * EF)
+     IF wrong: reset rep=0, interval=1, decrease EF
+   SET next_review_at = NOW() + interval_days
+   SET last_reviewed_at = NOW()
 ```
-
-Also add an early completion check in `loadNextQuestion()`:
-```
-if (seenCardIds.current.size >= effectiveTotal) return null; // triggers 'completed' state
-```
-
-**Settings UI:** New "Study" section in SettingsScreen using the identical radio-button pattern as the Appearance section. Options array:
-```typescript
-const sessionLengthOptions = [
-  { value: 10, label: '10 cards' },  // or t('settings.tenCards')
-  { value: 20, label: '20 cards' },
-  { value: 50, label: '50 cards' },
-  { value: 0,  label: 'All cards' }, // 0 means no limit
-];
-```
-
-**Confidence:** HIGH - straightforward state management, mirrors existing patterns, no external dependencies
-
-### 4. Bottom-Sheet Card Preview Bugfix
-
-**Current state:** `CardPreviewModal` renders a bottom-sheet (80% screen height via `maxHeight: SCREEN_HEIGHT * 0.8`) using React Native `Modal` with `transparent` mode. Inside: drag handle, header, ScrollView wrapping `CardContentView` (WebView with `scrollEnabled={false}`). Users report content cut off at the top.
-
-**Probable root causes (ordered by likelihood):**
-
-1. **WebView height calculation race condition (MOST LIKELY):** In `cardHtml.ts`, content height is reported via a single `setTimeout(() => postMessage({type:'height', value: scrollHeight}), 100)`. KaTeX CSS, highlight.js JS, and marked.js are loaded from CDN. On anything but the fastest connections, these resources have not loaded at 100ms, meaning the height report reflects unstyled/partially-rendered content. The WebView gets sized too small, and content overflows into the clipped area.
-
-2. **ScrollView + WebView nesting on Android:** `CardContentView` sets `scrollEnabled={false}` on the WebView. The parent ScrollView controls scrolling. But if the WebView's reported height is wrong (cause #1), the ScrollView's content is shorter than expected. Content that renders after the height report appears but is clipped at the WebView's fixed height boundary.
-
-3. **Handle/header padding displacement:** The drag handle row adds `paddingTop: 10` + `paddingBottom: 4` (14px) and the header adds `paddingVertical: 12` (24px) + `borderBottomWidth: 1`. These 39px are outside the ScrollView but inside the sheet, reducing available content space. If the WebView calculates its height based on the full sheet height, the top 39px of content would be pushed behind the header.
-
-**Recommended fix approach (simplest first):**
-
-**Option A - Remove ScrollView, enable WebView scrolling (simplest):**
-Remove the `ScrollView` wrapper entirely. Set `scrollEnabled={true}` on the WebView. Let the WebView handle its own scrolling. The bottom-sheet's `maxHeight: 0.8 * screenHeight` already constrains size. This eliminates the nested-scroll problem completely.
-
-**Option B - Fix height reporting (if Option A creates other issues):**
-In `cardHtml.ts`, replace the single `setTimeout(100)` with progressive height reports:
-```javascript
-function reportHeight() {
-  var h = document.documentElement.scrollHeight;
-  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: h }));
-}
-setTimeout(reportHeight, 100);
-setTimeout(reportHeight, 500);
-setTimeout(reportHeight, 1500);
-// Also observe DOM changes
-new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true });
-```
-
-In `CardContentView`, update `handleMessage` to always take the maximum reported height:
-```typescript
-const handleMessage = useCallback((event) => {
-  const data = JSON.parse(event.nativeEvent.data);
-  if (data.type === 'height' && data.value > 0) {
-    setWebViewHeight(prev => Math.max(prev, data.value));
-  }
-}, []);
-```
-
-**Confidence:** MEDIUM - root cause is inferred from code analysis, not confirmed with runtime debugging. The WebView height race condition is the most common cause of this symptom in production React Native apps using WebView + CDN resources.
-
-### 5. Dynamic Version Display
-
-**Current state:** SettingsScreen line 111 hardcodes `Lumio v1.0.0`. The actual version is v1.1.4, managed by `packages/shared/src/version.ts` with auto-release CI that bumps on every `feat:` or `fix:` commit.
-
-**Expected behavior:** Settings screen displays the actual version from `@lumio/shared`.
-
-**Implementation:**
-```typescript
-// In SettingsScreen.tsx
-import { getVersionString } from '@lumio/shared';
-
-// Replace: <Text>Lumio v1.0.0</Text>
-// With:    <Text>Lumio {getVersionString()}</Text>
-// Renders: "Lumio v1.1.4"
-```
-
-**Prerequisite:** Verify `@lumio/shared` is resolvable from the Android app. The app already uses `@lumio/core` (workspace dependency), and `@lumio/shared` is in the same monorepo. The Metro config includes `packages/core/node_modules` in `nodeModulesPaths` for transitive dependencies, so `@lumio/shared` should be accessible. If not, add it as an explicit dependency in `apps/android/package.json`.
-
-**Confidence:** HIGH - trivial one-line change, infrastructure already fully built
 
 ## MVP Recommendation
 
-Prioritize by dependency order and effort-to-impact ratio:
+Prioritize in this order:
 
-1. **Dynamic version display** - 5-minute fix, zero risk, immediately visible improvement
-2. **Logo on Login screen** (PNG conversion) - Low effort, high visual polish, no new native dependencies
-3. **Bottom-sheet preview bugfix** - Bug fix with clear user impact. Try Option A (remove ScrollView) first
-4. **Configurable cards-per-session** - Medium effort, high user value. Mirrors existing settings patterns exactly
-5. **i18n IT/EN toggle** - Highest effort (~84 strings across 16 files). Do LAST because it touches every screen and benefits from all other UI changes being finalized first (avoids translating strings that will change during other feature work)
+1. **card_progress table + SM-2 RPC functions** (table stakes foundation, everything depends on this)
+   - DB migration creating `card_progress` with RLS policies
+   - RPC: `upsert_card_progress(p_user_id, p_card_id, p_is_correct)` applying SM-2 formula server-side
+   - RPC: `get_due_cards_for_study(p_user_id, p_limit)` returning due cards ordered by overdue-ness
+   - RPC: `get_due_card_count(p_user_id)` returning count for dashboard
 
-Defer to follow-up:
-- **Logo on Dashboard header:** Nice-to-have, not essential. Add after Login logo works.
-- **Language-aware date formatting:** Add as enhancement after i18n core works. Can use `Intl.RelativeTimeFormat` which Hermes supports.
+2. **Rewrite useStudySession for SRS card selection** (table stakes, replaces random selection)
+   - Replace `selectRandomCard` with due-first-then-new selection
+   - Call `upsert_card_progress` after each answer (alongside existing `saveStudySession`)
+   - Track card type (review/new) in session state
+
+3. **Dashboard "cards due today" counter** (table stakes, visible user value)
+   - Add new `StatCard` to `DashboardScreen` showing due count
+   - Use the color coding pattern already established (like the amber clock icon for "last studied")
+
+4. **Review/New indicator during study** (differentiator, small UI addition)
+   - Badge near progress bar showing "Review" or "New" for current card
+   - i18n strings for both IT and EN
+
+5. **Study history display fix** (table stakes bug fix, independent of SRS)
+   - Replace `item.repositoryName ?? t('history.allRepos')` with card count display
+   - Show something like "10 carte" / "10 cards" using existing `item.totalCount`
+
+Defer to future milestone: FSRS upgrade (needs review data), push notifications, per-card statistics.
 
 ## Sources
 
-- [Expo Localization Guide](https://docs.expo.dev/guides/localization/) - Official recommendation for i18n (HIGH confidence)
-- [react-i18next documentation](https://react.i18next.com/) - Hooks-based i18n for React/RN (HIGH confidence)
-- [i18next AsyncStorage persistence pattern](https://medium.com/@lasithherath00/implementing-react-native-i18n-and-language-selection-with-asyncstorage-b24ae59e788e) - Language persistence (MEDIUM confidence)
-- [react-native-svg Expo docs](https://docs.expo.dev/versions/latest/sdk/svg/) - SVG rendering options, SDK 54 issues noted (HIGH confidence)
-- [Expo Constants / App versions](https://docs.expo.dev/build-reference/app-versions/) - Version management in Expo (HIGH confidence)
-- [WebView + bottom-sheet Android issues](https://github.com/gorhom/react-native-bottom-sheet/issues/499) - Known WebView interaction problems (HIGH confidence)
-- [WebView autoheight content cutoff](https://github.com/iou90/react-native-autoheight-webview/issues/179) - Height calculation race conditions (MEDIUM confidence)
-- Codebase analysis: All feature specs verified against actual source files in `apps/android/` (HIGH confidence)
+- [SM-2 Algorithm Original Specification](https://www.supermemo.com/en/archives1990-2015/english/ol/sm2) - Original SM-2 by Piotr Wozniak, 1987. Formulas and rating scale. (HIGH confidence)
+- [Anki Manual - Studying](https://docs.ankiweb.net/studying.html) - Study session UX: card counts, answer buttons, queue order (HIGH confidence)
+- [Anki Manual - Deck Options](https://docs.ankiweb.net/deck-options.html) - New cards/day, review limits, learning steps, new/review mix (HIGH confidence)
+- [FSRS vs SM-2 Guide](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/) - Algorithm comparison showing FSRS 20-30% more efficient (MEDIUM confidence)
+- [FSRS ABC Wiki](https://github.com/open-spaced-repetition/fsrs4anki/wiki/abc-of-fsrs) - Why FSRS outperforms SM-2, 99.6% superiority metric (MEDIUM confidence)
+- [SM-2 Explained - Tegaru](https://tegaru.app/en/blog/sm2-algorithm-explained) - Simplified SM-2 explanation with grade effects (MEDIUM confidence)
+- [Spaced Repetition Algorithm Journey](https://github.com/open-spaced-repetition/fsrs4anki/wiki/spaced-repetition-algorithm:-a-three%E2%80%90day-journey-from-novice-to-expert) - Evolution from SM-0 to FSRS, practical implementation approaches (HIGH confidence)
+- [Quizlet Spaced Repetition](https://medium.com/tech-quizlet/spaced-repetition-for-all-cognitive-science-meets-big-data-in-a-procrastinating-world-59e4d2c8ede1) - Industry approach to SRS in consumer apps (MEDIUM confidence)
+- Lumio codebase analysis: `useStudySession.ts`, `study.ts`, `StudyScreen.tsx`, `StudyHistoryScreen.tsx`, `DashboardScreen.tsx`, study_sessions migration, card_questions migration (HIGH confidence)

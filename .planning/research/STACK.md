@@ -1,261 +1,241 @@
-# Technology Stack: Phase 5 Additions
+# Stack Research: v2.0 Spaced Repetition
 
-**Project:** Lumio Android - i18n, Logo, Configurable Sessions, Bottom-Sheet Fix
-**Researched:** 2026-02-08
-**Scope:** NEW libraries and changes only. Existing stack (Expo 54, RN 0.81, etc.) is validated and not re-researched.
+**Domain:** SRS algorithm + card progress tracking + dashboard counter for Lumio Android
+**Researched:** 2026-02-25
+**Scope:** NEW additions only. Existing stack (Expo SDK 54, RN 0.81, react-navigation, Supabase, i18n-js, etc.) is validated and not re-researched.
+**Confidence:** HIGH
 
 ---
 
 ## Recommended Stack Additions
 
-### i18n (Italian/English Toggle)
+### SRS Algorithm Library
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| expo-localization | ~17.0.x | Device locale detection | Expo's official module. Provides `getLocales()` and `useLocales()` for detecting device language. Install via `npx expo install expo-localization` to get the SDK 54-compatible version. No native rebuild required -- it is an Expo module with config plugin auto-linking. |
-| i18n-js | ^4.5.2 | Translation engine | Expo's officially recommended i18n library (per [Expo Localization Guide](https://docs.expo.dev/guides/localization/)). Lightweight (~15kb), zero native dependencies, built-in fallback logic, pluralization via `make-plural`. Already uses `.mjs` exports but Expo SDK 54 Metro config includes `mjs` in `sourceExts` by default -- verified locally, no metro.config.js changes needed. |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| supermemo | ^2.0.23 | SM-2 spaced repetition scheduling | **The right weight class for this use case.** Lumio uses binary correct/incorrect answers (quiz: 4-option multiple choice). SM-2 maps directly to this: correct = grade 5, incorrect = grade 0. Three fields to persist per card (interval, repetition, efactor). Zero dependencies, pure TypeScript, 2KB. Published March 2025. The algorithm is correct and universally understood. |
 
-**Why i18n-js over react-i18next:** For a 2-locale app (IT/EN) with ~50-100 string keys, i18n-js is the right weight class. react-i18next adds ~45kb, namespace loading, context API wrapping, and React Suspense integration -- all unnecessary complexity for a simple locale toggle. i18n-js is what Expo officially documents. Use it.
+**Why `supermemo` over `ts-fsrs`:**
 
-**Why NOT react-intl:** Designed for ICU message format workflows with extraction tools. Overkill for two languages in a mobile app.
+ts-fsrs (v5.2.3, Sep 2025) implements FSRS v6 — the modern Anki algorithm trained on 700M reviews. FSRS is measurably better for long-term scheduling. However, it requires 4-level ratings (Again/Hard/Good/Easy) to work properly, and it persists 7+ fields per card (stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review, due). Lumio's quiz is binary (right/wrong) — mapping two outcomes to four FSRS grades loses the precision that makes FSRS better than SM-2. **When your input is binary, SM-2's simpler model is appropriate.**
 
-**Confidence:** HIGH -- verified with Expo official documentation and local Metro config check.
+supermemo persists exactly 3 fields: `interval` (days until next review), `repetition` (consecutive correct count), `efactor` (ease factor, initialized to 2.5). The new table is 4 columns. FSRS would need 8+ columns and a review_log table.
 
-### SVG Logo Rendering
+**Why NOT a hand-rolled SM-2:**
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| react-native-svg | (Expo-managed) | Render SVG logo on LoginScreen | Install via `npx expo install react-native-svg` to get the SDK 54-compatible version. Provides `SvgXml` component that accepts raw SVG XML strings -- perfect for the existing `logo.svg` and `logo-circle.svg` at repo root. The SVGs use standard `<path>`, `<rect>`, `<line>` elements that react-native-svg handles well. **Requires native rebuild** (prebuild + gradlew + adb install) since it includes native modules. |
+The `supermemo` package is a correct, battle-tested, 2KB SM-2 implementation. Hand-rolling saves nothing and introduces bugs.
 
-**Integration approach:** Convert the existing SVG file content to a TypeScript constant string, render via `<SvgXml xml={logoSvg} width={120} height={120} />`. This avoids needing a Metro SVG transformer, keeps the build simple, and allows easy dark-mode color overrides by string-replacing fill values before passing to SvgXml.
+**Confidence:** HIGH — version verified via npm registry, algorithm match to Lumio's binary quiz confirmed from codebase analysis.
 
-**Why NOT react-native-svg-transformer:** Adds a Metro transformer that converts `.svg` imports to React components at build time. Adds build complexity and requires metro.config.js changes. For 2 static SVG assets, `SvgXml` with string constants is simpler and has zero config overhead.
+### No New React Native Libraries Needed
 
-**Why NOT expo-image or Image component:** Expo's Image component cannot render local SVGs natively. SVGs must be rendered via react-native-svg or converted to PNG first. SVG keeps sharpness at any size and allows dynamic color theming.
+The dashboard counter, study session badge, and card mix logic require only:
+- New Supabase DB table (`user_card_progress`)
+- New Supabase DB function (`get_due_card_count`)
+- New functions in `@lumio/core/src/supabase/study.ts`
+- New types in `@lumio/shared/src/types/index.ts`
+- UI changes to existing screens (DashboardScreen, StudyScreen, StudyHistoryScreen)
 
-**Confidence:** HIGH -- react-native-svg is Expo's official SVG solution, SvgXml API verified via [Expo SVG docs](https://docs.expo.dev/versions/latest/sdk/svg/) and [react-native-svg USAGE.md](https://github.com/software-mansion/react-native-svg/blob/main/USAGE.md).
-
-### Settings Persistence (Cards-per-Session, Language Preference)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| @react-native-async-storage/async-storage | 2.2.0 (already installed) | Persist user settings | Already in the project and used by ThemeContext for theme preference. Same pattern extends naturally to language preference and cards-per-session count. No new dependency needed. |
-
-**No new library required.** The existing `AsyncStorage` pattern in `lib/theme.ts` (load/save with typed keys) is the right approach for simple key-value settings. Create a parallel `lib/settings.ts` with the same pattern:
-
-```typescript
-// Pattern from existing lib/theme.ts -- extend, don't add new deps
-const LANGUAGE_KEY = '@lumio/language';
-const CARDS_PER_SESSION_KEY = '@lumio/cards-per-session';
-
-export type Language = 'en' | 'it';
-export const DEFAULT_CARDS_PER_SESSION = 10; // or whatever the current implicit default is
-```
-
-**Why NOT expo-sqlite/kv-store:** The original STACK.md recommended it as an AsyncStorage replacement, but AsyncStorage is already installed, working, and has an established pattern in the codebase. Swapping storage engines mid-project for 2 new keys adds risk for zero benefit. If the app grows to 20+ settings, revisit.
-
-**Why NOT Zustand or a state management library for settings:** The existing pattern uses React Context (ThemeContext) with AsyncStorage. Adding a Zustand store just for settings would create two state management patterns. Stay consistent with what exists.
-
-**Confidence:** HIGH -- using already-installed library with proven pattern.
+No new React Native packages are required. All UI components (StatCard, badges, counters) are built with existing StyleSheet + Ionicons patterns already in the project.
 
 ---
 
-## No New Libraries Needed
+## Database: New Table Required
 
-### Bottom-Sheet Scroll Fix
+### `user_card_progress` Table
 
-**No new dependency.** The `CardPreviewModal` uses a custom bottom-sheet implementation (React Native `Modal` + `ScrollView` + `CardContentView` which wraps `WebView`). The scroll bug is a known Android issue with `WebView` inside `ScrollView` inside `Modal`.
+This is the central new addition for SRS. It tracks SM-2 state **per user per card**.
 
-The fix is code-level, not library-level:
-
-1. **WebView `scrollEnabled={false}` is already set** in `CardContentView.tsx` (line 59). The WebView reports its content height via `postMessage` and sizes itself accordingly. This is the correct pattern.
-
-2. **The real issue:** The `ScrollView` wrapping the `WebView` in `CardPreviewModal.tsx` (line 110-124) may not scroll properly on Android because the WebView's height reporting can race with ScrollView layout. The fix involves:
-   - Adding `nestedScrollEnabled={true}` to the ScrollView
-   - Ensuring the WebView height is fully resolved before ScrollView attempts to measure content
-   - Consider wrapping content in a `View` with `onLayout` to force remeasure
-
-3. **If `nestedScrollEnabled` alone doesn't fix it:** The `opacity: 0.99` hack on the WebView (line 58 of `CardContentView.tsx`) forces hardware acceleration on Android, which is good. But adding `overScrollMode="never"` to the ScrollView can help prevent gesture conflicts.
-
-**Why NOT @gorhom/bottom-sheet:** It is a well-maintained library (v5, Reanimated + GestureHandler based), but the app already has a working custom bottom-sheet Modal pattern. Replacing it with @gorhom/bottom-sheet would require adding `react-native-reanimated` as a dependency (which is NOT currently installed despite the original STACK.md suggesting it), updating the Babel config, and doing a native rebuild. For one scroll bug, this is too much churn.
-
-**Confidence:** HIGH -- WebView-in-ScrollView scroll issues on Android are well-documented and fixable with props.
-
-### Dynamic Version Display
-
-**No new dependency.** `@lumio/shared` already exports `VERSION`, `getVersionString()`, and `getFullVersionString()`. The `SettingsScreen.tsx` currently hardcodes `"Lumio v1.0.0"` (line 112). Fix is a one-line import change:
-
-```typescript
-import { getVersionString } from '@lumio/shared';
-// Then use: {`Lumio ${getVersionString()}`}
+```sql
+CREATE TABLE public.user_card_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+  -- SM-2 algorithm state (from supermemo package)
+  interval INTEGER NOT NULL DEFAULT 0,       -- days until next review
+  repetition INTEGER NOT NULL DEFAULT 0,     -- consecutive correct count
+  efactor REAL NOT NULL DEFAULT 2.5,         -- ease factor (initialized to 2.5 per SM-2 spec)
+  -- Scheduling
+  due_date TIMESTAMPTZ NOT NULL DEFAULT NOW(), -- when this card is next due
+  last_reviewed_at TIMESTAMPTZ,
+  -- Constraint: one row per user+card
+  UNIQUE(user_id, card_id)
+);
 ```
 
-**Confidence:** HIGH -- the code already exists in `packages/shared/src/version.ts`.
+**Why `UNIQUE(user_id, card_id)` not a composite PK:** Allows `INSERT ... ON CONFLICT (user_id, card_id) DO UPDATE` (upsert) pattern from the app, which is the natural update primitive.
 
----
+**Why `efactor REAL` not `NUMERIC(4,2)`:** The SM-2 formula produces floating-point values. REAL matches the JS `number` type without truncation risk.
 
-## Installation Summary
+**Why `due_date` stored (not computed):** The query `WHERE due_date <= NOW()` for the dashboard counter must use an index. Storing `due_date` enables a simple indexed query. If derived from `last_reviewed_at + interval`, the query would need a computed expression index.
 
-```bash
-# New dependencies (run from monorepo root)
-cd /home/toto/scm-projects/lumio
+**RLS:** `USING (auth.uid() = user_id)` for SELECT and INSERT/UPDATE. Users only see/modify their own progress.
 
-# i18n libraries (no native rebuild needed for these)
-pnpm --filter @lumio/android exec -- npx expo install expo-localization
-pnpm --filter @lumio/android add i18n-js
+### Supporting DB Function
 
-# SVG rendering (REQUIRES native rebuild)
-pnpm --filter @lumio/android exec -- npx expo install react-native-svg
+```sql
+-- Returns count of cards due for review for the authenticated user
+CREATE OR REPLACE FUNCTION get_due_card_count(p_user_id UUID)
+RETURNS INTEGER AS $$
+  SELECT COUNT(*)::INTEGER
+  FROM user_card_progress
+  WHERE user_id = p_user_id
+    AND due_date <= NOW();
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 ```
 
-### Post-Install: Native Rebuild Required
-
-Because `react-native-svg` includes native modules:
-
-```bash
-cd apps/android
-npx expo prebuild --platform android --clean
-cd android && ./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-`expo-localization` and `i18n-js` do NOT require a native rebuild -- they work with the existing dev client.
-
----
-
-## Metro Configuration
-
-**No changes needed.** Verified locally that Expo SDK 54's default Metro config already includes `mjs` in `sourceExts`:
-
-```
-sourceExts: ["ts","tsx","mjs","js","jsx","json","cjs","scss","sass","css"]
-```
-
-The existing `metro.config.js` at `apps/android/metro.config.js` extends the default config for monorepo support. No modifications required for i18n-js or react-native-svg.
-
----
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| i18n engine | i18n-js | react-i18next | Overkill for 2 locales. 3x larger bundle. Expo docs recommend i18n-js. |
-| i18n engine | i18n-js | Lingui | Metro transformer setup, message extraction workflow -- too heavy for IT/EN toggle |
-| Locale detection | expo-localization | react-native-localize | expo-localization is the Expo ecosystem answer. react-native-localize is for bare RN. |
-| SVG rendering | react-native-svg (SvgXml) | react-native-svg-transformer | Transformer adds metro config complexity for 2 SVG files. SvgXml is simpler. |
-| SVG rendering | react-native-svg (SvgXml) | Convert SVG to PNG | Loses resolution independence and dynamic dark-mode color swaps |
-| Settings storage | AsyncStorage (existing) | expo-sqlite/kv-store | Existing pattern works. Don't swap storage for 2 new keys. |
-| Settings storage | AsyncStorage (existing) | Zustand persist | Would introduce second state management pattern. ThemeContext pattern is consistent. |
-| Bottom-sheet | Custom Modal (existing) | @gorhom/bottom-sheet | Requires react-native-reanimated (not installed), native rebuild, Babel config changes. Over-engineered for one scroll fix. |
+**Why a DB function, not a raw REST query:** The dashboard needs a single integer. The function hides the query complexity and is callable via `rpc/get_due_card_count` without exposing table structure.
 
 ---
 
 ## Integration Points
 
-### i18n Architecture
+### `@lumio/core` — New Functions Needed
 
-Create a centralized i18n module that mirrors the ThemeContext pattern:
+Add to `packages/core/src/supabase/study.ts`:
 
-```
-apps/android/
-  lib/i18n.ts              # i18n instance, translations, init
-  contexts/I18nContext.tsx  # Provider + useI18n hook
-  hooks/useI18n.ts         # Re-export convenience
-  locales/
-    en.ts                  # English strings
-    it.ts                  # Italian strings
-```
+```typescript
+// Upsert SRS progress after each card answer
+export async function updateCardProgress(
+  cardId: string,
+  grade: 0 | 5  // correct = 5, incorrect = 0
+): Promise<void>
 
-The i18n provider should:
-1. Load saved language preference from AsyncStorage on mount
-2. Fall back to device locale via `getLocales()[0].languageCode`
-3. Fall back to `'en'` if device locale is neither `'en'` nor `'it'`
-4. Provide `t()` function and `setLanguage()` to children
+// Get count of cards due for review today
+export async function getDueCardCount(): Promise<number>
 
-### Settings Architecture
-
-Extend the existing pattern in `lib/theme.ts` to a broader `lib/settings.ts`:
-
-```
-apps/android/
-  lib/settings.ts           # load/save for all settings (cardsPerSession, language)
-  contexts/SettingsContext.tsx  # OR extend ThemeContext to AppSettingsContext
+// Get ordered list of cards for SRS study session
+// Returns: expired due cards first, then new cards, up to limit
+export async function getSRSStudyQueue(limit: number): Promise<StudyCard[]>
 ```
 
-Key decision: either create a separate SettingsContext or fold language + cardsPerSession into the existing ThemeContext (renaming it to AppSettingsContext). The latter reduces provider nesting. Recommend the fold approach.
+### `@lumio/shared` — New Types Needed
 
-### Logo Integration
+Add to `packages/shared/src/types/index.ts`:
 
+```typescript
+// SRS progress for a single card (stored in user_card_progress table)
+export interface CardProgress {
+  id: string;
+  userId: string;
+  cardId: string;
+  interval: number;        // days until next review (SM-2)
+  repetition: number;      // consecutive correct count (SM-2)
+  efactor: number;         // ease factor, initialized to 2.5 (SM-2)
+  dueDate: string;         // ISO timestamp of next review
+  lastReviewedAt: string | null;
+}
+
+// Input for upserting card progress
+export interface UpdateCardProgressOptions {
+  cardId: string;
+  interval: number;
+  repetition: number;
+  efactor: number;
+  dueDate: string;
+}
+
+// Card with SRS state attached (for study queue)
+export interface SRSStudyCard extends StudyCard {
+  isDue: boolean;          // true if due_date <= now
+  isNew: boolean;          // true if no progress record exists
+  dueDate: string | null;  // null for new cards
+}
 ```
-apps/android/
-  assets/logo.ts            # SVG XML string constants (copied from repo root SVGs)
-  components/LumioLogo.tsx   # Wrapper component with size/color props
+
+### Hook Changes
+
+The existing `useStudySession` hook needs extension, not replacement:
+
+- Add SRS mode flag to distinguish random (legacy) vs SRS scheduling
+- After `handleAnswer`, call `updateCardProgress` with grade 5 (correct) or 0 (incorrect)
+- Card loading in SRS mode uses `getSRSStudyQueue` instead of `getStudyCardsWithQuestions`
+- Track `isDue` / `isNew` on current card for the in-session badge
+
+### Dashboard Changes
+
+`DashboardScreen.tsx` — add a fourth StatCard:
+
+```typescript
+const [dueCount, setDueCount] = useState(0);
+
+// In fetchStats():
+const count = await getDueCardCount();
+setDueCount(count);
 ```
 
-The LoginScreen currently shows `<Text style={styles.logo}>Lumio</Text>` (line 54). Replace with the `LumioLogo` component.
+StatCard with icon `"refresh-outline"` and orange/amber color (matching the last-studied card).
 
-### Screens Needing i18n String Extraction
+### Study History Fix
 
-| Screen/Component | Estimated Strings | Priority |
-|-----------------|-------------------|----------|
-| LoginScreen.tsx | 4 (tagline, sign in, errors) | HIGH |
-| DashboardScreen.tsx | 8 (stats labels, CTA, empty state) | HIGH |
-| StudyScreen.tsx | 15 (states, buttons, alerts) | HIGH |
-| SettingsScreen.tsx | 8 (section headers, options, version) | HIGH |
-| StudySummaryScreen.tsx | 6 (results labels) | MEDIUM |
-| ReposScreen.tsx | 5 (headers, empty state) | MEDIUM |
-| Components (shared) | 10 (EmptyState, OfflineBanner, etc.) | MEDIUM |
-| **Total** | **~56 strings** | |
+The `StudyHistoryScreen` shows `item.repositoryName ?? t('history.allRepos')` for the repo column. The bug: when `repositoryName` is null (cross-repo sessions), it shows "All Repos" which is misleading. Fix: store `total_count` (already stored) and display `N cards` instead of repo name in the center column. No schema change needed.
+
+---
+
+## Installation
+
+```bash
+# From monorepo root — add to @lumio/android
+pnpm --filter @lumio/android add supermemo
+```
+
+No native rebuild required. `supermemo` is pure JavaScript/TypeScript with no native modules.
+
+Also add to `@lumio/core` dependencies if the SRS scheduling logic lives there:
+
+```bash
+pnpm --filter @lumio/core add supermemo
+```
+
+**Recommendation:** Place the `supermemo(card, grade)` call in `@lumio/core` alongside the Supabase upsert. This keeps the algorithm + persistence co-located and the app only calls `updateCardProgress(cardId, isCorrect)`.
+
+---
+
+## Alternatives Considered
+
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| supermemo (SM-2) | ts-fsrs (FSRS v6) | If Lumio adds multi-level ratings (Again/Hard/Good/Easy) in a future milestone. FSRS is genuinely better for nuanced recall grading. Current binary correct/wrong maps better to SM-2. |
+| supermemo (SM-2) | Hand-rolled SM-2 | Never — the package is correct, tiny, and battle-tested. Nothing to gain. |
+| supermemo (SM-2) | @open-spaced-repetition/sm-2-ts | Both implement the same algorithm. supermemo (2.0.23, Mar 2025) has more downloads, is slightly older/more proven, and the README is clearer. Either works. |
+| Supabase DB upsert | AsyncStorage for SRS state | AsyncStorage is local-only. SRS progress must survive reinstall and be shared if user logs in on another device. DB is correct here. |
+| Dedicated `user_card_progress` table | Add SRS columns to `cards` table | `cards` is shared across users (one card row per card, not per user). SRS progress is per-user, so it must be a separate table with `user_id`. |
 
 ---
 
 ## What NOT to Add
 
-| Avoid | Why |
-|-------|-----|
-| react-native-reanimated | Not needed for any Phase 5 feature. Only add if/when gesture animations become a requirement. |
-| NativeWind / Tailwind | Project uses StyleSheet API throughout. Introducing NativeWind now would create two styling patterns. |
-| Zustand | Settings are simple key-value pairs. Context + AsyncStorage pattern is already established. |
-| @gorhom/bottom-sheet | Custom Modal pattern works. Fix the scroll bug, don't replace the component. |
-| react-native-svg-transformer | Metro transformer overhead for 2 SVG files is not justified. |
-| Any translation management platform (Crowdin, Lokalise) | 2 locales, ~56 strings. A `locales/en.ts` and `locales/it.ts` file pair is sufficient. |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| ts-fsrs | FSRS requires 4-rating input (Again/Hard/Good/Easy). Lumio's binary quiz loses FSRS's advantage. 7+ DB columns vs 3. Over-engineered for binary grading. | supermemo (SM-2) |
+| react-native-reanimated | No new animations needed. Dashboard counter and session badges are static UI. | Not needed |
+| @gorhom/bottom-sheet | Already decided against in prior research. Custom Modal pattern works. | Existing Modal pattern |
+| Supabase Realtime for due counter | Dashboard counter refreshes on pull-to-refresh and screen focus. Real-time push for a study counter is over-engineering. | Simple fetch in `fetchStats()` |
+| expo-background-fetch | SRS review reminders are out of scope per PROJECT.md. | Out of scope |
 
 ---
 
-## Version Compatibility Matrix
+## Version Compatibility
 
 | Package | Compatible With | Requires Native Rebuild | Notes |
 |---------|-----------------|------------------------|-------|
-| expo-localization ~17.0.x | Expo SDK 54 | No | Expo module, auto-linked via config plugin |
-| i18n-js ^4.5.2 | Any JS runtime | No | Pure JavaScript, no native code |
-| react-native-svg (Expo-managed) | Expo SDK 54 | YES | Native rendering engine, must rebuild APK |
-| @react-native-async-storage 2.2.0 | Already installed | No | No change |
-| @lumio/shared (VERSION) | Already available | No | Import change only |
+| supermemo ^2.0.23 | Any JS runtime, Expo SDK 54 | No | Pure TypeScript, no native deps, ESM + CJS exports |
+| New Supabase migration | Existing Supabase local + production | No | Standard `supabase/migrations/` pattern |
+| `@lumio/core` additions | @lumio/android as-is | No | Adding functions to existing module |
+| `@lumio/shared` additions | @lumio/android as-is | No | Adding types to existing module |
 
 ---
 
 ## Sources
 
-### Official Documentation (HIGH confidence)
-- [Expo Localization Guide](https://docs.expo.dev/guides/localization/) -- Recommends expo-localization + i18n-js
-- [Expo Localization API](https://docs.expo.dev/versions/latest/sdk/localization/) -- getLocales(), useLocales() API
-- [Expo SVG Documentation](https://docs.expo.dev/versions/latest/sdk/svg/) -- react-native-svg installation and usage
-- [react-native-svg USAGE.md](https://github.com/software-mansion/react-native-svg/blob/main/USAGE.md) -- SvgXml component API
-
-### Verified Locally (HIGH confidence)
-- Expo SDK 54 Metro default `sourceExts` includes `mjs` -- confirmed via `getDefaultConfig()` output
-- AsyncStorage 2.2.0 already installed and used by ThemeContext
-- `@lumio/shared` exports `VERSION`, `getVersionString()`, `getFullVersionString()`
-- `logo.svg` and `logo-circle.svg` use standard SVG elements compatible with react-native-svg
-- `CardPreviewModal.tsx` uses custom Modal+ScrollView pattern, WebView has `scrollEnabled={false}`
-- `metro.config.js` already configured for monorepo, no changes needed
-
-### WebSearch (MEDIUM confidence, verified against official docs)
-- [i18n-js npm](https://www.npmjs.com/package/i18n-js) -- v4.5.2, actively maintained
-- [Expo SDK 54 Changelog](https://expo.dev/changelog/sdk-54) -- React Native 0.81, React 19.1
-- [WebView scroll issues](https://github.com/react-native-webview/react-native-webview/issues/22) -- nestedScrollEnabled fix pattern
+- [supermemo npm registry](https://registry.npmjs.org/supermemo) — version 2.0.23, published 2025-03-20, verified via Node.js fetch
+- [supermemo GitHub (VienDinhCom/supermemo)](https://github.com/VienDinhCom/supermemo) — SuperMemoItem type: `{interval, repetition, efactor}`, grade range 0-5, API verified
+- [ts-fsrs npm registry](https://registry.npmjs.org/ts-fsrs) — version 5.2.3, published 2025-09-05, zero peer deps, verified via Node.js fetch
+- [open-spaced-repetition/ts-fsrs GitHub](https://github.com/open-spaced-repetition/ts-fsrs) — FSRS v6, Card type fields (due, stability, difficulty, elapsed_days, state), 4-level Rating enum
+- FSRS vs SM-2 comparison — [MemoForge Blog 2025](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/): FSRS better for nuanced grading, SM-2 simpler and correct for binary outcomes
+- Codebase analysis: `apps/android/hooks/useStudySession.ts`, `packages/core/src/supabase/study.ts`, `packages/shared/src/types/index.ts`, `supabase/migrations/20260211000001_study_sessions.sql` — confirmed binary correct/wrong quiz model, existing DB patterns, study.ts architecture
 
 ---
 
-*Stack research for: Lumio Phase 5 -- i18n, Logo, Configurable Sessions, Bottom-Sheet Fix*
-*Researched: 2026-02-08*
+*Stack research for: Lumio v2.0 Spaced Repetition — SRS algorithm, card progress tracking, dashboard review counter*
+*Researched: 2026-02-25*

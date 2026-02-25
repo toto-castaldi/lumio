@@ -1,350 +1,296 @@
-# Domain Pitfalls
+# Pitfalls Research
 
-**Domain:** Adding i18n, SVG branding, configurable study sessions, bottom-sheet bugfix, and dynamic versioning to existing React Native/Expo Android app
-**Researched:** 2026-02-09
+**Domain:** Adding spaced repetition to existing Lumio flashcard app (React Native/Expo, Supabase backend)
+**Researched:** 2026-02-25
+**Confidence:** HIGH
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
+### Pitfall 1: Card-Level Schedule Orphaned When Card Content Changes
 
-### Pitfall 1: WebView Height Measurement Fires Before CDN Resources Load
+**What goes wrong:**
+Lumio cards are synced from GitHub repos via Docora. When a card's content changes (edited markdown file pushed), the backend updates the `cards` row (including `updated_at`). If the spaced repetition schedule is keyed to the `card_id`, it becomes stale: the old schedule (ease factor, interval, next due date) was earned for the *previous* content, not the new content. The user may be scheduled to see an "easy" card in 60 days, but the card now teaches something entirely different. Worse: if `card_questions` are also regenerated on content change (they are — `deactivation_reason = 'card_updated'`), a new question is generated but the user's SRS state from the old question bleeds into the new one.
 
-**What goes wrong:** The current `cardHtml.ts` reports height via `setTimeout(fn, 100)` after rendering (line 222-228). This 100ms delay races against CDN-loaded KaTeX CSS (~230KB), highlight.js CSS/JS (~40KB), and marked.js. On slow connections, these resources are not yet loaded when `document.documentElement.scrollHeight` executes, producing an incorrect height. Content gets cut off, and on Android specifically, the reported `scrollHeight` can also be inflated initially and then shrink as layout stabilizes, causing visual jumps.
+**Why it happens:**
+SRS state is typically stored as `(user_id, card_id) → {ease, interval, due_date, repetitions}`. The card_id is stable across content changes, so no foreign key violation fires. The schedule silently persists with stale parameters.
 
-**Why it happens:** The `setTimeout(100)` is a guess, not event-driven. CDN resources may take 200-500ms+ to load on mobile networks. The height is measured once and never re-measured, even as CSS changes the layout after load.
+**How to avoid:**
+- Add a `content_version` hash (e.g., `SHA256` of card content) to the SRS state row.
+- On each review session start, compare `cards.updated_at` (or a new `content_hash` column) against the value recorded in the SRS row at time of last review.
+- If the card was updated since the last review, reset the SRS state to "new" for that user (equivalent to never having seen it).
+- The Docora webhook already sets `deactivated_at` on questions when `card_updated`. Reuse this signal: when `card_questions` deactivates old questions for a card, also reset SRS state for that card across all users.
+- Alternatively (simpler): reset SRS state whenever `cards.updated_at` is newer than `card_reviews.reviewed_at`. No extra hash column needed.
 
-**Consequences:** Content visually cut off in the CardPreviewModal bottom sheet. The reported bug ("content cut off at top") is a direct symptom: the WebView height is set wrong, and the ScrollView clips incorrectly. The combination of `androidLayerType="hardware"` and `opacity: 0.99` (rendering workaround in `CardContentView.tsx` line 58) adds further layout unpredictability.
+**Warning signs:**
+- Users report seeing "easy" cards they've never actually studied under their current form.
+- The `cards.updated_at` timestamp is newer than the `card_reviews.last_reviewed_at` for the same card.
+- After a repo sync, a card's interval jumps to a large value on first review.
 
-**Prevention:**
-- Replace `setTimeout(100)` with a `ResizeObserver` on the content div, or use `load` events on `<link>` and `<script>` elements to wait for all CDN resources before measuring.
-- Use a `MutationObserver` as a fallback for older Android WebView versions lacking `ResizeObserver`.
-- Send multiple height updates (debounced) rather than a single one-shot measurement.
-- Example pattern:
-  ```javascript
-  Promise.all([
-    new Promise(r => document.fonts.ready.then(r)),
-    ...Array.from(document.querySelectorAll('link[rel=stylesheet]')).map(
-      link => new Promise(r => { link.onload = r; link.onerror = r; })
-    ),
-  ]).then(() => {
-    var height = document.documentElement.scrollHeight;
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: height }));
-  });
-  // Also observe for dynamic changes
-  new ResizeObserver(() => {
-    clearTimeout(window._ht);
-    window._ht = setTimeout(() => {
-      window.ReactNativeWebView.postMessage(
-        JSON.stringify({ type: 'height', value: document.documentElement.scrollHeight })
-      );
-    }, 50);
-  }).observe(document.getElementById('content'));
-  ```
-
-**Detection:** Content is cut off in CardPreviewModal; different card content lengths show inconsistent clipping. Testing on throttled network makes it dramatically worse.
-
-**Confidence:** HIGH -- verified by reading `cardHtml.ts` (line 222-228) and corroborated by [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715) and [issue #1395](https://github.com/react-native-webview/react-native-webview/issues/1395).
+**Phase to address:**
+Data model phase (schema design for `card_reviews` table). Add `card_updated_at TIMESTAMPTZ` snapshot column to `card_reviews` and stale-detection logic in the card selection RPC.
 
 ---
 
-### Pitfall 2: ScrollView + WebView(scrollEnabled=false) Gesture Conflict on Android
+### Pitfall 2: Card Deleted While in Active SRS Schedule
 
-**What goes wrong:** The `CardPreviewModal` wraps a `CardContentView` (WebView with `scrollEnabled={false}`) inside a `ScrollView`. On Android, even with `scrollEnabled={false}`, the WebView's internal gesture handling intercepts touch events, causing the parent ScrollView to stop scrolling entirely after the user interacts with the WebView area.
+**What goes wrong:**
+When a card is deleted from GitHub (file removed, repo unlinked, or `.lumioignore` pattern added), the `cards` row is soft-deleted (`is_active = FALSE`) or hard-deleted. If the SRS schedule references `card_id` via FK with `ON DELETE CASCADE`, all SRS state is silently dropped — losing the user's review history for that card. If using `ON DELETE RESTRICT`, the card deletion fails. If using `ON DELETE SET NULL`, you have orphaned SRS rows with no card reference.
 
-**Why it happens:** Android's native `WebView` has its own touch event pipeline separate from React Native's gesture system. Setting `scrollEnabled={false}` on the RN side does not fully disable the native WebView's gesture interception. When a user touches inside the WebView area, Android's WebView consumes `ACTION_MOVE` events before they bubble to the parent ScrollView.
+**Why it happens:**
+The existing `card_questions` table uses `ON DELETE CASCADE` on `card_id`. The natural instinct is to do the same for SRS state. But SRS state has dual purpose: it drives future scheduling AND it's part of the user's learning history. Cascading delete destroys both.
 
-**Consequences:** Users cannot scroll the card preview content on Android after touching inside the rendered card area. This makes the feature appear broken for any card with content taller than the visible area.
+**How to avoid:**
+- Use `ON DELETE CASCADE` for the SRS state (`card_reviews`) table — it is per-user per-card and has no value without the card. Losing the schedule for a deleted card is acceptable; the card is gone anyway.
+- However: `study_sessions` must **not** store `card_id` as a FK. The existing `study_sessions` schema correctly stores `repository_name TEXT` (nullable, not FK). Follow the same pattern for any session-level card tracking. Use `card_id UUID` (no FK) for audit columns in sessions, so session history survives card deletion.
+- Do NOT add `REFERENCES cards(id) ON DELETE CASCADE` to session detail rows — use `ON DELETE SET NULL` or store `card_id` as plain UUID without FK.
 
-**Prevention:**
-- Set `nestedScrollEnabled={false}` on the WebView explicitly.
-- Add `pointerEvents="none"` to a View wrapper around the WebView since card previews are read-only, allowing all touch events to pass through to the parent ScrollView.
-- As a more robust alternative, replace the ScrollView/WebView pattern with a single WebView that handles its own scrolling internally (remove outer ScrollView, set `scrollEnabled={true}` on WebView). The header/close button can be positioned absolutely above it.
+**Warning signs:**
+- After a repo sync that removes files, users see a drop in their "cards studied" stats.
+- `study_sessions` table references a deleted card_id, causing broken lookups.
 
-**Detection:** On a physical Android device (not emulator), try scrolling a card preview where content is taller than the bottom sheet. After touching inside the WebView area, the ScrollView will freeze.
-
-**Confidence:** HIGH -- documented in the project's own MEMORY.md ("Swipe gestures conflict with ScrollView inside child components") and confirmed by [react-native-webview issue #2565](https://github.com/react-native-webview/react-native-webview/issues/2565).
-
----
-
-### Pitfall 3: i18n Retrofit Missing Strings (Incomplete Extraction)
-
-**What goes wrong:** When retrofitting i18n into an app with all hardcoded English strings, developers find and translate the obvious JSX strings but miss: `Alert.alert()` titles/bodies, Toast messages, error messages in catch blocks, strings passed as props to reusable components (like `EmptyState`'s `title`/`subtitle`/`actionLabel`), template literals with embedded values (e.g., `` `${diffMinutes}m ago` ``), and navigation header titles.
-
-**Why it happens:** Automated extraction tools only find `t('key')` calls. During a retrofit, the process is manual. Without a systematic screen-by-screen audit, strings get missed. The Lumio codebase has approximately 55+ user-visible string literals across 11 files (6 screens + 5 components), plus strings in `formatLastStudied()` and `formatDuration()` helper functions.
-
-**Consequences:** A partially-translated app is worse than an untranslated one. Users will see a mix of English and Italian, creating a jarring experience. Strings in Alerts and Toasts are particularly easy to miss because they are inline in handler functions rather than in JSX.
-
-**Prevention:**
-- Create a complete inventory before starting. Here is the exhaustive list for Lumio:
-  - **`DashboardScreen.tsx`**: "Not yet", "Just now", `${n}m ago`, `${n}h ago`, `${n}d ago`, "No Repositories Yet", "Add a repository to start studying...", "Go to Repositories", "Repositories", "Cards", "Last Studied", "Start Study Session"
-  - **`StudyScreen.tsx`**: "End Session?", "Your progress will be saved.", "Continue Studying", "End Session", "Card skipped", "Study", "Review", "Loading cards...", "No cards available", "Questions are being prepared. Try again in a few minutes.", "Back to Dashboard", "Ready to study", `${n} cards available`, "Start", "Loading question...", "Prev Card", "Next Card", "Finish", "Back to Current Card", "Skip", "Skipping...", "Session Complete", "You studied all available cards"
-  - **`LoginScreen.tsx`**: "Lumio", "Your flashcards, supercharged", "Sign in with Google", "Sign in failed", "Google Sign-In not configured."
-  - **`StudySummaryScreen.tsx`**: "Session Complete!", "Score", "Correct", "Incorrect", "Skipped", "Time", "Return to Dashboard", `${n}m ${n}s`, `${n}s`
-  - **`SettingsScreen.tsx`**: "Signed in as", "Unknown user", "Appearance", "System", "Light", "Dark", "Log out", "Lumio v1.0.0"
-  - **`ReposScreen.tsx`**: Various repo-related strings (titles, empty states, form labels)
-  - **`CardPreviewModal.tsx`**: "Card Content", "No card content to display"
-  - **`EmptyState.tsx`**: Receives strings as props -- callers must translate
-  - **`AddRepoForm.tsx`**: Form labels and validation messages
-- Use `eslint-plugin-i18next` or a custom ESLint rule to flag untranslated string literals in JSX.
-- Do a final pass by switching to Italian and testing every screen including error paths and empty states.
-
-**Detection:** Switch app to Italian and methodically navigate every screen, trigger every Alert/Toast, and exercise every empty/error state. Any English text is a missed string.
-
-**Confidence:** HIGH -- directly verified by reading all source files.
+**Phase to address:**
+Data model phase. Design `card_reviews` with `ON DELETE CASCADE` and session detail tables without hard card FK constraints.
 
 ---
 
-### Pitfall 4: process.env in @lumio/shared Being Undefined at Runtime
+### Pitfall 3: "Due Today" Counter Uses Server UTC, App Displays Local Date
 
-**What goes wrong:** The `@lumio/shared` package uses `process.env.BUILD_NUMBER`, `process.env.COMMIT_SHA`, and `process.env.BUILD_DATE` in `version.ts` (lines 16-17). These will be `undefined` at runtime in the React Native app because: (1) Expo only inlines `EXPO_PUBLIC_*` variables, and (2) inlining does not apply to code in `node_modules` or pre-compiled packages.
+**What goes wrong:**
+SRS schedules cards with a `due_date TIMESTAMPTZ` stored in UTC. The "due today" dashboard counter runs a query like `WHERE due_date <= NOW()` on the server. But users think in calendar days, not UTC timestamps. A user in UTC+2 who finishes their reviews at 11pm local time (9pm UTC) will see the next day's cards appear at midnight UTC (2am local time) instead of their local midnight. Conversely, a user in UTC-5 whose next due date is "tomorrow" (UTC) has already started that day locally at 7pm.
 
-**Why it happens:** `@lumio/shared` is compiled by `tsup` into `dist/index.js` before consumption. By the time Metro bundles the Android app, the `process.env.BUILD_NUMBER` references are literal `process.env` lookups, not Expo-inlined constants. Expo/Metro only replaces `process.env.EXPO_PUBLIC_*` in source files it compiles directly, not pre-compiled packages.
+**Why it happens:**
+`NOW()` in PostgreSQL returns server UTC time. SRS algorithms typically compute `due_date = reviewed_at + interval_days` where `interval_days` is a whole number, so the due date is calculated as a point in time, not a calendar day. Without timezone awareness, "due today" means different things to different users.
 
-**Consequences:** `getFullVersionString()` returns `v1.1.4 (dev-local)` even in production. The version constant (`VERSION = "1.1.4"`) works because it is a literal string, but build metadata always shows fallback values.
+**How to avoid:**
+- Store `due_date DATE` (not `TIMESTAMPTZ`) in the `card_reviews` table. A DATE represents a calendar day, not a UTC instant. The query becomes `WHERE due_date <= CURRENT_DATE AT TIME ZONE user_timezone` or simply `WHERE due_date <= (NOW() AT TIME ZONE user_tz)::DATE`.
+- Simpler alternative for a single-developer app with known user base: store `due_date TIMESTAMPTZ` but compute "due today" on the client using the device's local `new Date()` for comparison. Pass `new Date().toISOString()` as `?currentTime=` parameter to the API.
+- Never compute "due today" purely in a Supabase RPC using `NOW()` without accounting for timezone.
+- For this milestone, storing as `DATE` and comparing to `CURRENT_DATE` is the cleanest approach given Lumio's single-user / known-timezone context.
 
-**Prevention:**
-- For the version display in SettingsScreen, import `VERSION` or `getVersionString()` from `@lumio/core` (which re-exports from `@lumio/shared`). The version constant works correctly because it is a literal.
-- Do NOT rely on `BUILD_INFO.buildNumber`, `BUILD_INFO.gitSha`, or `BUILD_INFO.buildDate` in the Android app.
-- If build metadata is needed, use `expo-constants` (`Constants.expoConfig.version`) or `EXPO_PUBLIC_*` environment variables in the app's own code.
-- When replacing the hardcoded `"Lumio v1.0.0"` in `SettingsScreen.tsx` (line 111), use: `import { getVersionString } from '@lumio/core';` which returns `"v1.1.4"`.
+**Warning signs:**
+- User says "I finished all my cards but the counter still shows N due".
+- Cards show as due at unexpected times (2am, 7pm instead of midnight).
+- The counter differs by 1 depending on the time of day.
 
-**Detection:** Call `getFullVersionString()` in the running app and check if build number and git SHA show as "dev" and "local".
-
-**Confidence:** HIGH -- verified by reading `version.ts`, `tsup` build config, and [Expo environment variables documentation](https://docs.expo.dev/guides/environment-variables/).
-
----
-
-## Moderate Pitfalls
-
-### Pitfall 5: SVG Metro Transformer Conflicting with Existing Metro Config
-
-**What goes wrong:** Adding `react-native-svg-transformer` requires modifying `metro.config.js` to change `babelTransformerPath` and move "svg" from `assetExts` to `sourceExts`. The existing `metro.config.js` already has custom config for the monorepo (`watchFolders`, `nodeModulesPaths`, `disableHierarchicalLookup`). Incorrectly merging these configurations breaks either SVG imports or monorepo package resolution.
-
-**Prevention:**
-- Merge into the existing config rather than replacing it. The SVG changes go into `config.transformer` and `config.resolver`, which must be spread with existing settings:
-  ```javascript
-  // Add to existing metro.config.js AFTER the current resolver config
-  config.transformer = {
-    ...config.transformer,
-    babelTransformerPath: require.resolve("react-native-svg-transformer/expo"),
-  };
-  config.resolver = {
-    ...config.resolver,
-    assetExts: config.resolver.assetExts.filter(ext => ext !== "svg"),
-    sourceExts: [...config.resolver.sourceExts, "svg"],
-  };
-  ```
-- The existing config uses `getDefaultConfig` from `expo/metro-config` which is compatible with `react-native-svg-transformer/expo`.
-- Test that `@lumio/core` imports still resolve correctly after the change.
-- Add TypeScript declaration for `.svg` imports (see Pitfall 12).
-
-**Confidence:** HIGH -- verified the existing `metro.config.js` structure and [react-native-svg-transformer Expo setup](https://github.com/kristerkari/react-native-svg-transformer).
+**Phase to address:**
+Data model phase. Use `DATE` type for `due_date`, document timezone assumption explicitly in migration comment.
 
 ---
 
-### Pitfall 6: SVG Press Events Broken on Expo SDK 54
+### Pitfall 4: Ease Factor Spiraling to Minimum ("Low Interval Hell")
 
-**What goes wrong:** If the logo SVG has interactive elements (pressable areas, links), they will not work on Expo SDK 54 with react-native-svg. There is a known regression where press events are only detected for the last rendered SVG element, and absolutely-positioned SVGs lose all press handling.
+**What goes wrong:**
+SM-2's ease factor has a floor of 1.3. When a user repeatedly answers incorrectly, the ease factor hits 1.3 and stays there. The interval formula `next_interval = current_interval * ease_factor` then produces intervals that grow only by 30% each time (e.g., 1 → 1.3 → 1.7 → 2.2 days). Cards that the user genuinely struggles with get scheduled more often than useful, appearing nearly every day. The user sees these "difficult" cards constantly, which creates review fatigue and can cause them to abandon the app.
 
-**Prevention:**
-- For a static logo, this is a non-issue -- static SVG rendering works fine.
-- Do NOT make the logo SVG pressable. If the logo needs to be tappable, wrap it in a `TouchableOpacity` or `Pressable` rather than using SVG's `onPress` prop.
-- Track [react-native-svg issue #2784](https://github.com/software-mansion/react-native-svg/issues/2784) and [#2796](https://github.com/software-mansion/react-native-svg/issues/2796) for fixes.
+**Why it happens:**
+SM-2 was designed for 5-point quality ratings (0-5). Lumio's quiz is binary (correct/incorrect). Mapping binary answers to SM-2 quality grades is non-trivial. If "correct" maps to quality=4 and "incorrect" maps to quality=0, the ease factor change for incorrect is `-0.8` per review, which quickly hits the 1.3 floor.
 
-**Confidence:** HIGH -- confirmed by GitHub issues specifically mentioning Expo SDK 54.
+**How to avoid:**
+- Use a simpler binary-adapted algorithm. Do not implement full SM-2 with 5-point quality scale for a binary correct/wrong quiz. Instead:
+  - **Correct answer:** `new_interval = max(1, round(current_interval * ease_factor))`, ease_factor += 0.1 (up to 2.5 max)
+  - **Wrong answer:** reset interval to 1, ease_factor = max(1.3, ease_factor - 0.2)
+- OR: Use fixed multipliers. Correct: multiply by 2.5 (easy), 2.0 (medium). Wrong: reset to 1 day. No ease factor at all — simpler and sufficient for Lumio's use case.
+- Enforce a floor (`ease_factor >= 1.3`) and ceiling (`ease_factor <= 2.5`) explicitly in the calculation, not just in DB constraints.
+- Cap maximum interval at 365 days to prevent cards from disappearing for over a year after a lucky correct answer streak.
 
----
+**Warning signs:**
+- User complains of seeing the same hard cards every day.
+- `card_reviews` table shows many rows where `ease_factor = 1.3` (the floor).
+- Session contains disproportionate number of low-interval cards.
 
-### Pitfall 7: i18n Language Preference Loading Race Condition
-
-**What goes wrong:** The i18next `languageDetector` plugin reads from AsyncStorage on app startup. AsyncStorage is async, but i18next initialization is sync. If the language preference has not loaded when the first screen renders, the app briefly flashes in the wrong language (typically the fallback) before switching.
-
-**Prevention:**
-- Use a "loading" state in the i18n provider that blocks rendering until the stored language is loaded, matching the existing `ThemeProvider` pattern.
-- Since Lumio only supports EN/IT toggle (not auto-detecting device locale), skip the `languageDetector` plugin. Load the preference from AsyncStorage in a context provider and call `i18n.changeLanguage()` imperatively:
-  ```typescript
-  // Follow ThemeProvider pattern (ThemeContext.tsx lines 44-48)
-  useEffect(() => {
-    loadLanguagePreference().then((lang) => {
-      i18n.changeLanguage(lang);
-      setReady(true);
-    });
-  }, []);
-  ```
-- The existing `ThemeContext.tsx` already demonstrates this exact async-load-before-render pattern.
-
-**Detection:** Set language to Italian, kill the app, reopen. Watch for a brief flash of English text before Italian loads.
-
-**Confidence:** MEDIUM -- based on documented async nature of AsyncStorage and standard i18next patterns; ThemeProvider shows the correct pattern already in use.
+**Phase to address:**
+Algorithm design phase. Decide on SM-2 binary adaptation or simplified fixed multipliers before writing any DB migration.
 
 ---
 
-### Pitfall 8: Separate AsyncStorage Keys vs. Single Settings Object
+### Pitfall 5: Session Limit (10/20/50/All) Conflicts With "Due Cards First" Priority
 
-**What goes wrong:** The current codebase stores theme under `@lumio/theme-preference`. Adding i18n and cards-per-session means either: (A) two more separate keys with 3+ independent reads on startup, or (B) migrating to a single settings object, risking data loss during migration.
+**What goes wrong:**
+The existing `cardsPerSession` setting (10/20/50/All) was designed for random selection. With spaced repetition, sessions have a different structure: due cards must come first (the user is "late" on those), then new cards fill remaining slots. But if a user sets 10 cards per session and has 15 overdue cards, the current limit logic truncates the session before all due cards are shown. This violates the core SRS contract: due cards should be reviewed when due.
 
-**Prevention:**
-- Use separate keys. Three small AsyncStorage reads in parallel via `Promise.all` are fast enough and avoid migration complexity:
-  ```typescript
-  const [theme, language, cardsPerSession] = await Promise.all([
-    loadThemePreference(),
-    loadLanguagePreference(),
-    loadCardsPerSession(),
-  ]);
-  ```
-- Use consistent naming: `@lumio/theme-preference`, `@lumio/language-preference`, `@lumio/cards-per-session`.
-- Do NOT use a single JSON blob. If the JSON gets corrupted (partial write, app crash), all settings are lost. Individual keys provide fault isolation.
+**Why it happens:**
+The `cardsPerSession` setting was implemented as a hard cap on total cards. It made sense for random selection (any card is equally valid). For SRS, "how many cards" is less important than "which cards" — overdue cards must take priority.
 
-**Detection:** Verify changing one setting does not affect others. Verify app startup time with all three settings stored.
+**How to avoid:**
+- Change the semantics of `cardsPerSession` for SRS: the limit applies to **new** cards only, not due cards. Due cards always appear regardless of the limit.
+- Alternatively: show all due cards first, then fill remaining slots (up to limit) with new cards. Example: limit=10, 7 due cards → show all 7 due + 3 new.
+- If the due card count itself is very high (backlog), cap at 2× the session limit to prevent overwhelming the user, but always show at least `min(due_count, session_limit)` due cards.
+- The `cardsPerSession` UI in Settings may need a label update: "New cards per session" instead of "Cards per session".
 
-**Confidence:** HIGH -- based on AsyncStorage best practices and the existing codebase pattern.
+**Warning signs:**
+- User studies 10 cards per session but keeps seeing "X cards due" never going to zero.
+- Due cards accumulate over time because they never get shown within the session limit.
 
----
-
-### Pitfall 9: i18n Interpolation Breaking with Dynamic Format Functions
-
-**What goes wrong:** `formatLastStudied()` in `DashboardScreen.tsx` returns strings like `` `${diffMinutes}m ago` ``. `formatDuration()` returns `` `${minutes}m ${seconds}s` ``. Simply wrapping these in `t()` does not work because the variable parts need to be interpolation parameters, and different languages structure these differently (Italian: "5 minuti fa" vs English: "5m ago").
-
-**Prevention:**
-- Use i18next interpolation for all dynamic strings:
-  ```json
-  // en.json
-  { "time.minutesAgo": "{{count}}m ago", "time.justNow": "Just now" }
-  // it.json
-  { "time.minutesAgo": "{{count}} min fa", "time.justNow": "Adesso" }
-  ```
-- If pluralization is needed later (Italian: "1 ora fa" vs "2 ore fa"), use i18next's plural support with `_one`/`_other` suffixes.
-- Audit all functions that construct strings with embedded numbers.
-
-**Detection:** Check translations make grammatical sense in Italian. Template literal strings with embedded values always need interpolation params.
-
-**Confidence:** HIGH -- directly observed `formatLastStudied()` and `formatDuration()` in source code.
+**Phase to address:**
+Session design phase (after data model). When implementing `useStudySession` SRS adaptation, the card selection logic must prioritize due cards before new cards, separate from the limit logic.
 
 ---
 
-### Pitfall 10: Cards-Per-Session Config Using Stale Closure or Wrong Limit Point
+### Pitfall 6: Cold-Start Problem — First-Time User Has No Schedule State
 
-**What goes wrong:** Adding a "cards per session" setting requires modifying `useStudySession` to stop after N cards. A naive implementation either: (A) limits the initial `cards` array (breaking random selection since fewer cards means less variety), or (B) checks the count in `handleNext` but uses a stale closure of the config value.
+**What goes wrong:**
+When a user starts their first SRS session, there is no `card_reviews` data. The scheduler has nothing to base intervals on. A naive implementation returns zero cards ("nothing due") or crashes on empty results. The "due today" counter shows 0, making the app look broken. Alternatively, all cards are treated as "new" and the scheduler floods the user with a backlog of hundreds of new cards.
 
-**Prevention:**
-- Add the limit check in `handleNext` by comparing `session.answeredCards.length + session.skippedCount` against the maximum:
-  ```typescript
-  const totalSeen = session.answeredCards.length + session.skippedCount;
-  if (totalSeen >= maxCardsPerSession) {
-    setSession(prev => ({ ...prev, state: 'completed' }));
-    return;
-  }
-  ```
-- Load cards-per-session once at session start (from SettingsContext), store in a `useRef` to avoid stale closures.
-- Use `Infinity` as default if no preference is set, preserving backward compatibility.
-- Do NOT filter the initial `cards` array -- the session needs all cards for random selection.
+**Why it happens:**
+SRS systems assume some initial state. SM-2 initializes with repetitions=0, ease_factor=2.5, interval=1. Many implementations forget to handle the "no rows in card_reviews" case as "all cards are new" and display them correctly.
 
-**Detection:** Set cards-per-session to 3, start a session with 10+ cards. Verify session completes after exactly 3 cards (answered + skipped).
+**How to avoid:**
+- Define "new card" as: a card with no row in `card_reviews` for this user, OR a card whose `card_reviews.repetitions = 0`.
+- The card selection query must include cards with no `card_reviews` row (LEFT JOIN, not INNER JOIN).
+- On first session, present N new cards (where N = `cardsPerSession` setting, defaulting to 10). Do not dump all cards at once.
+- Initialize the `card_reviews` row on the user's first correct answer, not before (lazy initialization avoids pre-populating thousands of rows).
+- The "due today" counter should show `new_cards_available` as a non-zero starting state, not just due cards.
 
-**Confidence:** HIGH -- directly observed the `useStudySession` hook and its `handleNext` closure patterns.
+**Warning signs:**
+- Dashboard shows "0 cards due" for a new user with 100 cards available.
+- The session starts but immediately completes ("no cards to study").
+- All cards appear in a single session with no SRS limiting.
 
----
-
-## Minor Pitfalls
-
-### Pitfall 11: WebView react-native-webview v13.13.2+ ScrollView Rendering Regression
-
-**What goes wrong:** react-native-webview v13.13.2 introduced a regression where WebViews wrapped in ScrollView may not render on Android with React Native 0.77+. The project uses v13.16.0 with RN 0.81.5.
-
-**Prevention:**
-- Ensure the parent ScrollView has `contentContainerStyle={{ flexGrow: 1 }}` (current code has this).
-- If blank rendering occurs, pin to v13.12.5 as a temporary workaround.
-- Monitor [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715).
-
-**Confidence:** MEDIUM -- potentially affected version but may not manifest depending on exact conditions.
+**Phase to address:**
+Data model phase and session selection logic. The card selection RPC must LEFT JOIN `card_reviews` and treat NULL rows as "new" cards.
 
 ---
 
-### Pitfall 12: Missing TypeScript Declarations for SVG Imports
+## Technical Debt Patterns
 
-**What goes wrong:** After setting up `react-native-svg-transformer`, importing SVG files with `import Logo from './logo.svg'` produces a TypeScript error: "Cannot find module './logo.svg'". The app runs but TypeScript errors clutter CI and IDE.
+Shortcuts that seem reasonable but create long-term problems.
 
-**Prevention:**
-- Create `apps/android/declarations.d.ts`:
-  ```typescript
-  declare module '*.svg' {
-    import React from 'react';
-    import { SvgProps } from 'react-native-svg';
-    const content: React.FC<SvgProps>;
-    export default content;
-  }
-  ```
-- Ensure `tsconfig.json` includes this declaration file.
-
-**Confidence:** HIGH -- standard requirement documented in react-native-svg-transformer README.
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Store `due_date` as TIMESTAMPTZ instead of DATE | Familiar type, no timezone thinking needed | "Due today" logic breaks subtly for users in non-UTC timezones | Never — use DATE |
+| Skip content-change reset (ignore card updates) | No migration, no webhook changes needed | Users study cards under stale ease factors; wrong content, right difficulty | Never for cards that change frequently |
+| Hard-cap session at `cardsPerSession` regardless of due status | Simple logic, existing code reuse | Due cards accumulate, SRS contract violated, cards never cleared | Only for "all" setting where the cap is effectively infinite |
+| Store SRS state in AsyncStorage instead of DB | Instant, no migration, no server calls | SRS state lost on app reinstall, no multi-device sync possible | Only during prototyping, never in production |
+| Use INNER JOIN on card_reviews in card selection | Simpler query | New cards (no review row) never appear; cold-start broken | Never |
+| Pre-initialize card_reviews rows for all cards | No NULL handling needed | Thousands of rows per user on first login, expensive migration for existing users | Never — use lazy initialization |
+| Use fire-and-forget for SRS state update (no await) | Non-blocking UX | SRS state may not persist if app crashes before write completes; session and schedule get out of sync | Only acceptable if retry is implemented |
 
 ---
 
-### Pitfall 13: StatusBar Style Not Adapting to Theme
+## Integration Gotchas
 
-**What goes wrong:** The current `App.tsx` hard-codes `<StatusBar style="light" />` (line 22). This is a pre-existing bug: the status bar is always light regardless of theme preference. When adding settings, this becomes more visible as users interact more with Settings.
+Common mistakes when connecting to external services.
 
-**Prevention:**
-- Change to `<StatusBar style={isDark ? 'light' : 'dark'} />` and move it inside `ThemeProvider` where `isDark` is available. Fix as part of the settings screen updates.
-
-**Confidence:** HIGH -- directly observed in `App.tsx` line 22.
-
----
-
-### Pitfall 14: Bottom Sheet Height Cached from Static Dimensions.get()
-
-**What goes wrong:** `CardPreviewModal` calculates `SCREEN_HEIGHT = Dimensions.get('window').height` at module load time (line 130). If window dimensions change (keyboard visible when module first imported, screen rotation, split-screen mode), the bottom sheet `maxHeight` (80% of screen) will be wrong.
-
-**Prevention:**
-- Use `useWindowDimensions()` hook instead of `Dimensions.get()` at module scope:
-  ```typescript
-  const { height: screenHeight } = useWindowDimensions();
-  // Then in style: maxHeight: screenHeight * 0.8
-  ```
-
-**Detection:** Open the app in split-screen mode or rotate the device. The bottom sheet will have incorrect height.
-
-**Confidence:** HIGH -- directly observed in `CardPreviewModal.tsx` line 130.
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Supabase RLS on `card_reviews` | Forgetting RLS, allowing users to read/write other users' SRS state | Add `user_id = auth.uid()` to all policies; index on `(user_id, card_id)` for performance |
+| `study_sessions` (immutable) + SRS state (mutable) | Trying to UPDATE `study_sessions` to store per-card SRS outcomes | Keep sessions immutable (INSERT-only). Store SRS state in separate mutable `card_reviews` table with UPSERT |
+| Docora webhook card update | Not triggering SRS state reset when card content changes | On `sync_success` webhook, check `cards.updated_at`; where it changed, mark `card_reviews` stale or reset interval |
+| `get_study_cards_with_questions` RPC | Using existing RPC which returns cards ordered by `updated_at DESC` (wrong for SRS) | Create new SRS-specific RPC that orders by: (1) overdue first, (2) new cards second, within each group random |
+| `card_questions` vote-based deactivation | A question gets deactivated after bad votes, but SRS state references the question_id | SRS state must reference `card_id` not `question_id`. The question is selected fresh each session; SRS tracks the card, not the question |
+| Supabase `NOW()` in RPC | Computing "due today" with `WHERE due_date <= NOW()` returns UTC-relative results | Use `WHERE due_date <= CURRENT_DATE` (if storing DATE) or pass current timestamp from client |
 
 ---
 
-## Phase-Specific Warnings
+## Performance Traps
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Bottom-sheet bugfix (WebView height) | Pitfall 1: Height measured before CDN loads | Use ResizeObserver + resource load events instead of setTimeout(100) |
-| Bottom-sheet bugfix (scroll) | Pitfall 2: ScrollView freezes after WebView touch | Use pointerEvents="none" wrapper since content is read-only |
-| Bottom-sheet bugfix (dimensions) | Pitfall 14: Static Dimensions.get at module scope | Replace with useWindowDimensions() hook |
-| i18n: String extraction | Pitfall 3: Incomplete extraction, ~55 strings across 11 files | Use provided exhaustive file-by-file inventory |
-| i18n: Interpolated strings | Pitfall 9: Template literals need i18next interpolation params | Convert formatLastStudied/formatDuration to use t() with params |
-| i18n: Initialization | Pitfall 7: Flash of wrong language on startup | Follow existing ThemeProvider pattern for async load |
-| i18n: Settings persistence | Pitfall 8: Separate keys vs single settings object | Use separate keys, parallel load via Promise.all |
-| Dynamic version | Pitfall 4: process.env undefined in pre-built shared package | Import VERSION constant (not BUILD_INFO) from @lumio/core |
-| SVG logo setup | Pitfall 5: Metro config merge breaks monorepo resolution | Merge carefully into existing config, test @lumio/core imports |
-| SVG press events | Pitfall 6: SDK 54 regression for interactive SVGs | Use Pressable wrapper, not SVG onPress prop |
-| Cards-per-session | Pitfall 10: Stale closure or wrong limit point in useStudySession | Count answered+skipped in handleNext, store limit in ref |
-| WebView rendering | Pitfall 11: v13.13.2+ regression on Android | Ensure flexGrow: 1 on ScrollView container |
-| SVG TypeScript | Pitfall 12: Missing module declarations | Add declarations.d.ts for *.svg |
-| StatusBar | Pitfall 13: Fixed to "light" regardless of theme | Fix when updating SettingsScreen |
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| N+1 SRS state fetch (one query per card in session) | Session loading takes 2-5 seconds for 20 cards | Batch-fetch all `card_reviews` for the session in one query, join with card selection | At 10+ cards per session |
+| No index on `(user_id, due_date)` in `card_reviews` | "Due today" counter query becomes table scan | Add composite index `CREATE INDEX ON card_reviews(user_id, due_date)` | At 500+ card_reviews rows |
+| Dashboard queries `card_reviews` on every mount | Repeated expensive aggregation calls when switching screens | Cache due-count in component state, invalidate on session completion | At 1000+ rows (single user, not a concern for solo app) |
+| Unindexed `card_id` in `card_reviews` | Card-specific lookups slow during session | Composite unique index on `(user_id, card_id)` is both uniqueness constraint and performance index | At 200+ cards per user |
+| RLS policy using subquery on `user_repositories` | Policy re-evaluates for every row scan | Already an existing concern in the codebase (all RLS policies use this pattern); acceptable given single-user scale | At multi-user scale |
+
+---
+
+## Security Mistakes
+
+Domain-specific security issues beyond general web security.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| No RLS on `card_reviews` | User A can read/modify User B's SRS schedule | Enable RLS immediately; no policy = publicly accessible via API |
+| Allowing UPDATE on other users' SRS rows | User can manipulate their score by resetting difficult cards | Policy: `USING (user_id = auth.uid())` on UPDATE and DELETE |
+| SRS reset endpoint (admin) accessible by regular users | Users could reset their own SRS to fake fresh start | Admin-only reset should use service_role key, not user JWT; no user-facing reset API |
+| Storing raw card content in `card_reviews` | Data duplication risk; stale snapshots if card updates silently diverge | Store only `card_id` + `card_updated_at_snapshot` (timestamp), never full content |
+
+---
+
+## UX Pitfalls
+
+Common user experience mistakes in this domain.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Showing SRS algorithm details to users ("ease: 2.3, interval: 7d") | Users over-optimize for algorithm instead of learning | Hide all algorithm state; show only "Review" vs "New" label and streak |
+| No visual distinction between "review" and "new" cards | Users don't understand why some cards keep repeating | Show "Review" badge on due cards, "New" badge on first-time cards during session |
+| Study session immediately jumps to SRS after feature ships | Existing users see all their cards reset to "new" state; disorienting | On first SRS session, initialize `card_reviews` lazily — no visible difference from user perspective, new cards just get scheduled going forward |
+| "Due today" counter shows 0 for genuinely new users | User thinks app is broken or has no content | Show "N new cards available" when due=0 but new cards exist |
+| Session ends immediately when all due cards shown (none new) | User feels punished for being caught up | Show congratulatory "All caught up!" screen instead of abrupt empty session |
+| Backlog anxiety: user returns after a week to find 50+ due cards | User feels overwhelmed, likely to abandon | Cap displayed backlog at "20+" with message "Take it easy, do 20 today" — don't show exact debt |
+| Session history screen shows "all repositories" instead of card count | Confusing; doesn't tell user what was studied | Fix per PROJECT.md requirement: show actual card count from `study_sessions.total_count` |
+
+---
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **SRS scheduler "working":** Often missing: reset logic when a card's content changes (verify: edit a card in GitHub, sync, check if SRS state resets)
+- [ ] **"Due today" counter accurate:** Often missing: timezone handling (verify: check counter value at 11pm local vs midnight vs 1am)
+- [ ] **New user onboarding:** Often missing: cold-start case where no `card_reviews` rows exist (verify: create new test user, check session loads correctly)
+- [ ] **Session limit with due cards:** Often missing: due cards bypass the cardsPerSession cap (verify: set limit=10 with 15 overdue cards, confirm all 15 show)
+- [ ] **Card deletion handling:** Often missing: SRS rows for deleted/inactive cards are excluded from scheduling (verify: soft-delete a card, confirm it no longer appears in sessions)
+- [ ] **Study history "card count" fix:** Often missing: `repository_name` in old sessions is NULL for cross-repo sessions — the display fix must handle NULL gracefully (verify: check history screen with old sessions that have NULL repository_name)
+- [ ] **SRS state persists after app reinstall:** Often missing if state stored in AsyncStorage (verify: uninstall, reinstall, check SRS state is recovered from DB)
+- [ ] **Ease factor bounds enforced:** Often missing: floor at 1.3 and ceiling at 2.5 in application code, not just DB CHECK constraint (verify: answer a card wrong 20 times, check ease_factor stays at 1.3, not below)
+
+---
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Stale SRS state after card content changes | MEDIUM | Write migration to reset `card_reviews` where `card_updated_at_snapshot < cards.updated_at`; run as one-time script |
+| Wrong due_date type (TIMESTAMPTZ instead of DATE) | MEDIUM | Migration: `ALTER TABLE card_reviews ALTER COLUMN due_date TYPE DATE USING due_date::DATE`; test timezone behavior before deploying |
+| Ease factor below 1.3 in existing data | LOW | `UPDATE card_reviews SET ease_factor = 1.3 WHERE ease_factor < 1.3`; add CHECK constraint going forward |
+| All `card_reviews` rows lost (cascade delete from cards) | HIGH | Restore from Supabase backup; no in-app recovery. Prevention is the only real answer. |
+| Session limit blocking due cards | LOW | Update card selection query; old sessions not affected; client update sufficient |
+| AsyncStorage SRS state (wrong implementation) | HIGH | Migration requires all users to lose their SRS history; no graceful recovery. Must be caught before shipping. |
+
+---
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Stale schedule after card content change | Phase: Data model (card_reviews schema) | Check `card_updated_at_snapshot` column in migration; test card edit → SRS reset flow |
+| Card deletion orphaning SRS state | Phase: Data model (FK policy decision) | Verify ON DELETE CASCADE on card_reviews; verify session detail uses UUID (no FK) |
+| UTC vs local date for "due today" | Phase: Data model (due_date type choice) | Test counter at 11pm, midnight, 1am local time |
+| Ease factor minimum floor | Phase: Algorithm implementation | Unit test: 20 wrong answers → ease_factor = 1.3, not lower |
+| Session limit vs due card priority | Phase: Session selection logic | Integration test: 15 due cards + limit=10 → all 15 due cards shown |
+| Cold-start empty state | Phase: Session selection RPC | Test with fresh user account with no card_reviews rows |
+| Study history "card count" display | Phase: Session history UI fix (standalone, minimal) | History screen shows "20 cards" not "all repositories" for old sessions |
+| N+1 SRS fetches | Phase: Session selection RPC | Single query fetches all needed state; verify in Supabase query logs |
+| Missing RLS on card_reviews | Phase: Data model (migration) | Verify RLS enabled before any other work; test cross-user access returns 0 rows |
 
 ---
 
 ## Sources
 
-- [react-native-webview issue #3715: WebView v13.13.2 cannot render with ScrollView on Android](https://github.com/react-native-webview/react-native-webview/issues/3715) -- HIGH confidence
-- [react-native-webview issue #1395: Android gives wrong content height](https://github.com/react-native-webview/react-native-webview/issues/1395) -- HIGH confidence
-- [react-native-webview issue #2565: ScrollView not working after WebView pressed on Android](https://github.com/react-native-webview/react-native-webview/issues/2565) -- HIGH confidence
-- [react-native-svg issue #2784: SVG onPress broken in Expo SDK 54](https://github.com/software-mansion/react-native-svg/issues/2784) -- HIGH confidence
-- [react-native-svg issue #2796: Path onPress not triggered since Expo 54](https://github.com/software-mansion/react-native-svg/issues/2796) -- HIGH confidence
-- [react-native-svg-transformer README: Expo Metro config setup](https://github.com/kristerkari/react-native-svg-transformer) -- HIGH confidence
-- [Expo: Environment Variables docs](https://docs.expo.dev/guides/environment-variables/) -- HIGH confidence
-- [Expo: Monorepo guide](https://docs.expo.dev/guides/monorepos/) -- HIGH confidence
-- [react-i18next documentation](https://react.i18next.com/) -- HIGH confidence
-- [Expo Localization SDK docs](https://docs.expo.dev/versions/latest/sdk/localization/) -- HIGH confidence
-- Lumio codebase direct inspection: `CardPreviewModal.tsx`, `CardContentView.tsx`, `cardHtml.ts`, `ThemeContext.tsx`, `SettingsScreen.tsx`, `StudyScreen.tsx`, `useStudySession.ts`, `DashboardScreen.tsx`, `LoginScreen.tsx`, `StudySummaryScreen.tsx`, `version.ts`, `metro.config.js`, `App.tsx` -- PRIMARY source
+- Direct inspection: `apps/android/hooks/useStudySession.ts` — existing random card selection logic (PRIMARY)
+- Direct inspection: `supabase/migrations/20260211000001_study_sessions.sql` — study_sessions schema, immutable INSERT-only design (PRIMARY)
+- Direct inspection: `supabase/migrations/20260123000001_card_questions.sql` — card_questions schema, card deletion cascade, deactivation reasons (PRIMARY)
+- Direct inspection: `supabase/migrations/20260115000001_shared_repositories.sql` — RLS patterns, user_repositories join pattern (PRIMARY)
+- Direct inspection: `apps/android/lib/studySettings.ts` — cardsPerSession type and semantics (PRIMARY)
+- [SM-2 algorithm bugs: low interval hell and ease factor floor](https://www.blueraja.com/blog/477/a-better-spaced-repetition-learning-algorithm-sm2) — MEDIUM confidence (WebSearch verified)
+- [FSRS vs SM-2 implementation considerations](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/) — MEDIUM confidence
+- [Effective Spaced Repetition: card design and backlog pitfalls](https://borretti.me/article/effective-spaced-repetition) — MEDIUM confidence
+- [Designing SRS for play not work: UX anti-patterns](https://pine.substack.com/p/designing-spaced-repetition-systems) — MEDIUM confidence
+- [FSRS algorithm data model: D/S/R state per card](https://github.com/open-spaced-repetition/fsrs4anki/wiki/spaced-repetition-algorithm:-a-three%E2%80%90day-journey-from-novice-to-expert) — HIGH confidence
+- [UTC timezone bug patterns in date logic](https://dev.to/kcsujeet/how-to-handle-date-and-time-correctly-to-avoid-timezone-bugs-4o03) — HIGH confidence
+- [Supabase RLS performance and best practices](https://supabase.com/docs/guides/troubleshooting/rls-performance-and-best-practices-Z5Jjwv) — HIGH confidence
+- Anki SM-2 implementation: ease factor floor = 1.3, confirmed in multiple sources — HIGH confidence
 
 ---
-*Pitfalls research for: Lumio v1.2 milestone (i18n, branding, configurable sessions, bottom-sheet bugfix, dynamic versioning)*
-*Researched: 2026-02-09*
+*Pitfalls research for: Lumio v2.0 — Adding spaced repetition to existing flashcard app*
+*Researched: 2026-02-25*

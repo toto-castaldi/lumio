@@ -1,675 +1,645 @@
-# Architecture Patterns
+# Architecture Patterns: Spaced Repetition Integration
 
-**Domain:** Feature integration into existing React Native / Expo Android app
-**Researched:** 2026-02-08
-
-## Overview
-
-This document specifies how four features -- i18n (IT/EN toggle), logo integration, configurable cards-per-session, and the bottom-sheet preview bugfix -- integrate into the existing Lumio Android app architecture. Each feature is analyzed for: what new components/files are needed, what existing files are modified, data flow changes, and integration points.
-
-The existing app uses: React Context (AuthContext, ThemeContext), AsyncStorage for preferences, react-navigation (not expo-router), WebView-based card rendering, and a custom bottom-sheet Modal. No Redux, Zustand, or TanStack Query.
+**Domain:** Spaced repetition scheduling for existing flashcard study app
+**Researched:** 2026-02-25
+**Confidence:** HIGH (based on codebase analysis + established algorithm research)
 
 ---
 
-## Feature 1: Internationalization (i18n) -- IT/EN Toggle
+## Executive Summary
 
-### Recommended Architecture
-
-Use `i18next` + `react-i18next` + `expo-localization` because this is the dominant pattern in the React Native / Expo ecosystem. `expo-localization` detects the device locale; `i18next` manages translation strings and language switching; `react-i18next` provides the `useTranslation` hook for components.
-
-**Confidence:** HIGH -- this is the standard approach across Expo starter kits, official Expo docs, and community guides.
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `apps/android/i18n/index.ts` | i18next initialization, language detector, fallback config |
-| `apps/android/i18n/locales/en.json` | English translation strings |
-| `apps/android/i18n/locales/it.json` | Italian translation strings |
-
-### New Context: LanguageProvider (NOT needed)
-
-Do NOT create a LanguageContext. `react-i18next` already provides `I18nextProvider` and the `useTranslation()` hook, which internally manage reactive language state. Adding a custom context would be redundant.
-
-### Provider Placement
-
-No wrapper component needed if using the `initReactI18next` plugin (which registers i18next as a React module internally). The initialization file is imported as a side-effect in `App.tsx`, the same pattern already used for Supabase:
-
-```
-App.tsx
-  import './i18n';          <-- NEW side-effect import (must be before component tree)
-  import './lib/supabase';  <-- existing side-effect import
-  GestureHandlerRootView
-    SafeAreaProvider
-      AuthProvider           <-- LoginScreen can already use useTranslation()
-        ThemeProvider
-          NavigationContainer
-            ...
-```
-
-### Data Flow
-
-```
-1. App boot -> i18n/index.ts initializes i18next with initReactI18next plugin
-2. expo-localization detects device locale
-3. AsyncStorage checked for persisted language override (@lumio/language)
-4. If override exists, use it; else use device locale (fallback: 'en')
-5. User changes language in SettingsScreen -> i18n.changeLanguage('it')
-6. i18next notifies react-i18next subscribers
-7. All components using useTranslation() re-render with new strings
-8. Selected language persisted to AsyncStorage
-```
-
-### Integration Points -- Modified Files
-
-| File | Change |
-|------|--------|
-| `App.tsx` | Add `import './i18n'` as first import (side-effect init) |
-| `screens/SettingsScreen.tsx` | Add "Language" section with IT/EN radio buttons (same UI pattern as existing theme toggle). Replace all 9 hardcoded strings with `t('key')`. |
-| `screens/LoginScreen.tsx` | Replace `"Your flashcards, supercharged"`, `"Sign in with Google"`, config warning with `t()` calls |
-| `screens/DashboardScreen.tsx` | Replace `"Repositories"`, `"Cards"`, `"Last Studied"`, `"Start Study Session"`, `"No Repositories Yet"`, subtitle, `"Go to Repositories"`, time-ago strings with `t()` |
-| `screens/ReposScreen.tsx` | Replace toast messages (`"Failed to load repositories"`, `"Repository added"`, `"Repository deleted"`, etc.), Alert titles/messages, button labels |
-| `screens/StudyScreen.tsx` | Replace `"Study"`, `"Review"`, `"Skip"`, `"Skipping..."`, `"Next Card"`, `"Finish"`, `"Loading cards..."`, `"Loading question..."`, `"No cards available"`, `"Ready to study"`, `"cards available"`, `"Start"`, `"Session Complete"`, `"Back to Dashboard"`, `"Prev Card"`, `"Back to Current Card"`, `"End Session?"`, `"Your progress will be saved."`, `"Continue Studying"`, `"Card skipped"` |
-| `screens/StudySummaryScreen.tsx` | Replace `"Session Complete!"`, `"Score"`, `"Correct"`, `"Incorrect"`, `"Skipped"`, `"Time"`, `"Return to Dashboard"` |
-| `components/AddRepoForm.tsx` | Replace `"Repository URL is required"`, `"Enter a valid GitHub repository URL"`, `"Cancel"`, `"Submit with Token"`, PAT label, placeholder |
-| `components/study/ExplanationPanel.tsx` | Replace any hardcoded labels |
-| `navigation/MainNavigator.tsx` | Replace `title: 'Repositories'` with translated string |
-
-### Translation Key Structure
-
-```json
-{
-  "common": {
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "loading": "Loading..."
-  },
-  "login": {
-    "tagline": "Your flashcards, supercharged",
-    "signInGoogle": "Sign in with Google",
-    "googleNotConfigured": "Google Sign-In not configured.\nSet EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID"
-  },
-  "dashboard": {
-    "repositories": "Repositories",
-    "cards": "Cards",
-    "lastStudied": "Last Studied",
-    "notYet": "Not yet",
-    "justNow": "Just now",
-    "minutesAgo": "{{count}}m ago",
-    "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago",
-    "startStudy": "Start Study Session",
-    "noReposTitle": "No Repositories Yet",
-    "noReposSubtitle": "Add a repository to start studying. Your flashcards will appear here once a repo is synced.",
-    "goToRepos": "Go to Repositories"
-  },
-  "settings": {
-    "signedInAs": "Signed in as",
-    "appearance": "Appearance",
-    "language": "Language",
-    "study": "Study",
-    "cardsPerSession": "Cards per session",
-    "allCards": "All",
-    "system": "System",
-    "light": "Light",
-    "dark": "Dark",
-    "italian": "Italiano",
-    "english": "English",
-    "logout": "Log out"
-  },
-  "study": {
-    "title": "Study",
-    "review": "Review",
-    "skip": "Skip",
-    "skipping": "Skipping...",
-    "nextCard": "Next Card",
-    "prevCard": "Prev Card",
-    "finish": "Finish",
-    "start": "Start",
-    "loadingCards": "Loading cards...",
-    "loadingQuestion": "Loading question...",
-    "noCards": "No cards available",
-    "noCardsSubtitle": "Questions are being prepared. Try again in a few minutes.",
-    "readyTitle": "Ready to study",
-    "cardsAvailable": "{{count}} cards available",
-    "sessionComplete": "Session Complete",
-    "backToDashboard": "Back to Dashboard",
-    "backToCurrent": "Back to Current Card",
-    "endSession": "End Session?",
-    "progressSaved": "Your progress will be saved.",
-    "continueStudying": "Continue Studying",
-    "cardSkipped": "Card skipped"
-  },
-  "summary": {
-    "title": "Session Complete!",
-    "score": "Score",
-    "correct": "Correct",
-    "incorrect": "Incorrect",
-    "skipped": "Skipped",
-    "time": "Time",
-    "returnDashboard": "Return to Dashboard"
-  },
-  "repos": {
-    "title": "Repositories",
-    "urlRequired": "Repository URL is required",
-    "invalidUrl": "Enter a valid GitHub repository URL",
-    "submitWithToken": "Submit with Token",
-    "patLabel": "This repository appears to be private. Enter a Personal Access Token:",
-    "addSuccess": "Repository added",
-    "addSuccessDetail": "Syncing cards from repository...",
-    "addFailed": "Failed to add repository",
-    "loadFailed": "Failed to load repositories",
-    "deleteTitle": "Delete Repository",
-    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? All associated cards will also be removed.",
-    "deleteSuccess": "Repository deleted",
-    "deleteSuccessDetail": "\"{{name}}\" has been removed.",
-    "deleteFailed": "Failed to delete repository",
-    "privateRepo": "Private repository?",
-    "privateRepoDetail": "Enter a Personal Access Token to add this repo.",
-    "emptyTitle": "No repositories yet",
-    "emptySubtitle": "Add a GitHub repository URL above to start importing study cards."
-  }
-}
-```
-
-### Persistence Strategy
-
-Use the same `AsyncStorage` pattern as theme preference, integrated into the i18next language detector plugin:
-
-```typescript
-// In i18n/index.ts
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLocales } from 'expo-localization';
-import en from './locales/en.json';
-import it from './locales/it.json';
-
-const LANGUAGE_STORAGE_KEY = '@lumio/language';
-
-const languageDetector = {
-  type: 'languageDetector' as const,
-  async: true,
-  detect: async (callback: (lng: string) => void) => {
-    const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (stored) return callback(stored);
-    const locale = getLocales()[0]?.languageCode || 'en';
-    callback(locale === 'it' ? 'it' : 'en'); // Only support it/en
-  },
-  cacheUserLanguage: async (lng: string) => {
-    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
-  },
-};
-
-i18n
-  .use(languageDetector)
-  .use(initReactI18next)
-  .init({
-    resources: { en: { translation: en }, it: { translation: it } },
-    fallbackLng: 'en',
-    interpolation: { escapeValue: false },
-  });
-
-export default i18n;
-```
-
-### Dependencies to Install
-
-```bash
-pnpm --filter @lumio/android add i18next react-i18next expo-localization
-```
-
-`expo-localization` is compatible with Expo SDK 54. No native rebuild required.
-
-### Anti-Patterns to Avoid
-
-- Do NOT create a separate `useLanguage()` hook wrapping `useTranslation()` -- it adds unnecessary indirection.
-- Do NOT put translation files in `packages/shared` -- they are UI-specific.
-- Do NOT use string concatenation for dynamic translations -- use i18next interpolation syntax: `t('repos.deleteConfirm', { name })`.
+Lumio's v2.0 spaced repetition feature integrates into the existing architecture through one new database table (`card_review_schedule`), modifications to the card selection logic in `useStudySession`, a new RPC function for due-card counting, and minor dashboard/UI changes. The existing `study_sessions` table (immutable, INSERT-only) stays untouched. The core SM-2 algorithm runs client-side in `@lumio/core` -- no new edge functions needed. The existing `study-planner` edge function stub can be deleted or repurposed later.
 
 ---
 
-## Feature 2: Logo Integration
+## Current Architecture (Baseline)
 
-### Recommended Architecture
+### Data Flow: Study Session
 
-Convert SVG logo to a React Native component using `SvgXml` from `react-native-svg`. The project already uses Expo SDK 54 which bundles `react-native-svg`. Render the logo inline as a React component rather than as a PNG image.
-
-**Confidence:** HIGH -- `react-native-svg` is included with Expo SDK 54.
-
-### Approach: SvgXml Component (NOT svg-transformer)
-
-Use `SvgXml` from `react-native-svg` because:
-1. The SVGs are simple (1.3KB each) -- inlining as string constants is trivial
-2. Avoids Metro config changes (`react-native-svg-transformer` requires modifying `metro.config.js`)
-3. No dev client rebuild needed
-4. The logo is only used in 1-2 places (LoginScreen, possibly header)
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `apps/android/components/LumioLogo.tsx` | SVG logo component with configurable `size` prop |
-
-### Component Design
-
-```typescript
-// components/LumioLogo.tsx
-import React from 'react';
-import { SvgXml } from 'react-native-svg';
-
-// Inline logo.svg content (without the signature line for in-app use)
-const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-  <path d="M 200 200 L 200 100 A 100 100 0 0 1 286.6 250 Z" fill="#FFA726"/>
-  <path d="M 200 200 L 286.6 250 A 100 100 0 0 1 113.4 250 Z" fill="#FF7061"/>
-  <path d="M 200 200 L 113.4 250 A 100 100 0 0 1 200 100 Z" fill="#9C68D4"/>
-  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FFA726" transform="translate(200, 200) rotate(-90)"/>
-  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#FF7061" transform="translate(200, 200) rotate(30)"/>
-  <rect x="115" y="-12" width="85" height="24" rx="6" fill="#9C68D4" transform="translate(200, 200) rotate(150)"/>
-</svg>`;
-
-interface LumioLogoProps {
-  size?: number;
-}
-
-export function LumioLogo({ size = 120 }: LumioLogoProps) {
-  return <SvgXml xml={logoSvg} width={size} height={size} />;
-}
+```
+DashboardScreen
+  |-- "Start Study Session" button
+  v
+StudyScreen
+  |-- useStudySession hook (loads data)
+  |     |-- getStudyCardsWithQuestions() --> RPC: get_study_cards_with_questions
+  |     |-- getUserRepositories() --> REST: repositories table
+  |     |-- Deck class filters per .lumioignore
+  |     |-- selectRandomCard() --> random unseen card from pool
+  |     |-- getPreGeneratedQuestion(cardId) --> Edge Function: llm-proxy (get_question action)
+  |     v
+  |-- QuizCard component (displays question, captures answer)
+  |-- handleAnswer() --> sets userAnswer in state
+  |-- handleNext() --> saves answered card, loads next random card
+  |-- On completion:
+  |     |-- saveStudySession() --> REST INSERT into study_sessions
+  |     |-- AsyncStorage.setItem('@lumio/lastStudiedAt')
+  |     v
+  v
+StudySummaryScreen (route params: totalCards, correctCount, etc.)
 ```
 
-### Integration Points -- Modified Files
+### Key Existing Tables
 
-| File | Change |
-|------|--------|
-| `screens/LoginScreen.tsx` | Replace `<Text style={styles.logo}>Lumio</Text>` (line 54) with `<LumioLogo size={120} />`. Keep "Lumio" as a separate text element below the logo icon (now translatable). |
+| Table | Purpose | Relevant Columns |
+|-------|---------|------------------|
+| `cards` | Flashcard content from Git repos | id, repository_id, file_path, title, content, is_active |
+| `card_questions` | Pre-generated quiz questions per card | id, card_id, question_text, options, correct_answer, is_active |
+| `study_sessions` | Immutable log of completed sessions | id, user_id, correct_count, total_count, duration_seconds |
+| `user_repositories` | Many-to-many: user <-> repo subscription | user_id, repository_id |
+| `platform_config` | Key-value admin settings | key, value |
 
-### Data Flow
+### Key Existing Code Modules
 
-None -- pure presentational component with no state or side effects.
-
-### Dependencies
-
-`react-native-svg` ships with Expo SDK 54. If not in direct dependencies, add explicitly:
-```bash
-pnpm --filter @lumio/android add react-native-svg
-```
+| Module | Location | Role |
+|--------|----------|------|
+| `useStudySession` | `apps/android/hooks/useStudySession.ts` | Orchestrates study flow: load cards, random selection, track answers |
+| `study.ts` | `packages/core/src/supabase/study.ts` | API layer: fetch study cards, questions, save sessions |
+| `Deck` | `packages/core/src/deck/Deck.ts` | .lumioignore filtering for card pool |
+| `types/index.ts` | `packages/shared/src/types/index.ts` | Shared TypeScript types |
+| `StudyScreen` | `apps/android/screens/StudyScreen.tsx` | UI: quiz display, navigation |
+| `DashboardScreen` | `apps/android/screens/DashboardScreen.tsx` | UI: stats display, study CTA |
+| `StudyHistoryScreen` | `apps/android/screens/StudyHistoryScreen.tsx` | UI: past session list |
 
 ---
 
-## Feature 3: Configurable Cards-per-Session
+## Recommended Architecture: Spaced Repetition
 
-### Recommended Architecture
+### Algorithm Choice: SM-2 (not FSRS)
 
-Add a `cardsPerSession` setting following the same AsyncStorage pattern as theme preference (`lib/theme.ts`). The `useStudySession` hook reads this value to limit cards loaded.
+**Use SM-2 because:**
+1. **Simplicity matches the project scope.** SM-2 requires 3 values per card (ease_factor, interval, repetitions). FSRS requires 5+ values (stability, difficulty, elapsed_days, scheduled_days, state, learning_steps, reps, lapses) plus parameter optimization.
+2. **No ML training needed.** FSRS's advantage (20-30% fewer reviews) comes from training on user history. With a single-user app and low review volume, this advantage is negligible.
+3. **Deterministic and debuggable.** SM-2 is a fixed formula. FSRS is a neural network -- harder to debug when scheduling seems off.
+4. **Proven for 35+ years.** Anki used SM-2 as default for over a decade. It works well enough.
+5. **Zero dependencies.** SM-2 is ~30 lines of code. FSRS via ts-fsrs adds a dependency with its own versioning.
+6. **Existing stub mentions SM-2.** The `study-planner` edge function comment says "SM-2 algorithm."
 
-### New Files
+**SM-2 Core Formula:**
+```
+Per card per user:
+  - ease_factor: starts at 2.5, adjusts per response quality
+  - interval: days until next review (1, 6, then interval * ease_factor)
+  - repetitions: count of consecutive correct answers
 
-| File | Purpose |
-|------|---------|
-| `apps/android/lib/studySettings.ts` | Load/save study preferences (cards per session) from AsyncStorage |
+On correct answer (quality >= 3):
+  repetitions++
+  if repetitions == 1: interval = 1
+  if repetitions == 2: interval = 6
+  else: interval = round(interval * ease_factor)
 
-### Settings Data Model
+On incorrect answer (quality < 3):
+  repetitions = 0
+  interval = 1
 
-```typescript
-// lib/studySettings.ts
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const STUDY_SETTINGS_KEY = '@lumio/study-settings';
-
-export type CardsPerSession = 5 | 10 | 15 | 20 | 0; // 0 = all
-
-export interface StudySettings {
-  cardsPerSession: CardsPerSession;
-}
-
-const DEFAULT_SETTINGS: StudySettings = {
-  cardsPerSession: 10,
-};
-
-export async function loadStudySettings(): Promise<StudySettings> {
-  try {
-    const stored = await AsyncStorage.getItem(STUDY_SETTINGS_KEY);
-    if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
-    return DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-export async function saveStudySettings(settings: Partial<StudySettings>): Promise<void> {
-  const current = await loadStudySettings();
-  const merged = { ...current, ...settings };
-  await AsyncStorage.setItem(STUDY_SETTINGS_KEY, JSON.stringify(merged));
-}
+Ease factor adjustment:
+  ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+  ease_factor = max(1.3, ease_factor)
 ```
 
-### Integration Points -- Modified Files
+**Quality mapping for Lumio (simplified):**
+- Correct answer = quality 4 (Good)
+- Incorrect answer = quality 1 (Bad)
+- Skipped = quality 0 (Complete failure, treated as wrong)
 
-| File | Change | Details |
-|------|--------|---------|
-| `hooks/useStudySession.ts` | Accept `maxCards` parameter | Signature: `useStudySession(maxCards: number = 0)`. In `loadInitialData`, after filtering with Deck, shuffle and slice to `maxCards` if > 0. |
-| `screens/StudyScreen.tsx` | Load settings on mount, pass to hook | `useState` for `maxCards`, load via `loadStudySettings()` in `useEffect`, pass to `useStudySession(maxCards)`. |
-| `screens/SettingsScreen.tsx` | Add "Study" section | Radio buttons for 5/10/15/20/All, same UI pattern as theme radio buttons. |
+This is a deliberate simplification. Lumio's quiz is multiple-choice with A/B/C/D -- there is no granular "how hard was it" input. Binary correct/incorrect maps cleanly to quality 4 vs quality 1.
 
-### Data Flow
+### New Database Table: `card_review_schedule`
 
-```
-1. SettingsScreen: User selects cards-per-session -> saveStudySettings()
-2. StudyScreen mount -> loadStudySettings() -> get cardsPerSession
-3. Pass to useStudySession(cardsPerSession)
-4. useStudySession.loadInitialData():
-   a. Fetch all available cards
-   b. Filter with Deck (.lumioignore)
-   c. Shuffle the filtered array (Fisher-Yates)
-   d. Slice to cardsPerSession (if > 0)
-   e. Set session state with sliced cards
-5. Progress bar and completion based on sliced count
-```
+```sql
+CREATE TABLE public.card_review_schedule (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
 
-### Hook Modification Detail
+    -- SM-2 algorithm state
+    ease_factor REAL NOT NULL DEFAULT 2.5,
+    interval_days INTEGER NOT NULL DEFAULT 0,
+    repetitions INTEGER NOT NULL DEFAULT 0,
 
-Key change to `useStudySession.ts`:
+    -- Scheduling
+    next_review_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_reviewed_at TIMESTAMPTZ,
 
-```typescript
-// BEFORE (line 60):
-export function useStudySession(): UseStudySessionReturn {
+    -- Metadata
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-// AFTER:
-export function useStudySession(maxCards: number = 0): UseStudySessionReturn {
-  // ... inside loadInitialData, after filteredCards is populated ...
+    -- One schedule per user per card
+    UNIQUE(user_id, card_id)
+);
 
-  // NEW: Limit cards if maxCards > 0
-  let sessionCards = filteredCards;
-  if (maxCards > 0 && filteredCards.length > maxCards) {
-    // Fisher-Yates shuffle then take first N
-    const shuffled = [...filteredCards];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    sessionCards = shuffled.slice(0, maxCards);
-  }
+-- Indexes
+CREATE INDEX idx_card_review_schedule_user_due
+    ON card_review_schedule(user_id, next_review_at)
+    WHERE next_review_at <= NOW();
 
-  // Use sessionCards instead of filteredCards in setSession
-```
+CREATE INDEX idx_card_review_schedule_user_card
+    ON card_review_schedule(user_id, card_id);
 
-### Why NOT a Context
+-- RLS
+ALTER TABLE card_review_schedule ENABLE ROW LEVEL SECURITY;
 
-Cards-per-session is read once at session start. It does not need to be reactive during a session. Using AsyncStorage directly (same as theme preference in `lib/theme.ts`) keeps the architecture simple and consistent.
+CREATE POLICY "Users can view own review schedule"
+    ON card_review_schedule FOR SELECT
+    USING (auth.uid() = user_id);
 
----
+CREATE POLICY "Users can insert own review schedule"
+    ON card_review_schedule FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
 
-## Feature 4: Bottom-Sheet Card Preview Bugfix
+CREATE POLICY "Users can update own review schedule"
+    ON card_review_schedule FOR UPDATE
+    USING (auth.uid() = user_id);
 
-### Root Cause Analysis
-
-The bug: content appears cut off at the top (first lines missing) in CardPreviewModal.
-
-**Architecture of the affected component chain:**
-
-```
-CardPreviewModal (Modal transparent, slide animation)
-  Pressable (backdrop, tap-to-close)
-  View (bottom sheet, position: absolute, bottom: 0, maxHeight: 80%)
-    View (drag handle: paddingTop: 10, paddingBottom: 4)
-    View (header: paddingVertical: 12, borderBottomWidth: 1)
-    ScrollView (flex: 1)
-      CardContentView (WebView, scrollEnabled: false, dynamic height via postMessage)
+-- No DELETE policy: schedule entries persist (reset via UPDATE)
 ```
 
-**The problem has two causes:**
+**Design decisions:**
+- `ease_factor REAL` not `NUMERIC`: SM-2 values are approximate, REAL (4 bytes) is sufficient, no precision concerns.
+- `interval_days INTEGER`: Whole days, matching SM-2 spec. No sub-day precision needed.
+- `next_review_at TIMESTAMPTZ`: Computed as `last_reviewed_at + interval_days`. Stored pre-computed for efficient querying ("cards due now").
+- `UNIQUE(user_id, card_id)`: One schedule row per user per card. UPSERT pattern for updates.
+- No DELETE policy: Schedule rows are long-lived. When a card is deleted, CASCADE handles cleanup.
 
-**Cause 1: Race condition in height measurement.** The WebView's JavaScript measures `document.documentElement.scrollHeight` after a 100ms `setTimeout` (line 223-228 of `cardHtml.ts`). But CDN resources (KaTeX CSS/fonts, highlight.js theme CSS, marked.js) may not have loaded in 100ms. The height is measured before content is fully rendered, resulting in an underestimated height. When resources finish loading and content expands, the WebView's actual content is taller than `webViewHeight`, but `scrollEnabled=false` prevents internal scrolling. The parent ScrollView may have already scrolled or laid out based on the incorrect smaller height.
+### New RPC Function: `get_due_card_count`
 
-**Cause 2: Initial height flash and ScrollView layout shift.** `CardContentView` starts with `webViewHeight = 300` (line 36 of CardContentView.tsx). When the actual height arrives (could be 600+), the ScrollView's content suddenly grows. On Android, this can cause the ScrollView to maintain its current scroll offset rather than resetting to top, making the beginning of content appear "cut off" above the visible area.
+```sql
+CREATE OR REPLACE FUNCTION get_due_card_count(p_user_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    SELECT COUNT(*)::INTEGER INTO v_count
+    FROM card_review_schedule crs
+    JOIN cards c ON c.id = crs.card_id AND c.is_active = TRUE
+    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
+    WHERE crs.user_id = p_user_id
+      AND crs.next_review_at <= NOW();
 
-### Recommended Fix Architecture
-
-**Three-part fix:**
-
-#### Part A: Improve height measurement timing and reliability (cardHtml.ts)
-
-Replace the single `setTimeout(reportHeight, 100)` with a multi-report strategy:
-
-```javascript
-function reportHeight() {
-  var height = Math.max(
-    document.body.scrollHeight,
-    document.body.offsetHeight,
-    document.documentElement.scrollHeight
-  );
-  if (height > 0 && window.ReactNativeWebView) {
-    window.ReactNativeWebView.postMessage(
-      JSON.stringify({ type: 'height', value: height })
-    );
-  }
-}
-
-// Report after initial render
-setTimeout(reportHeight, 150);
-
-// Report after fonts/CSS load (KaTeX web fonts)
-if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(function() {
-    setTimeout(reportHeight, 50);
-  });
-}
-
-// Report when all CDN resources finish loading
-window.addEventListener('load', function() {
-  setTimeout(reportHeight, 100);
-});
-
-// Watch for DOM mutations (KaTeX rendering inserts new elements)
-var observer = new MutationObserver(function() {
-  setTimeout(reportHeight, 50);
-});
-observer.observe(document.getElementById('content'), {
-  childList: true, subtree: true
-});
-// Auto-disconnect after 5 seconds to prevent leaks
-setTimeout(function() { observer.disconnect(); }, 5000);
+    RETURN v_count;
+END;
+$$;
 ```
 
-#### Part B: Fix initial opacity flash (CardContentView.tsx)
+This powers the dashboard "cards due for review" counter.
 
-Show the WebView only after the first valid height is received:
+### New RPC Function: `get_study_cards_for_session`
 
-```typescript
-const [webViewHeight, setWebViewHeight] = useState(300);
-const [isReady, setIsReady] = useState(false); // NEW
+New RPC that replaces the current `get_study_cards_with_questions` for study session initialization. Returns cards in priority order: due cards first, then new cards.
 
-const handleMessage = useCallback((event: WebViewMessageEvent) => {
-  try {
-    const data = JSON.parse(event.nativeEvent.data);
-    if (data.type === 'height' && typeof data.value === 'number' && data.value > 0) {
-      setWebViewHeight(data.value);
-      if (!isReady) setIsReady(true); // NEW: reveal on first measurement
-    }
-  } catch { /* ignore */ }
-}, [isReady]);
+```sql
+CREATE OR REPLACE FUNCTION get_study_cards_for_session(
+    p_user_id UUID,
+    p_limit INTEGER DEFAULT 20
+)
+RETURNS TABLE (
+    card_id UUID,
+    repository_id UUID,
+    file_path TEXT,
+    title TEXT,
+    content TEXT,
+    raw_content TEXT,
+    tags TEXT[],
+    difficulty INTEGER,
+    question_count BIGINT,
+    is_review BOOLEAN,         -- true = due card, false = new card
+    ease_factor REAL,
+    interval_days INTEGER,
+    repetitions INTEGER
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_due_count INTEGER;
+    v_new_limit INTEGER;
+    v_due_limit INTEGER;
+BEGIN
+    -- Count due cards
+    SELECT COUNT(*) INTO v_due_count
+    FROM card_review_schedule crs
+    JOIN cards c ON c.id = crs.card_id AND c.is_active = TRUE
+    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
+    WHERE crs.user_id = p_user_id
+      AND crs.next_review_at <= NOW();
 
-// Style change: opacity 0 until ready
-<WebView
-  style={[{ height: webViewHeight, opacity: isReady ? 0.99 : 0 }, style]}
-  ...
-/>
+    -- Proportional split: at least 70% due cards, rest new
+    v_due_limit := LEAST(v_due_count, GREATEST(p_limit * 7 / 10, p_limit - 5));
+    v_new_limit := p_limit - v_due_limit;
+
+    RETURN QUERY
+    -- Due cards (review)
+    (SELECT
+        c.id AS card_id,
+        c.repository_id,
+        c.file_path,
+        c.title,
+        c.content,
+        c.raw_content,
+        c.tags,
+        c.difficulty,
+        COUNT(cq.id) AS question_count,
+        TRUE AS is_review,
+        crs.ease_factor,
+        crs.interval_days,
+        crs.repetitions
+    FROM card_review_schedule crs
+    JOIN cards c ON c.id = crs.card_id AND c.is_active = TRUE
+    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
+    LEFT JOIN card_questions cq ON cq.card_id = c.id AND cq.is_active = TRUE
+    WHERE crs.user_id = p_user_id
+      AND crs.next_review_at <= NOW()
+    GROUP BY c.id, c.repository_id, c.file_path, c.title, c.content, c.raw_content, c.tags, c.difficulty,
+             crs.ease_factor, crs.interval_days, crs.repetitions
+    HAVING COUNT(cq.id) > 0
+    ORDER BY crs.next_review_at ASC
+    LIMIT v_due_limit)
+
+    UNION ALL
+
+    -- New cards (never reviewed by this user)
+    (SELECT
+        c.id AS card_id,
+        c.repository_id,
+        c.file_path,
+        c.title,
+        c.content,
+        c.raw_content,
+        c.tags,
+        c.difficulty,
+        COUNT(cq.id) AS question_count,
+        FALSE AS is_review,
+        2.5::REAL AS ease_factor,
+        0 AS interval_days,
+        0 AS repetitions
+    FROM cards c
+    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
+    LEFT JOIN card_questions cq ON cq.card_id = c.id AND cq.is_active = TRUE
+    LEFT JOIN card_review_schedule crs ON crs.card_id = c.id AND crs.user_id = p_user_id
+    WHERE c.is_active = TRUE
+      AND crs.id IS NULL  -- no review schedule = never seen
+    GROUP BY c.id, c.repository_id, c.file_path, c.title, c.content, c.raw_content, c.tags, c.difficulty
+    HAVING COUNT(cq.id) > 0
+    ORDER BY RANDOM()
+    LIMIT v_new_limit);
+END;
+$$;
 ```
 
-#### Part C: Reset ScrollView position on card change (CardPreviewModal.tsx)
-
-```typescript
-const scrollViewRef = useRef<ScrollView>(null);
-
-// Reset scroll position when card changes
-useEffect(() => {
-  if (visible && card) {
-    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-  }
-}, [visible, card]);
-
-// Add ref and contentContainerStyle fix
-<ScrollView
-  ref={scrollViewRef}
-  style={styles.scrollView}
-  contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} // flexGrow fix
-  showsVerticalScrollIndicator={true}
->
-```
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `lib/cardHtml.ts` | Replace single `setTimeout(reportHeight, 100)` at line 223-228 with multi-report strategy (MutationObserver + fonts.ready + window.load) |
-| `components/study/CardContentView.tsx` | Add `isReady` state, start with `opacity: 0`, reveal after first height message |
-| `components/study/CardPreviewModal.tsx` | Add `useRef` on ScrollView, reset scroll on card change, add `flexGrow: 1` to `contentContainerStyle` |
-
-### Data Flow (Fixed)
+### Component Boundaries: What Changes, What Stays
 
 ```
-1. Modal opens, card prop set
-2. CardContentView renders WebView with opacity: 0, initial height: 300
-3. WebView loads HTML, CDN resources begin loading
-4. MutationObserver fires as marked.js/KaTeX renders -> reportHeight()
-5. First valid height received -> setWebViewHeight(actualHeight), opacity -> 0.99
-6. ScrollView.scrollTo({ y: 0 }) resets position
-7. document.fonts.ready fires (KaTeX fonts) -> reportHeight() updates height
-8. window.load fires -> final reportHeight() confirms final height
-9. Each height update keeps ScrollView at y: 0 via effect
+EXISTING (no changes)              NEW / MODIFIED
+================================   ================================
+cards table                        card_review_schedule table (NEW)
+card_questions table               get_study_cards_for_session RPC (NEW)
+study_sessions table               get_due_card_count RPC (NEW)
+question_votes table
+platform_config table
+
+Deck class (filtering)             sm2.ts in @lumio/core (NEW)
+CardView class                     study.ts: new API functions (MODIFIED)
+                                   types/index.ts: new types (MODIFIED)
+
+StudyScreen.tsx (UI stays same)    useStudySession.ts (MODIFIED: selection logic)
+StudySummaryScreen.tsx             DashboardScreen.tsx (MODIFIED: due count)
+CardListScreen.tsx                 StudyHistoryScreen.tsx (MODIFIED: card count fix)
+CardDetailScreen.tsx
+
+AppNavigator.tsx                   i18n/en.ts, i18n/it.ts (MODIFIED: new strings)
+MainNavigator.tsx
+AuthNavigator.tsx
+
+llm-proxy edge function
+git-sync edge function
+docora-webhook edge function
+question-generator edge function
 ```
 
 ---
 
-## Complete Change Map
+## Detailed Data Flow: After Spaced Repetition
 
-### New Files (4)
+### Study Session Flow (Modified)
 
-| File | Feature | Lines (est.) |
-|------|---------|-------------|
-| `apps/android/i18n/index.ts` | i18n | ~40 |
-| `apps/android/i18n/locales/en.json` | i18n | ~80 |
-| `apps/android/i18n/locales/it.json` | i18n | ~80 |
-| `apps/android/components/LumioLogo.tsx` | Logo | ~25 |
-| `apps/android/lib/studySettings.ts` | Study settings | ~35 |
+```
+DashboardScreen
+  |-- Shows "X cards due for review" (NEW)
+  |-- "Start Study Session" button
+  v
+StudyScreen
+  |-- useStudySession hook (MODIFIED)
+  |     |-- get_study_cards_for_session RPC (NEW) -- returns due + new cards
+  |     |     (replaces getStudyCardsWithQuestions + random selection)
+  |     |-- getUserRepositories() --> REST (unchanged)
+  |     |-- Deck class filters per .lumioignore (unchanged)
+  |     |-- Cards arrive pre-ordered: due first, then new (no random for due)
+  |     |-- Each card tagged: is_review=true/false
+  |     |-- getPreGeneratedQuestion(cardId) --> same as before
+  |     v
+  |-- QuizCard component (unchanged)
+  |-- handleAnswer() --> sets userAnswer (unchanged)
+  |-- handleNext() --> saves answered card + calls updateReviewSchedule (MODIFIED)
+  |     |-- updateReviewSchedule():
+  |     |     1. Compute SM-2 output (client-side in @lumio/core)
+  |     |     2. UPSERT into card_review_schedule via REST
+  |     v
+  |-- On completion:
+  |     |-- saveStudySession() --> same as before
+  |     |-- AsyncStorage.setItem('@lumio/lastStudiedAt') --> same
+  |     v
+  v
+StudySummaryScreen (unchanged, but shows card count instead of "all repos")
+```
 
-### Modified Files (13)
+### SM-2 Computation: Client-Side in @lumio/core
 
-| File | Feature(s) | Nature of Change |
-|------|-----------|------------------|
-| `App.tsx` | i18n | Add 1 import line |
-| `screens/SettingsScreen.tsx` | i18n, study settings | Add language section, study section, replace strings with `t()` |
-| `screens/LoginScreen.tsx` | i18n, logo | Replace text logo with SVG component, replace strings with `t()` |
-| `screens/DashboardScreen.tsx` | i18n | Replace ~12 strings with `t()` |
-| `screens/ReposScreen.tsx` | i18n | Replace ~14 strings with `t()` |
-| `screens/StudyScreen.tsx` | i18n, study settings | Replace ~18 strings with `t()`, load settings on mount |
-| `screens/StudySummaryScreen.tsx` | i18n | Replace ~7 strings with `t()` |
-| `components/AddRepoForm.tsx` | i18n | Replace ~6 strings with `t()` |
-| `navigation/MainNavigator.tsx` | i18n | Replace tab header title |
-| `hooks/useStudySession.ts` | Study settings | Add `maxCards` parameter, shuffle + slice logic |
-| `lib/cardHtml.ts` | Bugfix | Replace height measurement with multi-report strategy |
-| `components/study/CardContentView.tsx` | Bugfix | Add `isReady` state, opacity transition |
-| `components/study/CardPreviewModal.tsx` | Bugfix | Add ScrollView ref, scroll reset, flexGrow fix |
+```
+packages/core/src/srs/sm2.ts (NEW FILE)
+
+export interface SM2Input {
+  quality: number;       // 0-5
+  easeFactor: number;    // previous, default 2.5
+  interval: number;      // previous, in days
+  repetitions: number;   // previous, default 0
+}
+
+export interface SM2Output {
+  easeFactor: number;
+  interval: number;      // in days
+  repetitions: number;
+  nextReviewAt: Date;    // computed from now + interval
+}
+
+export function computeSM2(input: SM2Input): SM2Output { ... }
+```
+
+**Why client-side, not edge function:**
+- SM-2 is ~30 lines of pure math with no external dependencies.
+- Running server-side would add latency per card answer (network round-trip).
+- The `study-planner` edge function is not needed for SM-2 -- the computation is trivial.
+- Result is written to DB via REST UPSERT (same pattern as saveStudySession).
+
+### Schedule Update: UPSERT Pattern
+
+```typescript
+// In packages/core/src/supabase/study.ts (new export)
+
+export async function updateReviewSchedule(
+  cardId: string,
+  sm2Output: SM2Output
+): Promise<void> {
+  // UPSERT via Supabase REST with Prefer: resolution=merge-duplicates
+  // Sets ease_factor, interval_days, repetitions, next_review_at, last_reviewed_at
+}
+```
+
+This is fire-and-forget (same pattern as saveStudySession). Does not block navigation to next card.
+
+### Dashboard: Due Count
+
+```typescript
+// In packages/core/src/supabase/study.ts (new export)
+
+export async function getDueCardCount(): Promise<number> {
+  // Calls RPC get_due_card_count
+}
+```
+
+Dashboard calls this alongside existing `getUserStats()` on mount and refresh.
 
 ---
 
-## Build Order (Dependency-Based)
+## Component Architecture: New and Modified Files
 
-The features have minimal interdependencies. Build order optimizes for: fix bugs first, then add infrastructure, then i18n last (touches the most files).
+### Layer 1: Database (Supabase Migration)
 
-### Phase 1: Bottom-sheet bugfix (0 dependencies on other features)
+| Change | File | Type |
+|--------|------|------|
+| New table `card_review_schedule` | `supabase/migrations/YYYYMMDD_card_review_schedule.sql` | NEW |
+| New RPC `get_due_card_count` | Same migration file | NEW |
+| New RPC `get_study_cards_for_session` | Same migration file | NEW |
+| Platform config: `new_cards_per_session` | Same migration file | NEW |
 
-1. `lib/cardHtml.ts` -- multi-report height strategy
-2. `components/study/CardContentView.tsx` -- opacity transition
-3. `components/study/CardPreviewModal.tsx` -- ScrollView fixes
+### Layer 2: Shared Types (packages/shared)
 
-**Rationale:** Bugfix improving existing functionality. No new files (only modifications), no new dependencies. Smallest blast radius. Delivers user-visible improvement immediately.
+| Change | File | Type |
+|--------|------|------|
+| `CardReviewSchedule` interface | `packages/shared/src/types/index.ts` | MODIFIED (add type) |
+| `StudyCard` extended with `isReview`, schedule fields | `packages/shared/src/types/index.ts` | MODIFIED (extend) |
+| `SM2Input`, `SM2Output` interfaces | `packages/shared/src/types/index.ts` | MODIFIED (add types) |
 
-### Phase 2: Logo integration (0 dependencies)
+### Layer 3: Core Library (packages/core)
 
-1. Verify `react-native-svg` availability (or add to dependencies)
-2. Create `components/LumioLogo.tsx`
-3. Modify `screens/LoginScreen.tsx` to use LumioLogo
+| Change | File | Type |
+|--------|------|------|
+| SM-2 algorithm implementation | `packages/core/src/srs/sm2.ts` | NEW |
+| `updateReviewSchedule()` | `packages/core/src/supabase/study.ts` | MODIFIED (add export) |
+| `getDueCardCount()` | `packages/core/src/supabase/study.ts` | MODIFIED (add export) |
+| `getStudyCardsForSession()` | `packages/core/src/supabase/study.ts` | MODIFIED (add export) |
+| Re-export SM-2 + new functions | `packages/core/src/index.ts` | MODIFIED (add exports) |
 
-**Rationale:** Single new component, single modified screen. Quick win. Should be done before i18n modifies LoginScreen.
+### Layer 4: Android App
 
-### Phase 3: Configurable cards-per-session (0 dependencies)
-
-1. Create `lib/studySettings.ts`
-2. Modify `hooks/useStudySession.ts` to accept `maxCards`
-3. Modify `screens/StudyScreen.tsx` to load settings and pass to hook
-4. Modify `screens/SettingsScreen.tsx` to add study section
-
-**Rationale:** Introduces settings infrastructure. Building this before i18n means SettingsScreen gets its new sections first, then i18n simply translates the final strings.
-
-### Phase 4: i18n (logically last -- touches all screens)
-
-1. Install `i18next`, `react-i18next`, `expo-localization`
-2. Create `i18n/index.ts`, `i18n/locales/en.json`, `i18n/locales/it.json`
-3. Add `import './i18n'` to `App.tsx`
-4. Modify ALL screens and components with `t()` calls
-5. Add language section to `SettingsScreen.tsx`
-
-**Rationale:** Touches every screen and most components. Doing it last means all other modifications (logo, settings, bugfix) are already in place, avoiding merge conflicts and double-editing.
-
-### Phase 5: Dynamic version display (trivial, independent)
-
-1. Modify `screens/SettingsScreen.tsx`: replace hardcoded `"Lumio v1.0.0"` with `getVersionString()` from `@lumio/shared`
-
-**Rationale:** Single-line change, can be folded into any phase.
+| Change | File | Type |
+|--------|------|------|
+| Use new card selection (due + new mix) | `apps/android/hooks/useStudySession.ts` | MODIFIED |
+| Call `updateReviewSchedule` after each answer | `apps/android/hooks/useStudySession.ts` | MODIFIED |
+| Show due card count on dashboard | `apps/android/screens/DashboardScreen.tsx` | MODIFIED |
+| Show "Review" / "New" badge during study | `apps/android/screens/StudyScreen.tsx` | MODIFIED (minor) |
+| Show card count instead of "all repos" in history | `apps/android/screens/StudyHistoryScreen.tsx` | MODIFIED (minor) |
+| New i18n strings | `apps/android/i18n/en.ts`, `it.ts` | MODIFIED |
 
 ---
 
 ## Patterns to Follow
 
-### Pattern 1: Side-Effect Module Initialization
+### Pattern 1: Fire-and-Forget Database Write
 
-**What:** Import a module purely for its side effects (initialization code runs on import).
-**When:** Global singletons that must be initialized before any component renders.
-**Already used at:** `App.tsx` line 1: `import './lib/supabase';`
-**Apply to:** i18n initialization: `import './i18n';`
+**What:** Write review schedule updates without blocking the UI.
+**Why:** Same pattern already used for `saveStudySession()`. User should never wait for DB write to proceed to next card.
 
-### Pattern 2: AsyncStorage Load/Save Functions
+```typescript
+// In useStudySession.ts handleNext():
+const sm2Result = computeSM2({
+  quality: isCorrect ? 4 : 1,
+  easeFactor: currentCard.easeFactor ?? 2.5,
+  interval: currentCard.intervalDays ?? 0,
+  repetitions: currentCard.repetitions ?? 0,
+});
 
-**What:** Standalone `load` and `save` async functions for preferences, co-located in a lib file.
-**When:** Simple key-value settings read once on mount (not reactive across the app).
-**Already used at:** `lib/theme.ts` with `loadThemePreference()` / `saveThemePreference()`
-**Apply to:** `lib/studySettings.ts` with `loadStudySettings()` / `saveStudySettings()`
+// Fire and forget
+updateReviewSchedule(currentCard.id, sm2Result)
+  .catch(err => console.error('Failed to update review schedule:', err));
+```
 
-### Pattern 3: Radio Button Setting Group
+### Pattern 2: UPSERT for Schedule Rows
 
-**What:** Array of option objects rendered as `TouchableOpacity` rows with checkmark indicator.
-**When:** Adding a new setting with finite options.
-**Already used at:** `SettingsScreen.tsx` lines 20-24 (`themeOptions`) and lines 64-93.
-**Apply to:** Language options (IT/EN) and cards-per-session options (5/10/15/20/All).
+**What:** Use PostgreSQL's ON CONFLICT for card_review_schedule writes.
+**Why:** First review of a card creates the row. Subsequent reviews update it. Single code path for both.
+
+```typescript
+// Via Supabase REST with Prefer: resolution=merge-duplicates
+const response = await fetch(`${supabaseUrl}/rest/v1/card_review_schedule`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    apikey: getSupabaseAnonKey(),
+    Prefer: 'resolution=merge-duplicates',
+  },
+  body: JSON.stringify({
+    user_id: userId,
+    card_id: cardId,
+    ease_factor: sm2Output.easeFactor,
+    interval_days: sm2Output.interval,
+    repetitions: sm2Output.repetitions,
+    next_review_at: sm2Output.nextReviewAt.toISOString(),
+    last_reviewed_at: new Date().toISOString(),
+  }),
+});
+```
+
+### Pattern 3: Server-Side Card Ordering, Client-Side Algorithm
+
+**What:** Database RPC returns cards in priority order (due first, then new). SM-2 math runs in the app.
+**Why:** Querying "which cards are due" requires efficient database indexing. Computing "what happens after this answer" is pure math that belongs client-side for zero latency.
+
+### Pattern 4: Progressive Enhancement of StudyCard Type
+
+**What:** Extend the existing `StudyCard` interface with optional SRS fields rather than creating a new type.
+**Why:** Keeps the `useStudySession` hook working with both the old and new data shape during transition. Existing fields remain, new fields are optional.
+
+```typescript
+// In packages/shared/src/types/index.ts
+export interface StudyCard extends Card {
+  questionCount: number;
+  // NEW: spaced repetition metadata (optional for backward compat)
+  isReview?: boolean;
+  easeFactor?: number;
+  intervalDays?: number;
+  repetitions?: number;
+}
+```
+
+---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Creating a New Context for Each Feature
+### Anti-Pattern 1: Edge Function for SM-2 Calculation
 
-**What:** Adding LocaleContext, StudySettingsContext, etc.
-**Why bad:** The app already has 2 contexts (Auth, Theme). i18next provides its own reactive state. Study settings are read once per session. Adding contexts causes unnecessary re-renders.
-**Instead:** Side-effect import for i18n. AsyncStorage read-on-mount for study settings.
+**What:** Moving SM-2 computation to the study-planner edge function.
+**Why bad:** Adds 50-200ms latency per card answer for a 30-line calculation. Creates unnecessary coupling and deployment dependency.
+**Instead:** Pure function in `@lumio/core`, called synchronously in the hook.
 
-### Anti-Pattern 2: SVG Transformer for 1-2 Logo Files
+### Anti-Pattern 2: Storing Schedule in study_sessions
 
-**What:** Adding `react-native-svg-transformer` and modifying Metro config.
-**Why bad:** Requires Metro config changes, potential monorepo resolution issues, all for 1.3KB of SVG.
-**Instead:** Use `SvgXml` from `react-native-svg` with inline SVG string constant.
+**What:** Trying to derive review schedule from the immutable study_sessions table.
+**Why bad:** study_sessions is aggregate (per-session), not per-card. It lacks card_id. Reconstructing per-card state from session history is fragile and slow.
+**Instead:** Dedicated `card_review_schedule` table with per-card per-user state.
 
-### Anti-Pattern 3: Flat Translation Key Namespace
+### Anti-Pattern 3: Random Selection for Due Cards
 
-**What:** `{ loginTagline: "...", dashboardCards: "...", settingsLogout: "..." }`
-**Why bad:** Ambiguous keys, no namespace isolation, hard to find/maintain.
-**Instead:** Nested namespaces matching screen names: `login.tagline`, `dashboard.cards`, `settings.logout`.
+**What:** Continuing to use `selectRandomCard()` for cards that are due for review.
+**Why bad:** Due cards should be reviewed in order of urgency (most overdue first). Randomizing defeats the purpose of spaced repetition.
+**Instead:** Due cards ordered by `next_review_at ASC` from the RPC. New cards can remain random.
+
+### Anti-Pattern 4: Blocking UI on Schedule Update
+
+**What:** Awaiting the UPSERT before allowing navigation to the next card.
+**Why bad:** Adds perceived latency. If the write fails, the user still studied the card -- the worst case is a slightly suboptimal next review date.
+**Instead:** Fire-and-forget with error logging, same as existing saveStudySession pattern.
+
+### Anti-Pattern 5: Modifying study_sessions Table
+
+**What:** Adding SRS columns to the immutable study_sessions table.
+**Why bad:** study_sessions has no UPDATE/DELETE RLS policies by design. It is an append-only audit log. SRS state is mutable (changes every review).
+**Instead:** Separate table with UPDATE policy.
+
+---
+
+## Suggested Build Order
+
+Build order follows dependency chain: schema first, then core library, then app integration, then UI.
+
+### Phase 1: Database + SM-2 Algorithm
+**Dependencies:** None
+**Delivers:** Foundation that everything else builds on
+
+1. Write migration: `card_review_schedule` table + RLS + indexes
+2. Write migration: `get_due_card_count` RPC
+3. Write migration: `get_study_cards_for_session` RPC
+4. Implement `packages/core/src/srs/sm2.ts` (pure function, easily unit-testable)
+5. Add new types to `packages/shared/src/types/index.ts`
+6. Add `updateReviewSchedule()`, `getDueCardCount()`, `getStudyCardsForSession()` to `packages/core/src/supabase/study.ts`
+7. Re-export from `packages/core/src/index.ts`
+8. Run `pnpm build:packages`
+
+### Phase 2: Study Session Integration
+**Dependencies:** Phase 1 (schema + core library)
+**Delivers:** Core spaced repetition behavior
+
+1. Modify `useStudySession.ts`:
+   - Replace `getStudyCardsWithQuestions()` with `getStudyCardsForSession()`
+   - Remove `selectRandomCard()` for due cards (use ordered list)
+   - Keep random for new cards within the session
+   - Add `updateReviewSchedule()` call in `handleNext()` after answer
+   - Track `isReview` flag per card for UI indicator
+2. Modify `StudyScreen.tsx`:
+   - Show "Review" / "New" badge on current card (small UI addition)
+
+### Phase 3: Dashboard + History Fixes
+**Dependencies:** Phase 1 (RPC for due count)
+**Delivers:** Visible spaced repetition value on home screen
+
+1. Modify `DashboardScreen.tsx`:
+   - Add `getDueCardCount()` call alongside `getUserStats()`
+   - Show "X cards due for review" stat card
+2. Modify `StudyHistoryScreen.tsx`:
+   - Show `totalCount` (card count) instead of repository_name when null
+   - This is the "Fix storico sessioni" from the milestone description
+3. Add i18n strings to `en.ts` and `it.ts`:
+   - `dashboard.dueForReview`: "Due for Review"
+   - `dashboard.cardsToReview`: "%{count} cards"
+   - `study.reviewBadge`: "Review"
+   - `study.newBadge`: "New"
+
+### Phase 4: Validation + Polish
+**Dependencies:** Phases 1-3
+**Delivers:** Confidence that it works correctly
+
+1. Manual testing: verify SM-2 intervals are computed correctly
+2. Verify schedule UPSERT works for first review and subsequent reviews
+3. Verify due count updates after completing a study session
+4. Verify mix of due + new cards in session
+5. Verify `.lumioignore` filtering still works with new card selection
+
+---
+
+## Scalability Considerations
+
+| Concern | Current Scale | At 1K cards | At 10K cards |
+|---------|--------------|-------------|--------------|
+| Due count query | Trivial | Index on (user_id, next_review_at) handles it | Same index, sub-ms |
+| Card selection query | ~50 cards total | RPC with LIMIT handles it | May need pagination |
+| Schedule table size | 0 rows | 1 row per card studied | 10K rows max per user |
+| SM-2 computation | N/A | Instant (pure math) | Instant |
+
+The architecture handles 10K+ cards per user without modification. The indexed `next_review_at` query is the critical path and is O(log n).
 
 ---
 
 ## Sources
 
-- [Expo Localization docs](https://docs.expo.dev/versions/latest/sdk/localization/) -- HIGH confidence
-- [React Native / Expo Starter i18n guide](https://starter.obytes.com/guides/internationalization/) -- MEDIUM confidence
-- [Phrase: React Native i18n with Expo and i18next](https://phrase.com/blog/posts/react-native-i18n-with-expo-and-i18next-part-1/) -- MEDIUM confidence
-- [react-native-webview issue #3715](https://github.com/react-native-webview/react-native-webview/issues/3715) -- HIGH confidence (direct issue report with confirmed workaround)
-- [react-native-svg Expo docs](https://docs.expo.dev/versions/latest/sdk/svg/) -- HIGH confidence
-- Codebase analysis of all 6 screens, 8 components, 3 hooks, 2 contexts, 4 lib files, navigation structure -- HIGH confidence
+- [SM-2 Algorithm Original Specification](https://super-memory.com/english/ol/sm2.htm) - HIGH confidence
+- [SM-2 ES6 Implementation (cnnrhill/sm-2)](https://github.com/cnnrhill/sm-2) - HIGH confidence
+- [SuperMemo TypeScript Package (VienDinhCom/supermemo)](https://github.com/VienDinhCom/supermemo) - HIGH confidence
+- [FSRS vs SM-2 Comparison](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/) - MEDIUM confidence
+- [ts-fsrs npm package](https://www.npmjs.com/package/ts-fsrs) - HIGH confidence (evaluated but not recommended)
+- [Spaced Repetition in PostgreSQL (sivers/srs)](https://github.com/sivers/srs) - MEDIUM confidence
+- [FSRS Algorithm: Next-Gen Spaced Repetition](https://www.quizcat.ai/blog/fsrs-algorithm-next-gen-spaced-repetition) - MEDIUM confidence
+- Lumio codebase analysis (direct code reading) - HIGH confidence
