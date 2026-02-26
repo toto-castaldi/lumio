@@ -11,23 +11,24 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Milestone: v2.0
 Phase: 23 of 26 (SRS Schema & Algorithm)
-Plan: 1 of 2 complete
-Status: Executing
-Last activity: 2026-02-26 — Plan 23-01 (SM-2 Algorithm Wrapper) completed
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-02-26 — Plan 23-02 (SRS Database Schema & RPCs) completed
 
-Progress (v2.0): [█░░░░░░░░░] 10%
-Progress (overall): 55/56 plans (54 shipped v1.1-v1.7 + 1 of 2 in Phase 23)
+Progress (v2.0): [██░░░░░░░░] 20%
+Progress (overall): 56/56 plans (54 shipped v1.1-v1.7 + 2 of 2 in Phase 23)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 55 (54 across v1.1-v1.7 + 1 in v2.0)
+- Total plans completed: 56 (54 across v1.1-v1.7 + 2 in v2.0)
 - Total milestones shipped: 7
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 23    | 01   | 3min     | 2     | 7     |
+| 23    | 02   | 3min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -45,6 +46,9 @@ Key decisions for v2.0:
 - No schedule write on skip -- skipped cards remain "new" for future sessions
 - Thin sm2() wrapper around supermemo: only adds 365-day max interval and 2.5 EF ceiling clamps
 - vitest added as @lumio/core test framework; SRS module at packages/core/src/srs/
+- content_hash_snapshot uses cards.content_hash (full file SHA-256) for stale detection -- simpler than question-only hash
+- Overdue cards bypass p_limit cap; limit applies only to new card slots
+- SECURITY DEFINER RPCs with (select auth.uid()) RLS pattern for performance
 
 ### Pending Todos
 
@@ -66,9 +70,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 23-01-PLAN.md (SM-2 Algorithm Wrapper)
+Stopped at: Completed 23-02-PLAN.md (SRS Database Schema & RPCs)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 23-01 complete)*
+*Last updated: 2026-02-26 (Plan 23-02 complete, Phase 23 complete)*

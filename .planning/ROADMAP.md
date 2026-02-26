@@ -99,7 +99,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 
 #### Phases
 
-- [ ] **Phase 23: SRS Schema & Algorithm** - Database table, RLS, RPCs, and SM-2 pure function in @lumio/core
+- [x] **Phase 23: SRS Schema & Algorithm** - Database table, RLS, RPCs, and SM-2 pure function in @lumio/core (completed 2026-02-26)
 - [ ] **Phase 24: Study Session Integration** - Wire SRS into study hook: due-first card selection, per-answer schedule write-back
 - [ ] **Phase 25: Dashboard & Study UI** - "Cards due today" counter on dashboard, Review/New badge during study
 - [ ] **Phase 26: History Fix & Validation** - Fix study history card count display, end-to-end validation
@@ -160,7 +160,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-22. Previous milestones | v1.1 - v1.7 | 54/54 | Complete | 2026-02-21 |
-| 23. SRS Schema & Algorithm | 1/2 | In Progress|  | - |
+| 23. SRS Schema & Algorithm | 2/2 | Complete   | 2026-02-26 | - |
 | 24. Study Session Integration | v2.0 | 0/TBD | Not started | - |
 | 25. Dashboard & Study UI | v2.0 | 0/TBD | Not started | - |
 | 26. History Fix & Validation | v2.0 | 0/TBD | Not started | - |
