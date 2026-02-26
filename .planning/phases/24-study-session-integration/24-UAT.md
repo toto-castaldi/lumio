@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 24-study-session-integration
 source: 24-01-SUMMARY.md, 24-02-SUMMARY.md
 started: 2026-02-26T09:30:00Z
@@ -50,7 +50,13 @@ skipped: 1
   reason: "User reported: Devo premere anche scheda successiva per non ritrovarmi la scheda nella sessione successiva"
   severity: minor
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "recordCardReviewWithRetry called only inside handleNext — handleAnswer only updates local state, no unmount flush exists"
+  artifacts:
+    - path: "apps/android/hooks/useStudySession.ts"
+      issue: "Write-back coupled to handleNext (line 229), not to handleAnswer (lines 266-271)"
+    - path: "apps/android/screens/StudyScreen.tsx"
+      issue: "X-button (line 116) calls navigation.goBack() with no flush of pending review"
+  missing:
+    - "Move recordCardReviewWithRetry call into handleAnswer so write-back fires immediately on answer"
+    - "writtenBackCardIds ref already prevents double-writes, so this is safe"
+  debug_session: ".planning/debug/srs-writeback-last-card.md"
