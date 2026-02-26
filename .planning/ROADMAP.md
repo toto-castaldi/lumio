@@ -159,7 +159,10 @@ Plans:
   2. A fresh user account (no review history) can start a study session and see cards without errors or empty sessions
   3. The "cards due today" counter does not flip at the wrong time when the device is in a non-UTC timezone (tested at 11pm, midnight, and 1am local time)
   4. After 20 consecutive wrong answers on the same card, its ease factor remains at 1.3 (floor enforced) and its interval stays at 1 day
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — Timezone-aware RPCs + fresh-user due count + CHECK constraints (HIST-01)
+- [ ] 26-02-PLAN.md — History row card count + relative dates + empty state CTA (HIST-01)
 
 ## Progress
 
@@ -169,7 +172,7 @@ Plans:
 | 23. SRS Schema & Algorithm | 2/2 | Complete    | 2026-02-26 | - |
 | 24. Study Session Integration | 3/3 | Complete   | 2026-02-26 | - |
 | 25. Dashboard & Study UI | 1/1 | Complete    | 2026-02-26 | - |
-| 26. History Fix & Validation | v2.0 | 0/TBD | Not started | - |
+| 26. History Fix & Validation | v2.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
