@@ -21,17 +21,27 @@ import { EmptyState } from '../components/EmptyState';
 type HistoryNavProp = NativeStackNavigationProp<RootStackParamList, 'StudyHistory'>;
 
 /**
- * Format a session date into a short date + time string.
- * E.g. "Feb 11, 14:30"
+ * Format a session date into a relative time string.
+ * E.g. "2h ago", "3d ago", or a locale date for older entries.
+ * Reuses the same dashboard i18n keys for consistency.
  */
-function formatSessionDate(dateString: string): string {
+function formatRelativeDate(
+  dateString: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) return t('dashboard.justNow');
+  if (diffMinutes < 60) return t('dashboard.mAgo', { count: diffMinutes });
+  if (diffHours < 24) return t('dashboard.hAgo', { count: diffHours });
+  if (diffDays < 7) return t('dashboard.dAgo', { count: diffDays });
+
+  return date.toLocaleDateString();
 }
 
 /**
@@ -117,7 +127,7 @@ export function StudyHistoryScreen() {
   const renderSessionItem = ({ item }: { item: StudySession }) => {
     const scoreColor = getScoreColor(item.correctCount, item.totalCount);
     const scoreIcon = getScoreIcon(item.correctCount, item.totalCount);
-    const repoLabel = item.repositoryName ?? t('history.allRepos');
+    const cardCountLabel = t('history.cardCount', { count: item.totalCount });
 
     return (
       <View style={[styles.sessionCard, { backgroundColor: colors.surface }]}>
@@ -126,14 +136,14 @@ export function StudyHistoryScreen() {
           <View style={styles.dateColumn}>
             <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
             <Text style={[styles.dateText, { color: colors.textSecondary }]} numberOfLines={1}>
-              {formatSessionDate(item.completedAt)}
+              {formatRelativeDate(item.completedAt, t)}
             </Text>
           </View>
 
-          {/* Center: repo name */}
-          <View style={styles.repoColumn}>
-            <Text style={[styles.repoText, { color: colors.text }]} numberOfLines={1}>
-              {repoLabel}
+          {/* Center: card count */}
+          <View style={styles.centerColumn}>
+            <Text style={[styles.centerText, { color: colors.text }]} numberOfLines={1}>
+              {cardCountLabel}
             </Text>
           </View>
 
@@ -191,6 +201,8 @@ export function StudyHistoryScreen() {
           icon="time-outline"
           title={t('history.emptyTitle')}
           subtitle={t('history.emptySubtitle')}
+          actionLabel={t('history.startFirstSession')}
+          onAction={() => navigation.goBack()}
         />
       </View>
     );
@@ -253,13 +265,13 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     flexShrink: 1,
   },
-  repoColumn: {
+  centerColumn: {
     flex: 1.2,
     alignItems: 'center',
     paddingHorizontal: 8,
     minWidth: 0,
   },
-  repoText: {
+  centerText: {
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
