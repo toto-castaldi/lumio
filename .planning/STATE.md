@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Spaced Repetition
 status: unknown
-last_updated: "2026-02-26T11:14:32.000Z"
+last_updated: "2026-02-26T13:24:55.291Z"
 progress:
-  total_phases: 18
-  completed_phases: 18
-  total_plans: 42
-  completed_plans: 42
+  total_phases: 19
+  completed_phases: 19
+  total_plans: 44
+  completed_plans: 44
 ---
 
 # Project State
