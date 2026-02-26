@@ -417,6 +417,15 @@ export async function getStudyHistory(
 // SRS SCHEDULING (Phase 23 - Spaced Repetition)
 // =============================================================================
 
+/** Get the device's IANA timezone string for server-side date calculations */
+function getDeviceTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
 /**
  * Study card with SRS info (returned by get_study_cards_for_session RPC)
  */
@@ -478,7 +487,7 @@ export async function getDueCardCount(): Promise<number> {
         Authorization: `Bearer ${token}`,
         apikey: getSupabaseAnonKey(),
       },
-      body: JSON.stringify({ p_user_id: userId }),
+      body: JSON.stringify({ p_user_id: userId, p_timezone: getDeviceTimezone() }),
     }
   );
 
@@ -520,7 +529,7 @@ export async function getStudyCardsForSession(
         Authorization: `Bearer ${token}`,
         apikey: getSupabaseAnonKey(),
       },
-      body: JSON.stringify({ p_user_id: userId, p_limit: limit }),
+      body: JSON.stringify({ p_user_id: userId, p_limit: limit, p_timezone: getDeviceTimezone() }),
     }
   );
 
@@ -567,6 +576,7 @@ export async function recordCardReview(
         p_card_id: cardId,
         p_quality: quality,
         p_content_hash: contentHash,
+        p_timezone: getDeviceTimezone(),
       }),
     }
   );
