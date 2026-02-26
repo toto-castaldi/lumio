@@ -1,149 +1,167 @@
 ---
 phase: 24-study-session-integration
-verified: 2026-02-26T10:00:00Z
+verified: 2026-02-26T12:30:00Z
 status: passed
-score: 5/5 must-haves verified
-re_verification: false
+score: 6/6 must-haves verified
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed:
+    - "Answering a card immediately triggers SRS write-back (no need to press Next)"
+    - "Closing the session after answering the last card does not lose that card's review"
+    - "Double write-back is still prevented by writtenBackCardIds dedup set"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 24: Study Session Integration Verification Report
 
 **Phase Goal:** Study sessions use SRS card ordering and write back per-card schedules after every answer
-**Verified:** 2026-02-26T10:00:00Z
+**Verified:** 2026-02-26T12:30:00Z
 **Status:** passed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — after gap closure plan 24-03 (SRS write-back timing fix)
+
+## Re-Verification Context
+
+The initial VERIFICATION.md was marked `passed` but UAT (24-UAT.md) found a real gap: the SRS write-back fired inside `handleNext` rather than inside `handleAnswer`. This meant that if the user answered the last card and closed the session before pressing "Next Card", that card's review was silently dropped. Plan 24-03 fixed this by moving `recordCardReviewWithRetry` from `handleNext` into `handleAnswer`. Commit `154fc3a` applies the fix to `apps/android/hooks/useStudySession.ts`.
+
+This re-verification focuses on the three truths from plan 24-03's `must_haves`, plus a regression check on the original five truths from plans 24-01 and 24-02.
 
 ---
 
 ## Goal Achievement
 
-### Observable Truths (Success Criteria)
+### Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Starting a study session returns overdue cards first (next_review_at <= today), then new cards fill remaining slots — not random selection | VERIFIED | `get_study_cards_for_session` in `20260226000002_upsert_card_review.sql` uses UNION ALL with overdue first (ORDER BY crs.next_review_at ASC), new cards fill remaining via `LIMIT GREATEST(0, p_limit - v_due_count)`. `useStudySession.ts` calls `getStudyCardsForSession(limit)` and iterates sequentially via `nextCardIndex.current`. |
-| 2 | Answering a card correctly causes that card's next review to be scheduled further in the future; answering incorrectly resets it to 1 day | VERIFIED | `upsert_card_review` RPC: `IF p_quality < 3 THEN v_new_interval := 1, v_new_reps := 0` (reset), else multiplies by EF (`ROUND(v_old_interval * v_old_ef)`). Hook sends `quality = isCorrect ? 4 : 1` to `recordCardReviewWithRetry`. |
-| 3 | A session with cardsPerSession=10 and 15 overdue cards shows all 15 overdue cards (due cards bypass the cap), then fills with new cards only if slots remain | VERIFIED | RPC computes `v_due_count` (count of overdue), then UNION ALL overdue cards (no LIMIT on overdue branch) with `LIMIT GREATEST(0, p_limit - v_due_count)` for new cards — overdue bypass cap by design. |
-| 4 | The schedule update does not block navigation to the next card (fire-and-forget, same pattern as saveStudySession) | VERIFIED | `recordCardReviewWithRetry(card.id, quality, card.contentHash)` called without `await` inside `setSession` callback in `handleNext`. Module-level helper function with single retry on error. `writtenBackCardIds` dedup set prevents double writes. |
-| 5 | Cards whose content has changed since last review (stale snapshot) are treated as new cards, not review cards | VERIFIED | `get_study_cards_for_session` Step 1: `DELETE FROM card_review_schedule crs_del USING cards c_del WHERE crs_del.content_hash_snapshot != c_del.content_hash` — stale rows deleted; card then appears as new (no schedule row). |
+| 1 | Starting a study session returns overdue cards first, then new cards fill remaining slots | VERIFIED | `get_study_cards_for_session` UNION ALL: overdue ORDER BY `next_review_at ASC`, new cards limited to `GREATEST(0, p_limit - v_due_count)`. Sequential `nextCardIndex` ref in hook preserves DB order. |
+| 2 | Answering a card correctly schedules it further ahead; answering incorrectly resets to 1 day | VERIFIED | `upsert_card_review` RPC: `p_quality < 3` resets interval=1, `p_quality >= 3` multiplies by EF. Hook sends `quality = isCorrect ? 4 : 1`. |
+| 3 | Overdue cards bypass the session cap; new cards fill remaining slots only | VERIFIED | RPC overdue branch has no LIMIT; new card branch uses `LIMIT GREATEST(0, p_limit - v_due_count)`. |
+| 4 | Answering a card immediately triggers SRS write-back (no need to press Next) | VERIFIED | `handleAnswer` (lines 256-273) calls `recordCardReviewWithRetry(card.id, quality, card.contentHash)` fire-and-forget immediately after `setSession`. `handleNext` (lines 207-251) contains zero calls to `recordCardReviewWithRetry` — confirmed by grep (single hit at line 270 inside handleAnswer only). |
+| 5 | Closing the session after answering the last card does not lose that card's review | VERIFIED | Write-back fires in `handleAnswer` at answer time. The X-button (`navigation.goBack()`) no longer needs to flush pending reviews because there are none — every answered card's write-back has already been dispatched at answer time. |
+| 6 | Double write-back is prevented by writtenBackCardIds dedup set | VERIFIED | Guard `if (!writtenBackCardIds.current.has(card.id))` at line 268; `writtenBackCardIds.current.add(card.id)` at line 269 before the call at line 270. `handleNext` no longer touches this set, so there is no duplicate code path. |
 
-**Score: 5/5 truths verified**
+**Score: 6/6 truths verified**
 
 ---
 
 ## Required Artifacts
 
-### Plan 24-01 Artifacts
+### Plan 24-03 Artifacts (Gap Closure — Primary Focus)
 
 | Artifact | Status | Evidence |
 |----------|--------|----------|
-| `supabase/migrations/20260226000002_upsert_card_review.sql` | VERIFIED | File exists, 236 lines. Contains `CREATE OR REPLACE FUNCTION upsert_card_review(p_user_id UUID, p_card_id UUID, p_quality INTEGER, p_content_hash TEXT)` with full SM-2 implementation and atomic UPSERT. Also contains re-created `get_study_cards_for_session` with `content_hash TEXT` in RETURNS TABLE. |
-| `packages/core/src/supabase/study.ts` | VERIFIED | Contains `recordCardReview` function (lines 544-578), `mapSRSStudyCard` mapping `contentHash: (dbCard.content_hash as string) \|\| ''` (line 438), and `getStudyCardsForSession` (lines 500-534). |
-| `packages/core/src/index.ts` | VERIFIED | Exports `recordCardReview`, `getStudyCardsForSession`, and `type SRSStudyCard` in SRS scheduling block (lines 57-62). |
+| `apps/android/hooks/useStudySession.ts` | VERIFIED | 371 lines. `recordCardReviewWithRetry` appears exactly twice: definition at line 65 (module-level helper), call at line 270 (inside `handleAnswer` callback). Zero occurrences inside `handleNext` body (lines 207-251). TypeScript compiles without errors (`pnpm --filter @lumio/android exec -- npx tsc --noEmit` returns clean). |
 
-### Plan 24-02 Artifacts
+### Plan 24-01 Artifacts (Regression Check)
 
 | Artifact | Status | Evidence |
 |----------|--------|----------|
-| `apps/android/hooks/useStudySession.ts` | VERIFIED | 370 lines. Imports `getStudyCardsForSession` and `recordCardReview` from `@lumio/core`. `StudySessionState` includes `overdueCount: number` and `newCount: number`. Uses `nextCardIndex` ref for sequential iteration. No `seenCardIds` or `selectRandomCard` present. |
-| `apps/android/screens/StudyScreen.tsx` | VERIFIED | `renderReady()` uses `session.overdueCount > 0` condition (line 202) to switch between `studyingWithBreakdown` and `cardsAvailable` display strings. |
-| `apps/android/i18n/en.ts` | VERIFIED | Contains `studyingWithBreakdown: '%{total} cards to study (%{overdue} overdue + %{new} new)'` (line 64). |
-| `apps/android/i18n/it.ts` | VERIFIED | Contains `studyingWithBreakdown: '%{total} schede da studiare (%{overdue} da ripassare + %{new} nuove)'` (line 67). |
+| `supabase/migrations/20260226000002_upsert_card_review.sql` | VERIFIED (no regression) | File unchanged since initial verification. Contains full SM-2 `upsert_card_review` RPC and `get_study_cards_for_session` with content_hash. |
+| `packages/core/src/supabase/study.ts` | VERIFIED (no regression) | `recordCardReview`, `mapSRSStudyCard`, `getStudyCardsForSession` all present. No changes in plan 24-03. |
+| `packages/core/src/index.ts` | VERIFIED (no regression) | Exports `recordCardReview`, `getStudyCardsForSession`, `type SRSStudyCard`. No changes in plan 24-03. |
+
+### Plan 24-02 Artifacts (Regression Check)
+
+| Artifact | Status | Evidence |
+|----------|--------|----------|
+| `apps/android/screens/StudyScreen.tsx` | VERIFIED (no regression) | `session.overdueCount > 0` condition for breakdown display. No changes in plan 24-03. |
+| `apps/android/i18n/en.ts` | VERIFIED (no regression) | `studyingWithBreakdown` key present. No changes in plan 24-03. |
+| `apps/android/i18n/it.ts` | VERIFIED (no regression) | `studyingWithBreakdown` key present. No changes in plan 24-03. |
 
 ---
 
 ## Key Link Verification
 
-### Plan 24-01 Key Links
+### Plan 24-03 Key Links (Primary Focus)
 
 | From | To | Via | Status | Evidence |
 |------|----|-----|--------|----------|
-| `packages/core/src/supabase/study.ts` | `20260226000002_upsert_card_review.sql` | RPC call to upsert_card_review | WIRED | `fetch(`${supabaseUrl}/rest/v1/rpc/upsert_card_review`, ...)` at line 557 |
-| `packages/core/src/supabase/study.ts` | `20260226000002_upsert_card_review.sql` | content_hash in get_study_cards_for_session response mapped to contentHash | WIRED | `contentHash: (dbCard.content_hash as string) \|\| ''` at line 438 in `mapSRSStudyCard` |
+| `handleAnswer` callback | `recordCardReviewWithRetry` | fire-and-forget call inside handleAnswer | WIRED | Line 270: `recordCardReviewWithRetry(card.id, quality, card.contentHash)` inside `handleAnswer` at lines 256-273. Pattern matches plan 24-03 `must_haves.key_links[0].pattern`. |
+| `handleNext` callback | `recordCardReviewWithRetry` | MUST NOT be wired (confirmed absent) | CONFIRMED ABSENT | Lines 207-251: `handleNext` body contains only `setSession`, `loadNextQuestion`, and state updates. Zero calls to `recordCardReviewWithRetry`. |
 
-### Plan 24-02 Key Links
+### Plan 24-01 / 24-02 Key Links (Regression Check)
 
-| From | To | Via | Status | Evidence |
-|------|----|-----|--------|----------|
-| `apps/android/hooks/useStudySession.ts` | `packages/core/src/supabase/study.ts` | import getStudyCardsForSession (replaces getStudyCardsWithQuestions) | WIRED | Line 4: `getStudyCardsForSession,` in import block. Line 128: `getStudyCardsForSession(limit)` called in `loadInitialData`. No references to `getStudyCardsWithQuestions`. |
-| `apps/android/hooks/useStudySession.ts` | `packages/core/src/supabase/study.ts` | import recordCardReview for fire-and-forget write-back | WIRED | Line 6: `recordCardReview,` in import block. Line 71/75: called inside `recordCardReviewWithRetry`. Line 229: `recordCardReviewWithRetry(card.id, quality, card.contentHash)` fired without await in `handleNext`. |
-| `apps/android/screens/StudyScreen.tsx` | `apps/android/hooks/useStudySession.ts` | session.overdueCount and session.newCount for ready screen display | WIRED | Lines 202-208: `session.overdueCount` and `session.newCount` accessed in `renderReady()`. `StudySessionState` interface declares both fields. |
+| From | To | Via | Status |
+|------|----|-----|--------|
+| `useStudySession.ts` | `upsert_card_review` RPC | `recordCardReview` from `@lumio/core` | WIRED (no regression) |
+| `useStudySession.ts` | `get_study_cards_for_session` RPC | `getStudyCardsForSession` from `@lumio/core` | WIRED (no regression) |
+| `StudyScreen.tsx` | `useStudySession.ts` | `session.overdueCount`, `session.newCount` | WIRED (no regression) |
 
 ---
 
 ## Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
+| Requirement | Source Plans | Description | Status | Evidence |
 |-------------|-------------|-------------|--------|----------|
-| SRS-01 | 24-01, 24-02 | User studia carte schedulate in base alle risposte precedenti (giusto → intervallo più lungo, sbagliato → reset a 1 giorno) | SATISFIED | `upsert_card_review` RPC implements SM-2 server-side: `grade < 3` resets to interval=1, `grade >= 3` multiplies by EF. Hook sends `quality = isCorrect ? 4 : 1`. Fire-and-forget per-answer call in `handleNext`. |
-| SRS-02 | 24-02 | Sessione presenta carte scadute prima, poi nuove carte riempiono i posti restanti | SATISFIED | `get_study_cards_for_session` UNION ALL: overdue cards first (ordered by `next_review_at ASC`, no cap), then new cards limited to `GREATEST(0, p_limit - v_due_count)`. Sequential iteration in hook preserves this order. |
+| SRS-01 | 24-01, 24-02, 24-03 | User studia carte schedulate in base alle risposte precedenti (giusto → intervallo più lungo, sbagliato → reset a 1 giorno) | SATISFIED | Plan 24-03 closes the remaining SRS-01 gap: write-back now fires in `handleAnswer`, not `handleNext`. SM-2 RPC unchanged. Quality mapping (`isCorrect ? 4 : 1`) unchanged. The requirement is now fully satisfied end-to-end. |
+| SRS-02 | 24-02 | Sessione presenta carte scadute prima, poi nuove carte riempiono i posti restanti | SATISFIED | Unchanged from initial verification. RPC UNION ALL ordering + sequential hook iteration verified. |
 
-No orphaned requirements detected. Both SRS-01 and SRS-02 are claimed by phase 24 plans and verified implemented.
+No orphaned requirements. Both SRS-01 and SRS-02 are claimed by phase 24 plans and confirmed implemented.
 
 ---
 
 ## Anti-Patterns Found
 
-No anti-patterns found across the 7 modified files.
+### Plan 24-03 Modified File Scan
 
-| File | Pattern | Result |
-|------|---------|--------|
-| `20260226000002_upsert_card_review.sql` | TODO/FIXME, stubs, empty returns | None found |
-| `packages/core/src/supabase/study.ts` | TODO/FIXME, stubs | None found (the `return null` at line 201 is in `loadNextQuestion` — correct sentinel for "no more cards") |
-| `packages/core/src/index.ts` | Stub exports | None found — all 3 SRS exports present and non-stub |
-| `apps/android/hooks/useStudySession.ts` | Random selection preserved, no write-back, stub handlers | None found — `seenCardIds` and `selectRandomCard` fully removed, fire-and-forget wired |
-| `apps/android/screens/StudyScreen.tsx` | Breakdown display not wired | None found — `overdueCount > 0` condition live |
-| `apps/android/i18n/en.ts` | Missing key | None found |
-| `apps/android/i18n/it.ts` | Missing key | None found |
+| File | Pattern Checked | Result |
+|------|----------------|--------|
+| `apps/android/hooks/useStudySession.ts` | TODO/FIXME/placeholder comments | None found |
+| `apps/android/hooks/useStudySession.ts` | Empty handlers (`() => {}`, `console.log` only) | None found — `handleAnswer` has real write-back logic |
+| `apps/android/hooks/useStudySession.ts` | `recordCardReviewWithRetry` in handleNext (wrong location) | CONFIRMED ABSENT — zero occurrences in handleNext |
+| `apps/android/hooks/useStudySession.ts` | Double-write path (write-back in both handleAnswer and handleNext) | CONFIRMED ABSENT — one call site at line 270 only |
+
+No anti-patterns found.
 
 ---
 
 ## Commit Verification
 
-All task commits from SUMMARY files confirmed in git log:
-
-| Commit | Description |
-|--------|-------------|
-| `4b8678f` | feat(24-01): create upsert_card_review RPC and add content_hash to get_study_cards_for_session |
-| `1b29c66` | feat(24-01): add recordCardReview client function and map content_hash |
-| `c9847e4` | feat(24-02): refactor useStudySession for SRS ordering and per-answer write-back |
-| `f843d2f` | feat(24-02): update study screen ready state and i18n for SRS session composition |
+| Commit | Plan | Description | Verified |
+|--------|------|-------------|---------|
+| `4b8678f` | 24-01 | feat: create upsert_card_review RPC | Yes |
+| `1b29c66` | 24-01 | feat: add recordCardReview client function | Yes |
+| `c9847e4` | 24-02 | feat: refactor useStudySession for SRS ordering | Yes |
+| `f843d2f` | 24-02 | feat: update study screen ready state and i18n | Yes |
+| `154fc3a` | 24-03 | fix: move SRS write-back from handleNext to handleAnswer | Yes — confirmed by `git show 154fc3a`; 30-line diff in `useStudySession.ts` only |
 
 ---
 
 ## Human Verification Required
 
-### 1. SRS Schedule Persisted After Answer
+### 1. SRS Schedule Persisted After Answer Without Pressing Next
 
-**Test:** Start a study session, answer a card correctly. Open Supabase Studio and check `card_review_schedule` — the row for that card should show `interval_days > 0`, `ease_factor` near 2.5, and `next_review_at` set to tomorrow (or 6 days ahead if it is the second review).
-**Expected:** Row exists with `repetitions = 1`, `interval_days = 1`, `next_review_at = today + 1 day`.
-**Why human:** Requires live Supabase instance and actual answer submission — cannot verify DB writes statically.
+**Test:** Start a study session, answer a card (tap an answer choice), then immediately press X to close the session without pressing "Next Card."
+**Expected:** Open Supabase Studio — `card_review_schedule` has a row for that card with `next_review_at > today`. The card does not reappear at the start of the next session.
+**Why human:** Requires live Supabase instance and verifying DB state after a specific close-without-next navigation path — cannot verify statically.
 
-### 2. Overdue Cards Appear Before New Cards in Session
+### 2. No Double Write on Normal Answer + Next Flow
 
-**Test:** With a user who has at least one card with `next_review_at <= today` in `card_review_schedule`, start a study session. Observe the first card presented — it should be the overdue card, not a random new card.
-**Expected:** The first card shown is the overdue card (most overdue first by `next_review_at ASC`).
-**Why human:** Requires live data state and UI walkthrough — cannot verify card ordering from static analysis alone.
+**Test:** Answer a card, then press "Next Card." Open Supabase Studio for that card's row in `card_review_schedule`.
+**Expected:** Exactly one row for that card; `repetitions = 1`. The dedup set prevents a second write when handleNext executes.
+**Why human:** Requires verifying DB row count and write timestamps after a specific sequence of user actions.
 
-### 3. Skip Does Not Write to card_review_schedule
+### 3. SRS Card Ordering in Next Session
 
-**Test:** Skip a card during a session. Open Supabase Studio — no new row should be inserted or updated in `card_review_schedule` for that card.
-**Expected:** `card_review_schedule` is unchanged for the skipped card.
-**Why human:** Requires verifying database state after a specific user interaction.
+**Test:** Answer all cards in a session correctly. Start a new session immediately.
+**Expected:** Those correctly-answered cards do not appear (scheduled for future dates). Only new cards or incorrectly-answered cards are present.
+**Why human:** Requires two live sessions with real DB state to confirm ordering and filtering.
 
 ### 4. Fire-and-Forget Does Not Block Navigation
 
-**Test:** Answer a card and tap "Next Card." The screen should advance immediately without any visible delay, even if the SRS write-back is slow.
-**Expected:** Navigation to the next card is instant; no loading spinner related to SRS.
-**Why human:** Requires testing on a device with network conditions — cannot verify timing behavior statically.
+**Test:** Answer a card and tap "Next Card."
+**Expected:** Screen advances immediately with no visible delay or loading spinner caused by the SRS write-back.
+**Why human:** Requires device testing under real network conditions — timing behavior cannot be verified statically.
 
 ---
 
 ## Gaps Summary
 
-None. All 5 observable truths verified, all 7 artifacts substantive and wired, both requirements (SRS-01, SRS-02) satisfied.
+None. All 6 observable truths verified. The UAT-identified gap (write-back firing on Next rather than on Answer) is confirmed fixed by commit `154fc3a`. Both requirements SRS-01 and SRS-02 are fully satisfied. TypeScript compiles cleanly. No anti-patterns detected. No regressions found in previously verified truths.
 
 ---
 
-_Verified: 2026-02-26T10:00:00Z_
+_Verified: 2026-02-26T12:30:00Z_
 _Verifier: Claude (gsd-verifier)_
