@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getPreGeneratedQuestion,
-  getStudyCardsWithQuestions,
+  getStudyCardsForSession,
   getUserRepositories,
+  recordCardReview,
   voteQuestion,
   Deck,
-  type StudyCard,
+  type SRSStudyCard,
   type Repository,
   type ShuffledQuestion,
   type QuestionVote,
@@ -19,7 +20,7 @@ import type { CardsPerSession } from '../lib/studySettings';
 export type StudyState = 'loading' | 'no_cards' | 'studying' | 'completed';
 
 export interface AnsweredCard {
-  card: StudyCard;
+  card: SRSStudyCard;
   question: ShuffledQuestion;
   userAnswer: string;
   isCorrect: boolean;
@@ -28,9 +29,9 @@ export interface AnsweredCard {
 
 export interface StudySessionState {
   state: StudyState;
-  cards: StudyCard[];
+  cards: SRSStudyCard[];
   currentIndex: number;
-  currentCard: StudyCard | null;
+  currentCard: SRSStudyCard | null;
   currentQuestion: ShuffledQuestion | null;
   userAnswer: string | null;
   userVote: QuestionVote | null;
@@ -38,6 +39,8 @@ export interface StudySessionState {
   skippedCount: number;
   startedAt: Date;
   repositoryMap: Map<string, Repository>;
+  overdueCount: number;
+  newCount: number;
 }
 
 export interface UseStudySessionReturn {
@@ -53,6 +56,28 @@ export interface UseStudySessionReturn {
   cardsRemaining: number;
   progress: number;
   effectiveLimit: number;
+}
+
+// =============================================================================
+// FIRE-AND-FORGET SRS WRITE-BACK WITH SINGLE RETRY
+// =============================================================================
+
+async function recordCardReviewWithRetry(
+  cardId: string,
+  quality: number,
+  contentHash: string
+): Promise<void> {
+  try {
+    await recordCardReview(cardId, quality, contentHash);
+  } catch (err) {
+    // Retry once silently
+    try {
+      await recordCardReview(cardId, quality, contentHash);
+    } catch (retryErr) {
+      // Drop the update — card will appear again as if not reviewed
+      console.error('SRS write-back failed after retry:', retryErr);
+    }
+  }
 }
 
 // =============================================================================
@@ -72,14 +97,19 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
     skippedCount: 0,
     startedAt: new Date(),
     repositoryMap: new Map(),
+    overdueCount: 0,
+    newCount: 0,
   });
 
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
 
-  // Track seen card IDs to avoid repeats
-  const seenCardIds = useRef<Set<string>>(new Set());
+  // Sequential card index — replaces random selection
+  const nextCardIndex = useRef(0);
+
+  // Track which cards have had SRS write-back to avoid double writes
+  const writtenBackCardIds = useRef<Set<string>>(new Set());
 
   // -------------------------------------------------------------------------
   // Load initial data on mount
@@ -90,21 +120,23 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
 
   const loadInitialData = async () => {
     try {
-      // Load repositories and study cards in parallel
-      const [repositories, studyCards] = await Promise.all([
+      const limit = cardsPerSession === 'all' ? 9999 : cardsPerSession;
+
+      // Load repositories and SRS-ordered study cards in parallel
+      const [repositories, srsCards] = await Promise.all([
         getUserRepositories(),
-        getStudyCardsWithQuestions(),
+        getStudyCardsForSession(limit),
       ]);
 
       // Build repository map
       const repoMap = new Map(repositories.map(r => [r.id, r]));
 
       // Filter cards per repository using Deck class (same pattern as PWA)
-      const filteredCards: StudyCard[] = [];
+      const filteredCards: SRSStudyCard[] = [];
 
       // Group cards by repository
-      const cardsByRepo = new Map<string, StudyCard[]>();
-      for (const card of studyCards) {
+      const cardsByRepo = new Map<string, SRSStudyCard[]>();
+      for (const card of srsCards) {
         const repoCards = cardsByRepo.get(card.repositoryId) || [];
         repoCards.push(card);
         cardsByRepo.set(card.repositoryId, repoCards);
@@ -115,7 +147,7 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
         const repo = repoMap.get(repoId);
         if (repo) {
           const deck = new Deck(repo, repoCards);
-          filteredCards.push(...(deck.getActiveCards() as StudyCard[]));
+          filteredCards.push(...(deck.getActiveCards() as SRSStudyCard[]));
         }
       }
 
@@ -124,12 +156,18 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
         return;
       }
 
+      // Compute SRS composition counts
+      const overdueCount = filteredCards.filter(c => c.isReview).length;
+      const newCount = filteredCards.filter(c => !c.isReview).length;
+
       // Initialize session with filtered cards - don't auto-load first question
       setSession(prev => ({
         ...prev,
         state: 'studying',
         cards: filteredCards,
         repositoryMap: repoMap,
+        overdueCount,
+        newCount,
       }));
     } catch (err) {
       console.error('Failed to load study data:', err);
@@ -138,33 +176,15 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
   };
 
   // -------------------------------------------------------------------------
-  // Select a random unseen card
+  // Load the next card's question (sequential iteration)
   // -------------------------------------------------------------------------
-  const selectRandomCard = useCallback((cards: StudyCard[]): StudyCard | null => {
-    const effectiveLimit = cardsPerSession === 'all' ? cards.length : cardsPerSession;
-    if (seenCardIds.current.size >= effectiveLimit) return null;
-    const unseenCards = cards.filter(c => !seenCardIds.current.has(c.id));
-    if (unseenCards.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * unseenCards.length);
-    return unseenCards[randomIndex];
-  }, [cardsPerSession]);
-
-  // -------------------------------------------------------------------------
-  // Load the next card's question
-  // -------------------------------------------------------------------------
-  const loadNextQuestion = useCallback(async (cards: StudyCard[]): Promise<{
-    card: StudyCard;
+  const loadNextQuestion = useCallback(async (cards: SRSStudyCard[]): Promise<{
+    card: SRSStudyCard;
     question: ShuffledQuestion;
   } | null> => {
-    const maxAttempts = cards.length;
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-      const nextCard = selectRandomCard(cards);
-      if (!nextCard) return null;
-
-      // Mark as seen regardless of whether it has a question
-      seenCardIds.current.add(nextCard.id);
+    while (nextCardIndex.current < cards.length) {
+      const nextCard = cards[nextCardIndex.current];
+      nextCardIndex.current++;
 
       try {
         const question = await getPreGeneratedQuestion(nextCard.id);
@@ -176,30 +196,39 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
       } catch (err) {
         console.error(`Failed to get question for card ${nextCard.id}:`, err);
       }
-
-      attempts++;
     }
 
     return null;
-  }, [selectRandomCard]);
+  }, []);
 
   // -------------------------------------------------------------------------
-  // handleNext: Save current answer (if any) and load next card
+  // handleNext: Save current answer (if any), fire SRS write-back, load next card
   // -------------------------------------------------------------------------
   const handleNext = useCallback(async () => {
     setIsLoadingQuestion(true);
 
     try {
-      // If there's a current answered card, save it to answeredCards
+      // If there's a current answered card, save it to answeredCards and fire SRS write-back
       setSession(prev => {
         if (prev.currentCard && prev.currentQuestion && prev.userAnswer !== null) {
           const answered: AnsweredCard = {
-            card: prev.currentCard,
+            card: prev.currentCard as SRSStudyCard,
             question: prev.currentQuestion,
             userAnswer: prev.userAnswer,
             isCorrect: prev.userAnswer === prev.currentQuestion.correctAnswer,
             vote: prev.userVote,
           };
+
+          // Fire SRS write-back (does NOT block navigation)
+          const isCorrect = prev.userAnswer === prev.currentQuestion.correctAnswer;
+          const quality = isCorrect ? 4 : 1;
+          const card = prev.currentCard as SRSStudyCard;
+
+          if (!writtenBackCardIds.current.has(card.id)) {
+            writtenBackCardIds.current.add(card.id);
+            recordCardReviewWithRetry(card.id, quality, card.contentHash);
+          }
+
           return {
             ...prev,
             answeredCards: [...prev.answeredCards, answered],
@@ -262,7 +291,7 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
   }, [session.currentQuestion]);
 
   // -------------------------------------------------------------------------
-  // handleSkip: Skip the current card and load next
+  // handleSkip: Skip the current card and load next (NO SRS write-back)
   // -------------------------------------------------------------------------
   const handleSkip = useCallback(async () => {
     setIsSkipping(true);
@@ -318,10 +347,10 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
   // Computed values
   // -------------------------------------------------------------------------
   const totalCards = session.cards.length;
-  const effectiveLimit = cardsPerSession === 'all' ? totalCards : Math.min(cardsPerSession as number, totalCards);
-  const seenCount = seenCardIds.current.size;
-  const cardsRemaining = Math.max(0, effectiveLimit - seenCount);
-  const progress = effectiveLimit > 0 ? Math.min(1, seenCount / effectiveLimit) : 0;
+  const effectiveLimit = totalCards;
+  const answeredCount = session.answeredCards.length + (session.userAnswer !== null ? 1 : 0);
+  const cardsRemaining = Math.max(0, totalCards - nextCardIndex.current);
+  const progress = totalCards > 0 ? Math.min(1, answeredCount / totalCards) : 0;
 
   return {
     session,
