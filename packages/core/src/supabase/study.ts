@@ -12,6 +12,7 @@ import type {
   StudyCard,
   StudySession,
   SaveStudySessionOptions,
+  CardReviewSchedule,
 } from '@lumio/shared';
 
 /**
@@ -410,4 +411,124 @@ export async function getStudyHistory(
 
   const rows = await response.json();
   return (rows as Record<string, unknown>[]).map(mapStudySession);
+}
+
+// =============================================================================
+// SRS SCHEDULING (Phase 23 - Spaced Repetition)
+// =============================================================================
+
+/**
+ * Study card with SRS info (returned by get_study_cards_for_session RPC)
+ */
+export interface SRSStudyCard extends StudyCard {
+  isReview: boolean;
+  easeFactor: number;
+  intervalDays: number;
+  repetitions: number;
+}
+
+/**
+ * Map database row to SRSStudyCard type
+ */
+function mapSRSStudyCard(dbCard: Record<string, unknown>): SRSStudyCard {
+  return {
+    id: dbCard.card_id as string,
+    repositoryId: dbCard.repository_id as string,
+    filePath: dbCard.file_path as string,
+    contentHash: '',  // Not provided by RPC
+    rawContent: dbCard.raw_content as string,
+    title: dbCard.title as string,
+    content: dbCard.content as string,
+    tags: dbCard.tags as string[],
+    difficulty: dbCard.difficulty as number,
+    language: '',  // Not provided by RPC
+    isActive: true,
+    createdAt: '',  // Not provided by RPC
+    updatedAt: '',  // Not provided by RPC
+    questionCount: Number(dbCard.question_count) || 0,
+    isReview: dbCard.is_review as boolean,
+    easeFactor: dbCard.ease_factor as number,
+    intervalDays: dbCard.interval_days as number,
+    repetitions: dbCard.repetitions as number,
+  };
+}
+
+/**
+ * Get the count of cards due for review today.
+ * Returns 0 for users with no review history.
+ */
+export async function getDueCardCount(): Promise<number> {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const userId = await getUserId();
+  if (!userId) {
+    throw new Error('User ID not found');
+  }
+
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/get_due_card_count`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: getSupabaseAnonKey(),
+      },
+      body: JSON.stringify({ p_user_id: userId }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get due card count');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get priority-ordered cards for a study session.
+ * Returns overdue cards first (most overdue first), then new cards.
+ * Deletes stale schedule rows where content has changed (SRS-06).
+ *
+ * @param limit - Maximum cards to return (overdue cards bypass this cap)
+ */
+export async function getStudyCardsForSession(
+  limit: number = 10
+): Promise<SRSStudyCard[]> {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const userId = await getUserId();
+  if (!userId) {
+    throw new Error('User ID not found');
+  }
+
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/get_study_cards_for_session`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: getSupabaseAnonKey(),
+      },
+      body: JSON.stringify({ p_user_id: userId, p_limit: limit }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get study cards for session');
+  }
+
+  const cards = await response.json();
+  return (cards as Record<string, unknown>[]).map(mapSRSStudyCard);
 }

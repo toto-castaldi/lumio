@@ -54,6 +54,10 @@ export {
   // Study sessions (Phase 15)
   saveStudySession,
   getStudyHistory,
+  // SRS scheduling (Phase 23)
+  getDueCardCount,
+  getStudyCardsForSession,
+  type SRSStudyCard,
 } from './supabase/study';
 
 // Export markdown configuration and utilities
