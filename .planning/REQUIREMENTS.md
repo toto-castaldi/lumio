@@ -18,8 +18,8 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 
 ### Dashboard & Visibility
 
-- [ ] **DASH-01**: Dashboard mostra counter "carte da ripassare oggi"
-- [ ] **DASH-02**: Durante studio, badge "Ripasso"/"Nuova" indica il tipo di carta
+- [x] **DASH-01**: Dashboard mostra counter "carte da ripassare oggi"
+- [x] **DASH-02**: Durante studio, badge "Ripasso"/"Nuova" indica il tipo di carta
 
 ### Study History
 
@@ -53,8 +53,8 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 | SRS-04 | Phase 23 | Complete |
 | SRS-05 | Phase 23 | Complete |
 | SRS-06 | Phase 23 | Complete |
-| DASH-01 | Phase 25 | Pending |
-| DASH-02 | Phase 25 | Pending |
+| DASH-01 | Phase 25 | Complete |
+| DASH-02 | Phase 25 | Complete |
 | HIST-01 | Phase 26 | Pending |
 
 **Coverage:**

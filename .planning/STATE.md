@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.0 Spaced Repetition -- Phase 24: Study Session Integration
+**Current focus:** v2.0 Spaced Repetition -- Phase 25: Dashboard Study UI
 
 ## Current Position
 
 Milestone: v2.0
-Phase: 24 of 26 (Study Session Integration)
-Plan: 3 of 3 complete
+Phase: 25 of 26 (Dashboard Study UI)
+Plan: 1 of 1 complete
 Status: Phase Complete
-Last activity: 2026-02-26 — Plan 24-03 (SRS Write-Back Timing Fix) completed
+Last activity: 2026-02-26 — Plan 25-01 (Dashboard Due Counter + Study Badge) completed
 
-Progress (v2.0): [████░░░░░░] 40%
-Progress (overall): 59/59 plans (54 shipped v1.1-v1.7 + 5 of 5 in Phase 23-24)
+Progress (v2.0): [██████░░░░] 60%
+Progress (overall): 60/60 plans (54 shipped v1.1-v1.7 + 6 of 6 in Phase 23-25)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 59 (54 across v1.1-v1.7 + 5 in v2.0)
+- Total plans completed: 60 (54 across v1.1-v1.7 + 6 in v2.0)
 - Total milestones shipped: 7
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
 
@@ -45,6 +45,7 @@ Progress (overall): 59/59 plans (54 shipped v1.1-v1.7 + 5 of 5 in Phase 23-24)
 | 24    | 01   | 2min     | 2     | 3     |
 | 24    | 02   | 2min     | 2     | 4     |
 | 24    | 03   | 1min     | 1     | 1     |
+| 25    | 01   | 3min     | 2     | 5     |
 
 ## Accumulated Context
 
@@ -73,6 +74,9 @@ Key decisions for v2.0:
 - effectiveLimit = totalCards (overdue cards already bypass cap in RPC)
 - Progress bar uses answeredCount/totalCards for accurate tracking
 - SRS write-back fires in handleAnswer (immediate) not handleNext (deferred) -- last-card-then-close no longer loses review
+- useFocusEffect replaces useEffect for dashboard data fetching -- refreshes on every screen focus including return from study
+- Due counter: emerald checkmark at 0, amber alarm when >0 -- urgency/success feedback
+- Badge pill inline colors (teal Review, green New) -- semantic SRS indicators, not theme elements
 
 ### Pending Todos
 
@@ -94,9 +98,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 24-03-PLAN.md (SRS Write-Back Timing Fix)
+Stopped at: Completed 25-01-PLAN.md (Dashboard Due Counter + Study Badge)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 24-03 complete)*
+*Last updated: 2026-02-26 (Plan 25-01 complete)*
