@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Spaced Repetition
 status: unknown
-last_updated: "2026-02-26T09:29:57.938Z"
+last_updated: "2026-02-26T11:14:32.000Z"
 progress:
   total_phases: 18
   completed_phases: 18
@@ -24,17 +24,17 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Milestone: v2.0
 Phase: 24 of 26 (Study Session Integration)
-Plan: 2 of 2 complete
+Plan: 3 of 3 complete
 Status: Phase Complete
-Last activity: 2026-02-26 — Plan 24-02 (SRS Study Session Integration) completed
+Last activity: 2026-02-26 — Plan 24-03 (SRS Write-Back Timing Fix) completed
 
 Progress (v2.0): [████░░░░░░] 40%
-Progress (overall): 58/58 plans (54 shipped v1.1-v1.7 + 4 of 4 in Phase 23-24)
+Progress (overall): 59/59 plans (54 shipped v1.1-v1.7 + 5 of 5 in Phase 23-24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 58 (54 across v1.1-v1.7 + 4 in v2.0)
+- Total plans completed: 59 (54 across v1.1-v1.7 + 5 in v2.0)
 - Total milestones shipped: 7
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
 
@@ -44,6 +44,7 @@ Progress (overall): 58/58 plans (54 shipped v1.1-v1.7 + 4 of 4 in Phase 23-24)
 | 23    | 02   | 3min     | 2     | 3     |
 | 24    | 01   | 2min     | 2     | 3     |
 | 24    | 02   | 2min     | 2     | 4     |
+| 24    | 03   | 1min     | 1     | 1     |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Key decisions for v2.0:
 - Fire-and-forget recordCardReview with single retry and writtenBackCardIds dedup set
 - effectiveLimit = totalCards (overdue cards already bypass cap in RPC)
 - Progress bar uses answeredCount/totalCards for accurate tracking
+- SRS write-back fires in handleAnswer (immediate) not handleNext (deferred) -- last-card-then-close no longer loses review
 
 ### Pending Todos
 
@@ -92,9 +94,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 24-02-PLAN.md (SRS Study Session Integration)
+Stopped at: Completed 24-03-PLAN.md (SRS Write-Back Timing Fix)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 24-02 complete)*
+*Last updated: 2026-02-26 (Plan 24-03 complete)*
