@@ -9,7 +9,7 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 
 ### SRS Scheduling
 
-- [ ] **SRS-01**: User studia carte schedulate in base alle risposte precedenti (giusto → intervallo più lungo, sbagliato → reset a 1 giorno)
+- [x] **SRS-01**: User studia carte schedulate in base alle risposte precedenti (giusto → intervallo più lungo, sbagliato → reset a 1 giorno)
 - [ ] **SRS-02**: Sessione presenta carte scadute prima, poi nuove carte riempiono i posti restanti
 - [x] **SRS-03**: Ease factor si adatta per carta (EF parte da 2.5, floor 1.3, ceiling 2.5)
 - [x] **SRS-04**: Carte più in ritardo hanno priorità nella sessione (ORDER BY next_review_at ASC)
@@ -47,7 +47,7 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRS-01 | Phase 24 | Pending |
+| SRS-01 | Phase 24 | Complete |
 | SRS-02 | Phase 24 | Pending |
 | SRS-03 | Phase 23 | Complete |
 | SRS-04 | Phase 23 | Complete |

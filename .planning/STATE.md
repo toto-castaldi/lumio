@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.0 Spaced Repetition -- Phase 23: SRS Schema & Algorithm
+**Current focus:** v2.0 Spaced Repetition -- Phase 24: Study Session Integration
 
 ## Current Position
 
 Milestone: v2.0
-Phase: 23 of 26 (SRS Schema & Algorithm)
-Plan: 2 of 2 complete
-Status: Phase Complete
-Last activity: 2026-02-26 — Plan 23-02 (SRS Database Schema & RPCs) completed
+Phase: 24 of 26 (Study Session Integration)
+Plan: 1 of 2 complete
+Status: In Progress
+Last activity: 2026-02-26 — Plan 24-01 (SRS Write-Back RPC) completed
 
-Progress (v2.0): [██░░░░░░░░] 20%
-Progress (overall): 56/56 plans (54 shipped v1.1-v1.7 + 2 of 2 in Phase 23)
+Progress (v2.0): [███░░░░░░░] 30%
+Progress (overall): 57/58 plans (54 shipped v1.1-v1.7 + 3 of 4 in Phase 23-24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 56 (54 across v1.1-v1.7 + 2 in v2.0)
+- Total plans completed: 57 (54 across v1.1-v1.7 + 3 in v2.0)
 - Total milestones shipped: 7
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
 
@@ -42,6 +42,7 @@ Progress (overall): 56/56 plans (54 shipped v1.1-v1.7 + 2 of 2 in Phase 23)
 |-------|------|----------|-------|-------|
 | 23    | 01   | 3min     | 2     | 7     |
 | 23    | 02   | 3min     | 2     | 3     |
+| 24    | 01   | 2min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -62,6 +63,9 @@ Key decisions for v2.0:
 - content_hash_snapshot uses cards.content_hash (full file SHA-256) for stale detection -- simpler than question-only hash
 - Overdue cards bypass p_limit cap; limit applies only to new card slots
 - SECURITY DEFINER RPCs with (select auth.uid()) RLS pattern for performance
+- upsert_card_review RPC runs SM-2 server-side for atomic schedule updates (not client-side)
+- CURRENT_DATE for next_review_at base in upsert to avoid timezone flip bugs
+- DROP + re-create get_study_cards_for_session to add content_hash (PostgreSQL RETURNS TABLE limitation)
 
 ### Pending Todos
 
@@ -83,9 +87,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 23-02-PLAN.md (SRS Database Schema & RPCs)
+Stopped at: Completed 24-01-PLAN.md (SRS Write-Back RPC)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 23-02 complete, Phase 23 complete)*
+*Last updated: 2026-02-26 (Plan 24-01 complete)*
