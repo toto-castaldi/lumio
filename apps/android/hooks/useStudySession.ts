@@ -202,13 +202,13 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
   }, []);
 
   // -------------------------------------------------------------------------
-  // handleNext: Save current answer (if any), fire SRS write-back, load next card
+  // handleNext: Save current answer (if any) to answeredCards, load next card
   // -------------------------------------------------------------------------
   const handleNext = useCallback(async () => {
     setIsLoadingQuestion(true);
 
     try {
-      // If there's a current answered card, save it to answeredCards and fire SRS write-back
+      // If there's a current answered card, save it to answeredCards
       setSession(prev => {
         if (prev.currentCard && prev.currentQuestion && prev.userAnswer !== null) {
           const answered: AnsweredCard = {
@@ -218,16 +218,6 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
             isCorrect: prev.userAnswer === prev.currentQuestion.correctAnswer,
             vote: prev.userVote,
           };
-
-          // Fire SRS write-back (does NOT block navigation)
-          const isCorrect = prev.userAnswer === prev.currentQuestion.correctAnswer;
-          const quality = isCorrect ? 4 : 1;
-          const card = prev.currentCard as SRSStudyCard;
-
-          if (!writtenBackCardIds.current.has(card.id)) {
-            writtenBackCardIds.current.add(card.id);
-            recordCardReviewWithRetry(card.id, quality, card.contentHash);
-          }
 
           return {
             ...prev,
@@ -261,14 +251,26 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
   }, [session.cards, loadNextQuestion]);
 
   // -------------------------------------------------------------------------
-  // handleAnswer: Set the user's answer (does NOT advance)
+  // handleAnswer: Set the user's answer and fire SRS write-back immediately
   // -------------------------------------------------------------------------
   const handleAnswer = useCallback((answer: string) => {
     setSession(prev => ({
       ...prev,
       userAnswer: answer,
     }));
-  }, []);
+
+    // Fire SRS write-back immediately on answer (not on Next)
+    if (session.currentCard && session.currentQuestion) {
+      const isCorrect = answer === session.currentQuestion.correctAnswer;
+      const quality = isCorrect ? 4 : 1;
+      const card = session.currentCard as SRSStudyCard;
+
+      if (!writtenBackCardIds.current.has(card.id)) {
+        writtenBackCardIds.current.add(card.id);
+        recordCardReviewWithRetry(card.id, quality, card.contentHash);
+      }
+    }
+  }, [session.currentCard, session.currentQuestion]);
 
   // -------------------------------------------------------------------------
   // handleVote: Vote on the current question
