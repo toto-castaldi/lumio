@@ -70,7 +70,7 @@ Each task was committed atomically:
 1. **Task 1: Create SQL migration for timezone-aware RPCs, fresh-user due count, and CHECK constraints** - `c0b618f` (feat)
 2. **Task 2: Pass device timezone from client to all three SRS RPCs** - `d0ea819` (feat)
 
-**Plan metadata:** [pending] (docs: complete plan)
+**Plan metadata:** `9cc4f4b` (docs: complete plan)
 
 ## Files Created/Modified
 - `supabase/migrations/20260226000003_timezone_checks_fresh_user.sql` - Migration with CHECK constraints, timezone-aware RPCs, fresh-user due count

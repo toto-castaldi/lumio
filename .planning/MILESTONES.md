@@ -192,3 +192,36 @@
 
 ---
 
+
+## v2.0 Spaced Repetition (Shipped: 2026-02-26)
+
+**Delivered:** Transformed study from random card selection to intelligent spaced repetition with SM-2 algorithm, timezone-aware scheduling, and visible SRS indicators throughout the app.
+
+**Phases completed:** 23-26 (8 plans total)
+
+**Key accomplishments:**
+
+- SM-2 spaced repetition algorithm (supermemo@2.0.23) with TDD test suite, 365-day interval cap, and EF 1.3-2.5 clamps
+- card_review_schedule table with RLS, SECURITY DEFINER RPCs, and server-side SM-2 atomic write-back
+- SRS-integrated study sessions: overdue-first ordering, fire-and-forget per-answer write-back, content-hash stale detection
+- Dashboard "cards due today" counter with contextual colors (emerald at 0, amber when due) and useFocusEffect refresh
+- Review/New badge pills during study sessions with inline semantic colors
+- Timezone-aware RPCs (AT TIME ZONE), CHECK constraints for data integrity, history screen card count with relative dates
+
+**Stats:**
+
+- 52 files changed (+7,990 / -139 lines)
+- 4 phases, 8 plans, 15 tasks
+- 1 day (2026-02-26)
+- 45 commits
+
+**Git range:** `feef0d5` → `9cc4f4b` (13 feat + docs commits)
+
+**Tech debt (non-blocking):**
+- Orphaned client-side SM-2 exports (sm2(), newSM2Item(), types, constants) — server-side pivot made them unused by app code; test suite exercises them, tree-shaking removes from bundles
+- 3 runtime verification items pending (EF floor, timezone flip, fresh user) — code-verified + CHECK constraints enforce correctness
+
+**What's next:** TBD
+
+---
+

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, sessioni di studio configurabili, navigazione carte nei repository, storico sessioni di studio, gestione errori sync con aggiornamento token in-app, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2 (carte scadute prima, nuove dopo), sessioni di studio configurabili, counter "carte da ripassare oggi" sulla dashboard, navigazione carte nei repository, storico sessioni con conteggio carte, gestione errori sync con aggiornamento token in-app, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
 
 ## Core Value
 
@@ -68,48 +68,52 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Edge function /version usa versione da STATE.md — v1.7
 - ✓ docs/VERSIONING.md documenta il nuovo flusso GSD — v1.7
 
+- ✓ Ripetizione spaziata SM-2 con scheduling basato su risposte (giusto → intervallo più lungo, sbagliato → reset a 1 giorno) — v2.0
+- ✓ Mix intelligente sessioni: carte scadute prima, nuove dopo, proporzionate automaticamente — v2.0
+- ✓ Ease factor adattivo per carta (2.5 iniziale, floor 1.3, ceiling 2.5, intervallo max 365 giorni) — v2.0
+- ✓ SRS state reset quando il contenuto della carta cambia (sync da GitHub) — v2.0
+- ✓ Dashboard counter "carte da ripassare oggi" con colori contestuali — v2.0
+- ✓ Badge "Ripasso"/"Nuova" durante lo studio — v2.0
+- ✓ Storico sessioni con conteggio carte, date relative, e CTA per nuovi utenti — v2.0
+- ✓ RPCs timezone-aware con AT TIME ZONE e CHECK constraints per integrità dati — v2.0
+
 ### Active
 
-## Current Milestone: v2.0 Spaced Repetition
-
-**Goal:** Trasformare lo studio da selezione casuale a ripetizione spaziata intelligente.
-
-**Target features:**
-- Ripetizione spaziata con scheduling basato su risposte (giusto → più tardi, sbagliato → prima)
-- Mix intelligente sessioni: carte scadute + nuove, proporzionate automaticamente
-- Dashboard counter "carte da ripassare oggi"
-- Indicatore ripasso/nuova durante studio
-- Fix storico sessioni: numero carte al posto di "tutti i repository"
+(No active milestone — run `/gsd:new-milestone` to start next)
 
 ### Out of Scope
 
 - iOS — rimandato a milestone futura
 - Distribuzione su Google Play Store — per ora solo APK diretto
 - Offline mode — richiede connessione per studio
-- Notifiche push — da valutare in futuro
+- Notifiche push — da valutare in futuro (incluso promemoria carte scadute)
 - Unificazione packages/core e packages/shared — @lumio/core riusato as-is, funziona bene
 - react-native-svg per logo — native rebuild richiesto, SDK 54 press event regressions, si usa PNG
 - Slider per cards-per-session — decision paralysis, preset radio buttons sufficienti
 - Traduzione contenuto card — il materiale educativo resta nella lingua originale
 - Supporto lingue RTL — nessuna lingua RTL pianificata
 - Piattaforma di gestione traduzioni (Crowdin etc.) — 2 lingue, ~85 stringhe, singolo sviluppatore
-- Dettaglio per carta nelle statistiche — risultato sessione sufficiente
-- Statistiche con grafici/trend — v1.4 mostra solo lista sessioni, analytics avanzata futura
+- Statistiche con grafici/trend — lista sessioni sufficiente per ora, analytics avanzata futura
 - Auto-retry sync dall'app — Docora gestisce circuit breaker e retry internamente
 - Trigger sync manuale — Docora controlla la schedulazione sync
 - Push notification per errori sync — rimandato a milestone futura
 - UI circuit breaker (timer cooldown, conteggio retry) — over-engineering, messaggio errore sufficiente
+- Full SM-2 grade scale (0-5 buttons) — ridondante con quiz multiple choice binario
+- Undo/reschedule button — compromette integrità algoritmo; studio forward-only
+- FSRS algorithm — richiede 400+ review per calibrare ML; prematuro
+- Per-card statistics detail — risultato sessione sufficiente
 
 ## Context
 
-**Stato attuale (post v1.7):**
+**Stato attuale (post v2.0):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
-- Backend Supabase: auth, DB, storage, edge functions, Docora webhook + study_sessions table
-- Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked
+- Backend Supabase: auth, DB, storage, edge functions, Docora webhook + study_sessions + card_review_schedule tables
+- Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23, vitest@4.0.18
 - CI/CD: lint → build-apk → deploy-landing → deploy-migrations → deploy-functions (version from STATE.md)
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
-- App bilingue IT/EN con branding Lumio, sessioni configurabili, card browse, study history, studio forward-only, sync error handling con token update in-app
-- 7 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning)
+- App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app
+- 16,320 LOC (TS/TSX/SQL)
+- 8 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition)
 
 ## Constraints
 
@@ -162,6 +166,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Script generates entire version.ts (not patch) | Ensures consistent output, no merge conflicts | ✓ Good — v1.7 |
 | CI-time sed injection for landing page version | Zero JS overhead, no runtime fetch needed | ✓ Good — v1.7 |
 | STATE.md as single source of truth for version | One file drives APK, landing, edge function, shared package | ✓ Good — v1.7 |
+| SM-2 over FSRS | Binary quiz input (correct/wrong) loses FSRS's granular-feedback advantage | ✓ Good — v2.0 |
+| supermemo@2.0.23 with thin wrapper | Only adds 365-day cap and EF ceiling clamps, no logic changes | ✓ Good — v2.0 |
+| Server-side SM-2 in upsert_card_review RPC | Atomic UPSERT prevents race conditions, simpler client | ✓ Good — v2.0 |
+| SECURITY DEFINER RPCs with (select auth.uid()) | Performance pattern for Supabase RLS bypass in trusted RPCs | ✓ Good — v2.0 |
+| DATE type for next_review_at (not TIMESTAMPTZ) | Avoids timezone flip bugs — "today" is always a date, not an instant | ✓ Good — v2.0 |
+| Fire-and-forget recordCardReview with dedup set | Non-blocking SRS write-back, single retry, writtenBackCardIds prevents double-writes | ✓ Good — v2.0 |
+| Sequential card iteration (not random) | Preserves SRS ordering: overdue first, then new | ✓ Good — v2.0 |
+| useFocusEffect for dashboard refresh | Refreshes on every screen focus including return from study | ✓ Good — v2.0 |
+| AT TIME ZONE with fallback for timezone-aware RPCs | Local date comparison near midnight, degrades to CURRENT_DATE on invalid timezone | ✓ Good — v2.0 |
+| CHECK constraints on card_review_schedule | Database-level enforcement of EF floor/ceiling and interval bounds | ✓ Good — v2.0 |
 
 ---
-*Last updated: 2026-02-25 after v2.0 milestone started*
+*Last updated: 2026-02-26 after v2.0 milestone*
