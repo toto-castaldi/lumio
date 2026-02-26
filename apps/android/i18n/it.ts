@@ -133,7 +133,11 @@ const it: Translations = {
     title: 'Storico studio',
     emptyTitle: 'Nessuna sessione',
     emptySubtitle: 'Completa una sessione di studio per vedere lo storico qui.',
-    allRepos: 'Tutti i repository',
+    startFirstSession: 'Inizia a studiare',
+    cardCount: {
+      one: '%{count} carta',
+      other: '%{count} carte',
+    },
     score: '%{correct}/%{total}',
     failedToLoad: 'Impossibile caricare lo storico',
   },

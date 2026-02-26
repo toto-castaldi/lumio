@@ -130,7 +130,11 @@ const en = {
     title: 'Study History',
     emptyTitle: 'No sessions yet',
     emptySubtitle: 'Complete a study session to see your history here.',
-    allRepos: 'All repositories',
+    startFirstSession: 'Start Studying',
+    cardCount: {
+      one: '%{count} card',
+      other: '%{count} cards',
+    },
     score: '%{correct}/%{total}',
     failedToLoad: 'Failed to load study history',
   },
