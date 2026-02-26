@@ -64,6 +64,7 @@ const it: Translations = {
     readyTitle: 'Pronto per studiare',
     studyingXOfY: 'Studio di %{limit} su %{total} schede',
     cardsAvailable: '%{count} schede disponibili',
+    studyingWithBreakdown: '%{total} schede da studiare (%{overdue} da ripassare + %{new} nuove)',
     start: 'Inizia',
     loadingQuestion: 'Caricamento domanda...',
     endSessionTitle: 'Terminare la sessione?',

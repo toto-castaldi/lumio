@@ -199,8 +199,12 @@ export function StudyScreen() {
         {t('study.readyTitle')}
       </Text>
       <Text style={[contentStyles.subtitle, { color: colors.textSecondary }]}>
-        {effectiveLimit < session.cards.length
-          ? t('study.studyingXOfY', { limit: effectiveLimit, total: session.cards.length })
+        {session.overdueCount > 0
+          ? t('study.studyingWithBreakdown', {
+              total: session.cards.length,
+              overdue: session.overdueCount,
+              new: session.newCount,
+            })
           : t('study.cardsAvailable', { count: session.cards.length })}
       </Text>
       <TouchableOpacity

@@ -61,6 +61,7 @@ const en = {
     readyTitle: 'Ready to study',
     studyingXOfY: 'Studying %{limit} of %{total} cards',
     cardsAvailable: '%{count} cards available',
+    studyingWithBreakdown: '%{total} cards to study (%{overdue} overdue + %{new} new)',
     start: 'Start',
     loadingQuestion: 'Loading question...',
     endSessionTitle: 'End Session?',
