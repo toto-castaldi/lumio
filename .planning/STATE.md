@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Milestone: v2.0
 Phase: 26 of 26 (History Fix & Validation)
 Plan: 2 of 2 complete
-Status: Plan 26-02 Complete
-Last activity: 2026-02-26 — Plan 26-02 (History Screen Fix) completed
+Status: Phase Complete
+Last activity: 2026-02-26 — Plan 26-01 (Timezone-aware SRS RPCs) completed
 
 Progress (v2.0): [████████░░] 80%
 Progress (overall): 62/62 plans (54 shipped v1.1-v1.7 + 8 of 8 in Phase 23-26)
@@ -46,6 +46,7 @@ Progress (overall): 62/62 plans (54 shipped v1.1-v1.7 + 8 of 8 in Phase 23-26)
 | 24    | 02   | 2min     | 2     | 4     |
 | 24    | 03   | 1min     | 1     | 1     |
 | 25    | 01   | 3min     | 2     | 5     |
+| 26    | 01   | 3min     | 2     | 2     |
 | 26    | 02   | 2min     | 2     | 3     |
 
 ## Accumulated Context
@@ -80,6 +81,9 @@ Key decisions for v2.0:
 - Badge pill inline colors (teal Review, green New) -- semantic SRS indicators, not theme elements
 - History card count replaces "All repositories" (repositoryName always null) -- shows meaningful info
 - Relative dates in history reuse dashboard i18n keys (dashboard.justNow/mAgo/hAgo/dAgo) -- DRY
+- AT TIME ZONE with fallback to CURRENT_DATE on invalid timezone (non-critical degradation)
+- Fresh-user due count includes never-reviewed cards (LEFT JOIN WHERE crs.id IS NULL)
+- Safety UPDATE before CHECK constraints to fix pre-existing violating rows
 
 ### Pending Todos
 
@@ -101,9 +105,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 26-02-PLAN.md (History Screen Fix)
+Stopped at: Completed 26-01-PLAN.md (Timezone-aware SRS RPCs)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 26-02 complete)*
+*Last updated: 2026-02-26 (Plan 26-01 complete)*
