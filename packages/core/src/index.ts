@@ -73,3 +73,6 @@ export { Deck } from './deck';
 
 // Export CardView class for image URL transformation
 export { CardView } from './card';
+
+// Export SRS functions (Phase 23)
+export { sm2, newSM2Item } from './srs';
