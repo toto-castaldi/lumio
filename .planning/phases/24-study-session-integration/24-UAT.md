@@ -1,9 +1,9 @@
 ---
-status: resolved
+status: complete
 phase: 24-study-session-integration
 source: 24-01-SUMMARY.md, 24-02-SUMMARY.md
 started: 2026-02-26T09:30:00Z
-updated: 2026-02-26T12:00:00Z
+updated: 2026-02-26T14:30:00Z
 ---
 
 ## Current Test
@@ -31,22 +31,20 @@ result: pass
 
 ### 5. SRS Write-Back on Answer
 expected: After answering cards in a session, closing and starting a new session shows those cards are no longer present (scheduled for future date).
-result: issue
-reported: "Devo premere anche scheda successiva per non ritrovarmi la scheda nella sessione successiva"
-severity: minor
+result: pass (re-verified after fix 154fc3a)
 
 ## Summary
 
 total: 5
-passed: 3
-issues: 1
+passed: 4
+issues: 0
 pending: 0
 skipped: 1
 
 ## Gaps
 
 - truth: "SRS write-back fires immediately when user answers a card"
-  status: resolved
+  status: verified
   reason: "User reported: Devo premere anche scheda successiva per non ritrovarmi la scheda nella sessione successiva"
   severity: minor
   test: 5
