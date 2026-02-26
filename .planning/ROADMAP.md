@@ -116,7 +116,10 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
   3. `get_study_cards_for_session` RPC returns priority-ordered cards (most overdue first via `ORDER BY next_review_at ASC`), using LEFT JOIN so new users with no review history receive cards
   4. Calling `sm2(quality, item)` in `@lumio/core/src/srs/sm2.ts` with quality=4 (correct) returns a longer interval; with quality=1 (wrong) returns interval=1 and a lower ease factor, never below 1.3; interval never exceeds 365
   5. `pnpm build:packages` passes with new types exported from `@lumio/shared` and new functions from `@lumio/core`
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — TDD SM-2 wrapper function + types + constants (SRS-03, SRS-05)
+- [ ] 23-02-PLAN.md — Database migration + RPCs + client functions (SRS-04, SRS-06)
 
 ### Phase 24: Study Session Integration
 **Goal**: Study sessions use SRS card ordering and write back per-card schedules after every answer
@@ -157,7 +160,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-22. Previous milestones | v1.1 - v1.7 | 54/54 | Complete | 2026-02-21 |
-| 23. SRS Schema & Algorithm | v2.0 | 0/TBD | Not started | - |
+| 23. SRS Schema & Algorithm | v2.0 | 0/2 | Planned | - |
 | 24. Study Session Integration | v2.0 | 0/TBD | Not started | - |
 | 25. Dashboard & Study UI | v2.0 | 0/TBD | Not started | - |
 | 26. History Fix & Validation | v2.0 | 0/TBD | Not started | - |
