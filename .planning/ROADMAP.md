@@ -172,7 +172,7 @@ Plans:
 | 23. SRS Schema & Algorithm | 2/2 | Complete    | 2026-02-26 | - |
 | 24. Study Session Integration | 3/3 | Complete   | 2026-02-26 | - |
 | 25. Dashboard & Study UI | 1/1 | Complete    | 2026-02-26 | - |
-| 26. History Fix & Validation | 2/2 | Complete   | 2026-02-26 | - |
+| 26. History Fix & Validation | 2/2 | Complete    | 2026-02-26 | - |
 
 ---
 *Roadmap created: 2026-01-29*
