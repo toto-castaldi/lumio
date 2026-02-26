@@ -146,7 +146,9 @@ Plans:
   2. During a study session, each card displays a "Review" or "New" badge near the progress bar indicating whether it is a scheduled review or a first-time card
   3. The "Cards due today" counter shows 0 (not an error) for a user who has never studied
   4. The badge and counter use the existing i18n system and display correctly in both Italian and English
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 25-01-PLAN.md — Due counter on dashboard + Review/New badge in study + i18n (DASH-01, DASH-02)
 
 ### Phase 26: History Fix & Validation
 **Goal**: Study history shows accurate card counts, and all SRS correctness guarantees are verified end-to-end
