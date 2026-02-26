@@ -435,7 +435,7 @@ function mapSRSStudyCard(dbCard: Record<string, unknown>): SRSStudyCard {
     id: dbCard.card_id as string,
     repositoryId: dbCard.repository_id as string,
     filePath: dbCard.file_path as string,
-    contentHash: '',  // Not provided by RPC
+    contentHash: (dbCard.content_hash as string) || '',
     rawContent: dbCard.raw_content as string,
     title: dbCard.title as string,
     content: dbCard.content as string,
@@ -531,4 +531,48 @@ export async function getStudyCardsForSession(
 
   const cards = await response.json();
   return (cards as Record<string, unknown>[]).map(mapSRSStudyCard);
+}
+
+/**
+ * Record a card review and update SRS schedule server-side.
+ * The RPC runs SM-2 calculation and upserts card_review_schedule atomically.
+ *
+ * @param cardId - The card that was reviewed
+ * @param quality - SM-2 quality grade (1=incorrect, 4=correct)
+ * @param contentHash - Current content hash for stale detection
+ */
+export async function recordCardReview(
+  cardId: string,
+  quality: number,
+  contentHash: string
+): Promise<void> {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const userId = await getUserId();
+  if (!userId) throw new Error('User ID not found');
+
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/upsert_card_review`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: getSupabaseAnonKey(),
+      },
+      body: JSON.stringify({
+        p_user_id: userId,
+        p_card_id: cardId,
+        p_quality: quality,
+        p_content_hash: contentHash,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to record card review');
+  }
 }

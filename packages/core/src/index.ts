@@ -57,6 +57,7 @@ export {
   // SRS scheduling (Phase 23)
   getDueCardCount,
   getStudyCardsForSession,
+  recordCardReview,
   type SRSStudyCard,
 } from './supabase/study';
 
