@@ -100,7 +100,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 #### Phases
 
 - [x] **Phase 23: SRS Schema & Algorithm** - Database table, RLS, RPCs, and SM-2 pure function in @lumio/core (completed 2026-02-26)
-- [x] **Phase 24: Study Session Integration** - Wire SRS into study hook: due-first card selection, per-answer schedule write-back (completed 2026-02-26)
+- [ ] **Phase 24: Study Session Integration** - Wire SRS into study hook: due-first card selection, per-answer schedule write-back (UAT gap closure in progress)
 - [ ] **Phase 25: Dashboard & Study UI** - "Cards due today" counter on dashboard, Review/New badge during study
 - [ ] **Phase 26: History Fix & Validation** - Fix study history card count display, end-to-end validation
 
@@ -131,10 +131,11 @@ Plans:
   3. A session with `cardsPerSession=10` and 15 overdue cards shows all 15 overdue cards (due cards bypass the cap), then fills with new cards only if slots remain
   4. The schedule update does not block navigation to the next card (fire-and-forget, same pattern as `saveStudySession`)
   5. Cards whose content has changed since last review (stale snapshot) are treated as new cards, not review cards
-**Plans**: 2 plans
+**Plans**: 3 plans
 Plans:
-- [ ] 24-01-PLAN.md — Server-side SM-2 write-back RPC + content_hash in session RPC + client wrapper (SRS-01)
-- [ ] 24-02-PLAN.md — Hook refactor for SRS ordering + fire-and-forget write-back + session composition UI (SRS-01, SRS-02)
+- [x] 24-01-PLAN.md — Server-side SM-2 write-back RPC + content_hash in session RPC + client wrapper (SRS-01)
+- [x] 24-02-PLAN.md — Hook refactor for SRS ordering + fire-and-forget write-back + session composition UI (SRS-01, SRS-02)
+- [ ] 24-03-PLAN.md — Gap closure: move SRS write-back from handleNext to handleAnswer for immediate persistence (SRS-01)
 
 ### Phase 25: Dashboard & Study UI
 **Goal**: SRS data surfaces visibly in the app so users know what to study and what type each card is
@@ -164,7 +165,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-22. Previous milestones | v1.1 - v1.7 | 54/54 | Complete | 2026-02-21 |
 | 23. SRS Schema & Algorithm | 2/2 | Complete    | 2026-02-26 | - |
-| 24. Study Session Integration | 2/2 | Complete    | 2026-02-26 | - |
+| 24. Study Session Integration | 2/3 | Gap closure | 2026-02-26 | - |
 | 25. Dashboard & Study UI | v2.0 | 0/TBD | Not started | - |
 | 26. History Fix & Validation | v2.0 | 0/TBD | Not started | - |
 
