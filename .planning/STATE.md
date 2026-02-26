@@ -11,19 +11,23 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Milestone: v2.0
 Phase: 23 of 26 (SRS Schema & Algorithm)
-Plan: — (ready to plan)
-Status: Ready to plan
-Last activity: 2026-02-25 — v2.0 roadmap created (4 phases, 9 requirements mapped)
+Plan: 1 of 2 complete
+Status: Executing
+Last activity: 2026-02-26 — Plan 23-01 (SM-2 Algorithm Wrapper) completed
 
-Progress (v2.0): [░░░░░░░░░░] 0%
-Progress (overall): 54/54 plans across 7 milestones shipped, v2.0 starting
+Progress (v2.0): [█░░░░░░░░░] 10%
+Progress (overall): 55/56 plans (54 shipped v1.1-v1.7 + 1 of 2 in Phase 23)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 54 (across v1.1 - v1.7)
+- Total plans completed: 55 (54 across v1.1-v1.7 + 1 in v2.0)
 - Total milestones shipped: 7
-- Timeline: 25 days (2026-01-29 to 2026-02-22)
+- Timeline: 29 days (2026-01-29 to 2026-02-26)
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 23    | 01   | 3min     | 2     | 7     |
 
 ## Accumulated Context
 
@@ -39,6 +43,8 @@ Key decisions for v2.0:
 - SM-2 runs client-side in `@lumio/core/src/srs/sm2.ts` (no edge function -- avoids 50-200ms latency)
 - Due cards bypass `cardsPerSession` cap; cap applies only to new cards
 - No schedule write on skip -- skipped cards remain "new" for future sessions
+- Thin sm2() wrapper around supermemo: only adds 365-day max interval and 2.5 EF ceiling clamps
+- vitest added as @lumio/core test framework; SRS module at packages/core/src/srs/
 
 ### Pending Todos
 
@@ -59,10 +65,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: v2.0 roadmap created -- Phase 23 ready to plan
+Last session: 2026-02-26
+Stopped at: Completed 23-01-PLAN.md (SM-2 Algorithm Wrapper)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-25 (v2.0 roadmap created)*
+*Last updated: 2026-02-26 (Plan 23-01 complete)*
