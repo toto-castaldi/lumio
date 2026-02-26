@@ -131,7 +131,10 @@ Plans:
   3. A session with `cardsPerSession=10` and 15 overdue cards shows all 15 overdue cards (due cards bypass the cap), then fills with new cards only if slots remain
   4. The schedule update does not block navigation to the next card (fire-and-forget, same pattern as `saveStudySession`)
   5. Cards whose content has changed since last review (stale snapshot) are treated as new cards, not review cards
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 24-01-PLAN.md — Server-side SM-2 write-back RPC + content_hash in session RPC + client wrapper (SRS-01)
+- [ ] 24-02-PLAN.md — Hook refactor for SRS ordering + fire-and-forget write-back + session composition UI (SRS-01, SRS-02)
 
 ### Phase 25: Dashboard & Study UI
 **Goal**: SRS data surfaces visibly in the app so users know what to study and what type each card is
