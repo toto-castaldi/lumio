@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getUserStats } from '@lumio/core';
+import { getUserStats, getDueCardCount } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { MainTabParamList } from '../navigation/MainNavigator';
@@ -64,34 +64,62 @@ export function DashboardScreen() {
 
   const [repoCount, setRepoCount] = useState(0);
   const [cardCount, setCardCount] = useState(0);
+  const [dueCount, setDueCount] = useState<number | null>(null);
   const [lastStudied, setLastStudied] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      // Fetch repo and card counts via @lumio/core API
-      const stats = await getUserStats();
-      setRepoCount(stats.repositoryCount);
-      setCardCount(stats.cardCount);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      // Only show loading spinner on first mount (not on refocus)
+      setIsLoading(prev => repoCount === 0 && cardCount === 0 ? true : prev);
 
-      // Fetch last studied timestamp from local storage
-      const stored = await AsyncStorage.getItem('@lumio/lastStudiedAt');
-      setLastStudied(stored);
-    } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
-    }
-  }, []);
+      const refresh = async () => {
+        try {
+          const [stats, due] = await Promise.all([
+            getUserStats(),
+            getDueCardCount(),
+          ]);
+          if (!cancelled) {
+            setRepoCount(stats.repositoryCount);
+            setCardCount(stats.cardCount);
+            setDueCount(due);
+          }
+        } catch (error) {
+          console.error('Failed to fetch dashboard stats:', error);
+          if (!cancelled) setDueCount(0);
+        }
+      };
 
-  useEffect(() => {
-    fetchStats().finally(() => setIsLoading(false));
-  }, [fetchStats]);
+      refresh().finally(() => { if (!cancelled) setIsLoading(false); });
+
+      AsyncStorage.getItem('@lumio/lastStudiedAt').then(stored => {
+        if (!cancelled) setLastStudied(stored);
+      });
+
+      return () => { cancelled = true; };
+    }, [])
+  );
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchStats();
-    setIsRefreshing(false);
-  }, [fetchStats]);
+    try {
+      const [stats, due] = await Promise.all([
+        getUserStats(),
+        getDueCardCount(),
+      ]);
+      setRepoCount(stats.repositoryCount);
+      setCardCount(stats.cardCount);
+      setDueCount(due);
+      const stored = await AsyncStorage.getItem('@lumio/lastStudiedAt');
+      setLastStudied(stored);
+    } catch (error) {
+      console.error('Failed to refresh dashboard:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
 
   const handleStudyPress = () => {
     navigation.navigate('Study');
@@ -165,6 +193,22 @@ export function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Due today counter */}
+      <View style={styles.dueCountRow}>
+        <StatCard
+          icon={dueCount === 0 ? 'checkmark-circle-outline' : 'alarm-outline'}
+          iconColor={dueCount === 0 ? '#10b981' : '#F59E0B'}
+          iconBgColor={
+            dueCount === 0
+              ? (isDark ? '#064e3b' : '#d1fae5')
+              : (isDark ? '#78350f' : '#FEF3C7')
+          }
+          label={t('dashboard.dueToday')}
+          value={dueCount === 0 ? t('dashboard.allCaughtUp') : (dueCount ?? '\u2014')}
+          isLoading={dueCount === null && isLoading}
+        />
+      </View>
+
       {/* Study CTA button */}
       <TouchableOpacity
         style={[
@@ -183,7 +227,11 @@ export function DashboardScreen() {
         ) : (
           <Ionicons name="play" size={24} color="#ffffff" />
         )}
-        <Text style={styles.studyButtonText}>{t('dashboard.startStudySession')}</Text>
+        <Text style={styles.studyButtonText}>
+          {dueCount != null && dueCount > 0
+            ? t('dashboard.studyNDueCards', { count: dueCount })
+            : t('dashboard.startStudySession')}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -206,6 +254,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   lastStudiedRow: {
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  dueCountRow: {
     paddingHorizontal: 16,
     marginTop: 12,
   },

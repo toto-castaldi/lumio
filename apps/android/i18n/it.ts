@@ -31,6 +31,9 @@ const it: Translations = {
     emptySubtitle:
       'Aggiungi un repository per iniziare a studiare. Le tue flashcard appariranno qui dopo la sincronizzazione.',
     goToRepos: 'Vai ai repository',
+    dueToday: 'Da ripassare oggi',
+    allCaughtUp: 'Tutto aggiornato!',
+    studyNDueCards: 'Studia %{count} schede in scadenza',
   },
   repos: {
     failedToLoad: 'Impossibile caricare i repository',
@@ -77,6 +80,8 @@ const it: Translations = {
     backToCurrentCard: 'Torna alla scheda corrente',
     sessionComplete: 'Sessione completata',
     studiedAllCards: 'Hai studiato tutte le schede disponibili',
+    reviewBadge: 'Ripasso',
+    newBadge: 'Nuova',
   },
   summary: {
     title: 'Sessione completata!',

@@ -29,6 +29,9 @@ const en = {
     emptySubtitle:
       'Add a repository to start studying. Your flashcards will appear here once a repo is synced.',
     goToRepos: 'Go to Repositories',
+    dueToday: 'Due Today',
+    allCaughtUp: 'All caught up!',
+    studyNDueCards: 'Study %{count} due cards',
   },
   repos: {
     failedToLoad: 'Failed to load repositories',
@@ -74,6 +77,8 @@ const en = {
     backToCurrentCard: 'Back to Current Card',
     sessionComplete: 'Session Complete',
     studiedAllCards: 'You studied all available cards',
+    reviewBadge: 'Review',
+    newBadge: 'New',
   },
   summary: {
     title: 'Session Complete!',
