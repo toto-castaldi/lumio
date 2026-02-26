@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.0 Spaced Repetition -- Phase 25: Dashboard Study UI
+**Current focus:** v2.0 Spaced Repetition -- Phase 26: History Fix & Validation
 
 ## Current Position
 
 Milestone: v2.0
-Phase: 25 of 26 (Dashboard Study UI)
-Plan: 1 of 1 complete
-Status: Phase Complete
-Last activity: 2026-02-26 — Plan 25-01 (Dashboard Due Counter + Study Badge) completed
+Phase: 26 of 26 (History Fix & Validation)
+Plan: 2 of 2 complete
+Status: Plan 26-02 Complete
+Last activity: 2026-02-26 — Plan 26-02 (History Screen Fix) completed
 
-Progress (v2.0): [██████░░░░] 60%
-Progress (overall): 60/60 plans (54 shipped v1.1-v1.7 + 6 of 6 in Phase 23-25)
+Progress (v2.0): [████████░░] 80%
+Progress (overall): 62/62 plans (54 shipped v1.1-v1.7 + 8 of 8 in Phase 23-26)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 60 (54 across v1.1-v1.7 + 6 in v2.0)
+- Total plans completed: 62 (54 across v1.1-v1.7 + 8 in v2.0)
 - Total milestones shipped: 7
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
 
@@ -46,6 +46,7 @@ Progress (overall): 60/60 plans (54 shipped v1.1-v1.7 + 6 of 6 in Phase 23-25)
 | 24    | 02   | 2min     | 2     | 4     |
 | 24    | 03   | 1min     | 1     | 1     |
 | 25    | 01   | 3min     | 2     | 5     |
+| 26    | 02   | 2min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Key decisions for v2.0:
 - useFocusEffect replaces useEffect for dashboard data fetching -- refreshes on every screen focus including return from study
 - Due counter: emerald checkmark at 0, amber alarm when >0 -- urgency/success feedback
 - Badge pill inline colors (teal Review, green New) -- semantic SRS indicators, not theme elements
+- History card count replaces "All repositories" (repositoryName always null) -- shows meaningful info
+- Relative dates in history reuse dashboard i18n keys (dashboard.justNow/mAgo/hAgo/dAgo) -- DRY
 
 ### Pending Todos
 
@@ -98,9 +101,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 25-01-PLAN.md (Dashboard Due Counter + Study Badge)
+Stopped at: Completed 26-02-PLAN.md (History Screen Fix)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 25-01 complete)*
+*Last updated: 2026-02-26 (Plan 26-02 complete)*

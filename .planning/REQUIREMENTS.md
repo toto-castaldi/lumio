@@ -23,7 +23,7 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 
 ### Study History
 
-- [ ] **HIST-01**: Storico sessioni mostra conteggio carte al posto di "tutti i repository"
+- [x] **HIST-01**: Storico sessioni mostra conteggio carte al posto di "tutti i repository"
 
 ## Future Requirements
 
@@ -55,7 +55,7 @@ Requirements for spaced repetition milestone. Each maps to roadmap phases.
 | SRS-06 | Phase 23 | Complete |
 | DASH-01 | Phase 25 | Complete |
 | DASH-02 | Phase 25 | Complete |
-| HIST-01 | Phase 26 | Pending |
+| HIST-01 | Phase 26 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 9 total
