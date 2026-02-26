@@ -164,7 +164,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-22. Previous milestones | v1.1 - v1.7 | 54/54 | Complete | 2026-02-21 |
 | 23. SRS Schema & Algorithm | 2/2 | Complete    | 2026-02-26 | - |
-| 24. Study Session Integration | 2/2 | Complete   | 2026-02-26 | - |
+| 24. Study Session Integration | 2/2 | Complete    | 2026-02-26 | - |
 | 25. Dashboard & Study UI | v2.0 | 0/TBD | Not started | - |
 | 26. History Fix & Validation | v2.0 | 0/TBD | Not started | - |
 
