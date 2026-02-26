@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 24-study-session-integration
 source: 24-01-SUMMARY.md, 24-02-SUMMARY.md
 started: 2026-02-26T09:30:00Z
-updated: 2026-02-26T10:45:00Z
+updated: 2026-02-26T12:00:00Z
 ---
 
 ## Current Test
@@ -46,7 +46,7 @@ skipped: 1
 ## Gaps
 
 - truth: "SRS write-back fires immediately when user answers a card"
-  status: failed
+  status: resolved
   reason: "User reported: Devo premere anche scheda successiva per non ritrovarmi la scheda nella sessione successiva"
   severity: minor
   test: 5
