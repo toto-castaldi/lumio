@@ -9,12 +9,16 @@ interface ProgressBarProps {
   current: number;
   /** Total cards in session */
   total: number;
+  /** Badge label text (e.g. "Review" / "New") */
+  badgeText?: string;
+  /** true = teal badge (review), false = green badge (new) */
+  isReview?: boolean;
 }
 
 /**
  * Session progress indicator showing a horizontal bar and fraction text.
  */
-export function ProgressBar({ progress, current, total }: ProgressBarProps) {
+export function ProgressBar({ progress, current, total, badgeText, isReview }: ProgressBarProps) {
   const { colors } = useTheme();
   const clampedProgress = Math.min(1, Math.max(0, progress));
 
@@ -34,6 +38,14 @@ export function ProgressBar({ progress, current, total }: ProgressBarProps) {
       <Text style={[styles.text, { color: colors.textSecondary }]}>
         {current} / {total}
       </Text>
+      {badgeText && (
+        <View style={[
+          styles.badge,
+          { backgroundColor: isReview ? '#0d9488' : '#16a34a' },
+        ]}>
+          <Text style={styles.badgeText}>{badgeText}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -61,5 +73,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     minWidth: 40,
     textAlign: 'right',
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveStudySession } from '@lumio/core';
+import type { SRSStudyCard } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
@@ -341,6 +342,11 @@ export function StudyScreen() {
 
   const answeredCount = session.answeredCards.length + (session.userAnswer !== null ? 1 : 0);
 
+  const currentCard = session.currentCard as SRSStudyCard | null;
+  const badgeText = currentCard
+    ? (currentCard.isReview ? t('study.reviewBadge') : t('study.newBadge'))
+    : undefined;
+
   return (
     <SafeAreaView style={[screenStyles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
@@ -349,6 +355,8 @@ export function StudyScreen() {
           progress={progress}
           current={answeredCount}
           total={effectiveLimit}
+          badgeText={badgeText}
+          isReview={currentCard?.isReview}
         />
       )}
       <View style={screenStyles.content}>
