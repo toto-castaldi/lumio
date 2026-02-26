@@ -8,6 +8,10 @@ export const SM2_DEFAULTS = {
   initialInterval: 1,
 } as const;
 
+// SM-2 Algorithm caps (Phase 23)
+export const SM2_MAX_INTERVAL = 365;
+export const SM2_EF_CEILING = 2.5;
+
 // Study defaults
 export const STUDY_DEFAULTS = {
   defaultMasteryTarget: 85,

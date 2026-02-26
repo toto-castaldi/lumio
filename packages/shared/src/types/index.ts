@@ -275,3 +275,34 @@ export interface SaveStudySessionOptions {
   skippedCount: number;
   durationSeconds: number;
 }
+
+// =============================================================================
+// SRS TYPES (Phase 23 - Spaced Repetition)
+// =============================================================================
+
+// SM-2 item state (input/output for sm2 function)
+export interface SM2Item {
+  interval: number;     // days until next review (0 for new items)
+  repetition: number;   // consecutive correct count
+  efactor: number;      // ease factor (2.5 initial, 1.3 floor, 2.5 ceiling)
+}
+
+// SM-2 result with computed next review date
+export interface SM2Result extends SM2Item {
+  nextReviewAt: Date;
+}
+
+// Card review schedule row (stored in public.card_review_schedule)
+export interface CardReviewSchedule {
+  id: string;
+  userId: string;
+  cardId: string;
+  easeFactor: number;
+  intervalDays: number;
+  repetitions: number;
+  nextReviewAt: string;       // ISO 8601 TIMESTAMPTZ
+  lastReviewedAt: string | null;
+  contentHashSnapshot: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
