@@ -24,17 +24,17 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Milestone: v2.0
 Phase: 24 of 26 (Study Session Integration)
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-02-26 — Plan 24-01 (SRS Write-Back RPC) completed
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-02-26 — Plan 24-02 (SRS Study Session Integration) completed
 
-Progress (v2.0): [███░░░░░░░] 30%
-Progress (overall): 57/58 plans (54 shipped v1.1-v1.7 + 3 of 4 in Phase 23-24)
+Progress (v2.0): [████░░░░░░] 40%
+Progress (overall): 58/58 plans (54 shipped v1.1-v1.7 + 4 of 4 in Phase 23-24)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 57 (54 across v1.1-v1.7 + 3 in v2.0)
+- Total plans completed: 58 (54 across v1.1-v1.7 + 4 in v2.0)
 - Total milestones shipped: 7
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
 
@@ -43,6 +43,7 @@ Progress (overall): 57/58 plans (54 shipped v1.1-v1.7 + 3 of 4 in Phase 23-24)
 | 23    | 01   | 3min     | 2     | 7     |
 | 23    | 02   | 3min     | 2     | 3     |
 | 24    | 01   | 2min     | 2     | 3     |
+| 24    | 02   | 2min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -66,6 +67,10 @@ Key decisions for v2.0:
 - upsert_card_review RPC runs SM-2 server-side for atomic schedule updates (not client-side)
 - CURRENT_DATE for next_review_at base in upsert to avoid timezone flip bugs
 - DROP + re-create get_study_cards_for_session to add content_hash (PostgreSQL RETURNS TABLE limitation)
+- Sequential card iteration replaces random selection to preserve SRS ordering (overdue first, then new)
+- Fire-and-forget recordCardReview with single retry and writtenBackCardIds dedup set
+- effectiveLimit = totalCards (overdue cards already bypass cap in RPC)
+- Progress bar uses answeredCount/totalCards for accurate tracking
 
 ### Pending Todos
 
@@ -87,9 +92,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 24-01-PLAN.md (SRS Write-Back RPC)
+Stopped at: Completed 24-02-PLAN.md (SRS Study Session Integration)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (Plan 24-01 complete)*
+*Last updated: 2026-02-26 (Plan 24-02 complete)*
