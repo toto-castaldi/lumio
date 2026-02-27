@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Milestone: v2.1 Email Auth
 Phase: 29 of 31 (Email Signup & Verification)
-Plan: 1 of 2 in current phase
-Status: Phase 29 plan 01 complete
-Last activity: 2026-02-27 -- Completed 29-01 Login Redesign & Auth Infrastructure
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 29 complete
+Last activity: 2026-02-27 -- Completed 29-02 Signup & OTP Screens
 
-Progress: [#####.....] 50%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [#####.....] 50%
 | 28 | 02 | 1min | 1 | 2 |
 | Phase 28 P01 | 2min | 1 tasks | 1 files |
 | 29 | 01 | 3min | 2 | 5 |
+| 29 | 02 | 2min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -60,6 +61,10 @@ All decisions logged in PROJECT.md Key Decisions table (50 entries).
 - [Phase 29]: Email-first progressive disclosure: email + Continue button reveals password field
 - [Phase 29]: Dual-auth layout with equal visual weight: Google button -> separator -> email form
 - [Phase 29]: Read-only email field with pencil icon as back affordance in password step
+- [Phase 29]: Single password field with eye toggle, no confirm password (display name from email prefix)
+- [Phase 29]: OTP wrong code triggers shake animation + clear digits for polished retry UX
+- [Phase 29]: OTP back button navigates to Login (not signup) since user already signed up
+- [Phase 29]: First OTP digit box allows maxLength=6 for paste support
 
 ### Pending Todos
 
@@ -82,9 +87,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 29-01-PLAN.md
+Stopped at: Completed 29-02-PLAN.md
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-27 (29-01 Login Redesign & Auth Infrastructure completed)*
+*Last updated: 2026-02-27 (29-02 Signup & OTP Screens completed)*

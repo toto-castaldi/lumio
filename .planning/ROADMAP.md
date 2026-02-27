@@ -110,7 +110,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 
 - [x] **Phase 27: Foundation & Database** - Supabase config, email templates, DB trigger fix for email signups (completed 2026-02-27)
 - [x] **Phase 28: Auth Context & Infrastructure** - Extend AuthContext with email auth methods, fix signOut for email-only users, add i18n strings (completed 2026-02-27)
-- [ ] **Phase 29: Email Signup & Verification** - SignUp screen, OTP verification screen, login screen layout with email form
+- [x] **Phase 29: Email Signup & Verification** - SignUp screen, OTP verification screen, login screen layout with email form (completed 2026-02-27)
 - [ ] **Phase 30: Email Login & Password Reset** - Email login flow, forgot password screen, reset password screen with OTP
 - [ ] **Phase 31: Account Linking** - Connected accounts display, add Google to email account, add email to Google account, unlink method
 
@@ -208,7 +208,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27. Foundation & Database | 2/2 | Complete    | 2026-02-27 | - |
 | 28. Auth Context & Infrastructure | 2/2 | Complete    | 2026-02-27 | - |
-| 29. Email Signup & Verification | 1/2 | In Progress|  | - |
+| 29. Email Signup & Verification | 2/2 | Complete   | 2026-02-27 | - |
 | 30. Email Login & Password Reset | v2.1 | 0/? | Not started | - |
 | 31. Account Linking | v2.1 | 0/? | Not started | - |
 
