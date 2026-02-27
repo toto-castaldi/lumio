@@ -154,11 +154,11 @@ Plans:
   3. User can enter the OTP code on a verification screen to confirm their email and be logged in
   4. Login screen shows Google OAuth button prominently on top and email form below an "oppure"/"or" separator
   5. Duplicate email signup (email already registered via Google) is detected and shows a meaningful error
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 29-01: TBD
-- [ ] 29-02: TBD
+- [ ] 29-01-PLAN.md -- Login screen redesign + AuthNavigator expansion + AuthContext OTP methods + i18n keys
+- [ ] 29-02-PLAN.md -- SignUp screen + OTP verification screen
 
 ### Phase 30: Email Login & Password Reset
 **Goal**: Users can log in with email/password and recover a forgotten password via OTP
