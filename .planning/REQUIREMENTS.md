@@ -65,28 +65,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| AUTH-06 | — | Pending |
-| LINK-01 | — | Pending |
-| LINK-02 | — | Pending |
-| LINK-03 | — | Pending |
-| LINK-04 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| INFRA-06 | — | Pending |
+| AUTH-01 | Phase 29 | Pending |
+| AUTH-02 | Phase 29 | Pending |
+| AUTH-03 | Phase 29 | Pending |
+| AUTH-04 | Phase 30 | Pending |
+| AUTH-05 | Phase 30 | Pending |
+| AUTH-06 | Phase 30 | Pending |
+| LINK-01 | Phase 31 | Pending |
+| LINK-02 | Phase 31 | Pending |
+| LINK-03 | Phase 31 | Pending |
+| LINK-04 | Phase 31 | Pending |
+| INFRA-01 | Phase 27 | Pending |
+| INFRA-02 | Phase 28 | Pending |
+| INFRA-03 | Phase 27 | Pending |
+| INFRA-04 | Phase 27 | Pending |
+| INFRA-05 | Phase 29 | Pending |
+| INFRA-06 | Phase 28 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 after roadmap creation*

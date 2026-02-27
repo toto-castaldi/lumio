@@ -10,6 +10,7 @@
 - SHIPPED **v1.6 Sync Error Handling** -- Phases 17-19 (shipped 2026-02-18)
 - SHIPPED **v1.7 GSD Versioning** -- Phases 20-22 (shipped 2026-02-21)
 - SHIPPED **v2.0 Spaced Repetition** -- Phases 23-26 (shipped 2026-02-26)
+- IN PROGRESS **v2.1 Email Auth** -- Phases 27-31
 
 ## Phases
 
@@ -103,7 +104,96 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
+### v2.1 Email Auth (In Progress)
+
+**Milestone Goal:** Add email/password authentication with OTP verification, password reset, and account linking alongside existing Google OAuth.
+
+- [ ] **Phase 27: Foundation & Database** - Supabase config, email templates, DB trigger fix for email signups
+- [ ] **Phase 28: Auth Context & Infrastructure** - Extend AuthContext with email auth methods, fix signOut for email-only users, add i18n strings
+- [ ] **Phase 29: Email Signup & Verification** - SignUp screen, OTP verification screen, login screen layout with email form
+- [ ] **Phase 30: Email Login & Password Reset** - Email login flow, forgot password screen, reset password screen with OTP
+- [ ] **Phase 31: Account Linking** - Connected accounts display, add Google to email account, add email to Google account, unlink method
+
+## Phase Details
+
+### Phase 27: Foundation & Database
+**Goal**: Supabase is configured for email auth and the database correctly handles email signups
+**Depends on**: Nothing (first phase of v2.1)
+**Requirements**: INFRA-01, INFRA-03, INFRA-04
+**Success Criteria** (what must be TRUE):
+  1. A user signing up with email/password gets a non-null display_name in public.users (derived from email prefix)
+  2. Supabase config.toml has email confirmations enabled and manual identity linking enabled
+  3. OTP email templates with Lumio branding exist and deliver 6-digit codes (testable via Inbucket locally)
+**Plans**: TBD
+
+Plans:
+- [ ] 27-01: TBD
+- [ ] 27-02: TBD
+
+### Phase 28: Auth Context & Infrastructure
+**Goal**: AuthContext supports email auth lifecycle and all new UI strings are translatable
+**Depends on**: Phase 27
+**Requirements**: INFRA-02, INFRA-06
+**Success Criteria** (what must be TRUE):
+  1. An email-only user can sign out without the app crashing (GoogleSignin.signOut guarded)
+  2. All new auth-related strings (approximately 30 keys) are available in both IT and EN
+  3. AuthContext exposes signUpWithEmail, signInWithEmail, resetPassword, updatePassword, and passwordRecoveryPending state
+**Plans**: TBD
+
+Plans:
+- [ ] 28-01: TBD
+
+### Phase 29: Email Signup & Verification
+**Goal**: Users can create an account with email/password and verify their email via OTP code
+**Depends on**: Phase 28
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, INFRA-05
+**Success Criteria** (what must be TRUE):
+  1. User can fill email and password on a SignUp screen and submit to create an account
+  2. User receives a 6-digit OTP code via email after signup
+  3. User can enter the OTP code on a verification screen to confirm their email and be logged in
+  4. Login screen shows Google OAuth button prominently on top and email form below an "oppure"/"or" separator
+  5. Duplicate email signup (email already registered via Google) is detected and shows a meaningful error
+**Plans**: TBD
+
+Plans:
+- [ ] 29-01: TBD
+- [ ] 29-02: TBD
+
+### Phase 30: Email Login & Password Reset
+**Goal**: Users can log in with email/password and recover a forgotten password via OTP
+**Depends on**: Phase 29
+**Requirements**: AUTH-04, AUTH-05, AUTH-06
+**Success Criteria** (what must be TRUE):
+  1. User can log in with email and password from the login screen
+  2. User can tap "Forgot password?" and receive a reset OTP code via email
+  3. User can enter the reset OTP code and set a new password, then is logged in automatically
+  4. Invalid credentials and unverified email show appropriate error messages
+**Plans**: TBD
+
+Plans:
+- [ ] 30-01: TBD
+- [ ] 30-02: TBD
+
+### Phase 31: Account Linking
+**Goal**: Users can connect multiple auth methods to a single account from Settings
+**Depends on**: Phase 30
+**Requirements**: LINK-01, LINK-02, LINK-03, LINK-04
+**Success Criteria** (what must be TRUE):
+  1. User can see which authentication methods (Google, email) are connected in Settings
+  2. A Google-only user can add a password to their account from Settings
+  3. An email-only user can link their Google account from Settings
+  4. User can unlink an authentication method as long as at least one method remains
+  5. SecureStore handles dual-identity JWT size without session loss
+**Plans**: TBD
+
+Plans:
+- [ ] 31-01: TBD
+- [ ] 31-02: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -115,7 +205,13 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 | 17-19. Sync Error Handling | v1.6 | 4/4 | Complete | 2026-02-18 |
 | 20-22. GSD Versioning | v1.7 | 6/6 | Complete | 2026-02-21 |
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
+| 27. Foundation & Database | v2.1 | 0/? | Not started | - |
+| 28. Auth Context & Infrastructure | v2.1 | 0/? | Not started | - |
+| 29. Email Signup & Verification | v2.1 | 0/? | Not started | - |
+| 30. Email Login & Password Reset | v2.1 | 0/? | Not started | - |
+| 31. Account Linking | v2.1 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
 *v2.0 shipped: 2026-02-26*
+*v2.1 roadmap added: 2026-02-27*

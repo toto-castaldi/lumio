@@ -5,7 +5,7 @@ milestone_name: Email Auth
 status: active
 last_updated: "2026-02-27T00:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,15 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 Email Auth
+**Current focus:** v2.1 Email Auth -- Phase 27 Foundation & Database
 
 ## Current Position
 
 Milestone: v2.1 Email Auth
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-27 — Milestone v2.1 started
+Phase: 27 of 31 (Foundation & Database)
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-02-27 — Roadmap created for v2.1
+
+Progress: [..........] 0%
 
 ## Performance Metrics
 
@@ -47,7 +49,8 @@ None.
 
 ### Blockers/Concerns
 
-None.
+- **Phase 31 gate:** SecureStore JWT size for dual-identity users must be measured during Phase 27. If over 1500 bytes, MMKV+SecureStore pattern needed before account linking.
+- **Phase 31 spike:** linkIdentity() native behavior is MEDIUM confidence -- browser PKCE flow vs native SDK needs testing. Fallback: Supabase automatic same-email merging.
 
 ### Quick Tasks Completed
 
@@ -61,9 +64,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Defining requirements for v2.1
+Stopped at: Roadmap created for v2.1 Email Auth (5 phases, 27-31)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-27 (v2.1 milestone started)*
+*Last updated: 2026-02-27 (v2.1 roadmap created)*
