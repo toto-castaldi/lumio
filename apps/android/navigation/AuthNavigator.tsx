@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../screens/LoginScreen';
+import { SignUpScreen } from '../screens/SignUpScreen';
+import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -10,18 +11,6 @@ export type AuthStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
-
-// Temporary placeholders - replaced by Plan 02
-const SignUpScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>SignUp</Text>
-  </View>
-);
-const OtpVerificationScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>OTP</Text>
-  </View>
-);
 
 /**
  * AuthNavigator handles the authentication flow.
