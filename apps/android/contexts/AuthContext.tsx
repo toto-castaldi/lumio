@@ -71,6 +71,12 @@ export interface AuthContextType {
   resetLoading: boolean;
   updatePasswordLoading: boolean;
 
+  // OTP verification methods
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
+  resendOtp: (email: string) => Promise<void>;
+  verifyLoading: boolean;
+  resendLoading: boolean;
+
   // Recovery flow state
   recoveryState: RecoveryState;
 }
@@ -96,6 +102,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [signInLoading, setSignInLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [recoveryState, setRecoveryStateLocal] = useState<RecoveryState>('idle');
 
   const setRecoveryState = useCallback(async (newState: RecoveryState) => {
@@ -251,6 +259,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [setRecoveryState]);
 
+  const verifyEmailOtp = useCallback(async (email: string, token: string): Promise<void> => {
+    setVerifyLoading(true);
+    try {
+      const { error } = await getSupabaseClient().auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      });
+      if (error) throw error;
+      // onAuthStateChange fires SIGNED_IN, session auto-updates, state -> 'ready'
+    } finally {
+      setVerifyLoading(false);
+    }
+  }, []);
+
+  const resendOtp = useCallback(async (email: string): Promise<void> => {
+    setResendLoading(true);
+    try {
+      const { error } = await getSupabaseClient().auth.resend({
+        type: 'signup',
+        email,
+      });
+      if (error) throw error;
+    } finally {
+      setResendLoading(false);
+    }
+  }, []);
+
   const value: AuthContextType = {
     user,
     session,
@@ -265,6 +301,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signInLoading,
     resetLoading,
     updatePasswordLoading,
+    verifyEmailOtp,
+    resendOtp,
+    verifyLoading,
+    resendLoading,
     recoveryState,
   };
 

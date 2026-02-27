@@ -181,6 +181,9 @@ const it: Translations = {
       invalidCredentials: 'Email o password non validi. Riprova.',
       emailNotConfirmed: 'Verifica la tua email prima di accedere.',
       or: 'oppure',
+      continue: 'Continua',
+      signInAction: 'Accedi',
+      signingIn: 'Accesso in corso...',
     },
     signup: {
       title: 'Crea Account',
@@ -195,6 +198,18 @@ const it: Translations = {
       checkEmail: 'Controlla la tua email',
       verificationSent: 'Abbiamo inviato un codice di verifica a %{email}',
       passwordMismatch: 'Le password non corrispondono.',
+      signingUp: 'Registrazione in corso...',
+      codeSentToast: 'Codice inviato alla tua email',
+    },
+    otp: {
+      title: 'Verifica la tua Email',
+      subtitle: 'Inserisci il codice a 6 cifre inviato a',
+      resend: 'Reinvia codice',
+      resendIn: 'Reinvia tra %{seconds}s',
+      invalidCode: 'Codice non valido. Riprova.',
+      expired: 'Codice scaduto. Richiedine uno nuovo.',
+      resent: 'Nuovo codice inviato',
+      verifying: 'Verifica in corso...',
     },
     reset: {
       title: 'Reimposta Password',

@@ -178,6 +178,9 @@ const en = {
       invalidCredentials: 'Invalid email or password. Please try again.',
       emailNotConfirmed: 'Please verify your email before signing in.',
       or: 'or',
+      continue: 'Continue',
+      signInAction: 'Sign in',
+      signingIn: 'Signing in...',
     },
     signup: {
       title: 'Create Account',
@@ -192,6 +195,18 @@ const en = {
       checkEmail: 'Check your email',
       verificationSent: 'We sent a verification code to %{email}',
       passwordMismatch: 'Passwords do not match.',
+      signingUp: 'Signing up...',
+      codeSentToast: 'Code sent to your email',
+    },
+    otp: {
+      title: 'Verify Your Email',
+      subtitle: 'Enter the 6-digit code sent to',
+      resend: 'Resend code',
+      resendIn: 'Resend in %{seconds}s',
+      invalidCode: 'Invalid code. Please try again.',
+      expired: 'Code expired. Please request a new one.',
+      resent: 'New code sent',
+      verifying: 'Verifying...',
     },
     reset: {
       title: 'Reset Password',
