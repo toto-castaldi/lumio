@@ -205,7 +205,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 17-19. Sync Error Handling | v1.6 | 4/4 | Complete | 2026-02-18 |
 | 20-22. GSD Versioning | v1.7 | 6/6 | Complete | 2026-02-21 |
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
-| 27. Foundation & Database | 2/2 | Complete   | 2026-02-27 | - |
+| 27. Foundation & Database | 2/2 | Complete    | 2026-02-27 | - |
 | 28. Auth Context & Infrastructure | v2.1 | 0/? | Not started | - |
 | 29. Email Signup & Verification | v2.1 | 0/? | Not started | - |
 | 30. Email Login & Password Reset | v2.1 | 0/? | Not started | - |
