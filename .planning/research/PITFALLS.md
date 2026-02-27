@@ -1,296 +1,429 @@
-# Pitfalls Research
+# Domain Pitfalls
 
-**Domain:** Adding spaced repetition to existing Lumio flashcard app (React Native/Expo, Supabase backend)
-**Researched:** 2026-02-25
+**Domain:** Adding email/password auth, email verification, password reset, and account linking to existing Supabase + React Native app with Google OAuth
+**Researched:** 2026-02-27
 **Confidence:** HIGH
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Card-Level Schedule Orphaned When Card Content Changes
+### Pitfall 1: handle_new_user Trigger Assumes OAuth Metadata -- Email/Password Signup Has None
 
 **What goes wrong:**
-Lumio cards are synced from GitHub repos via Docora. When a card's content changes (edited markdown file pushed), the backend updates the `cards` row (including `updated_at`). If the spaced repetition schedule is keyed to the `card_id`, it becomes stale: the old schedule (ease factor, interval, next due date) was earned for the *previous* content, not the new content. The user may be scheduled to see an "easy" card in 60 days, but the card now teaches something entirely different. Worse: if `card_questions` are also regenerated on content change (they are — `deactivation_reason = 'card_updated'`), a new question is generated but the user's SRS state from the old question bleeds into the new one.
+The existing `handle_new_user()` trigger (migration `20241230000003_auth_trigger.sql`) extracts `display_name` from `raw_user_meta_data->>'full_name'` and `avatar_url` from `raw_user_meta_data->>'avatar_url'`. These fields are populated by Google OAuth but are completely absent in email/password signups. The `COALESCE` in the trigger still evaluates to NULL for both fields. While `display_name` and `avatar_url` are nullable in `public.users`, several UI components assume they exist:
+- `SettingsScreen.tsx` line 48-49: reads `user?.user_metadata?.avatar_url` and `user?.user_metadata?.full_name` directly for the account section
+- `packages/core/src/supabase/auth.ts` line 57-60: constructs `AuthUser` from `user_metadata?.full_name`
+
+The result: email-signup users see a blank account section (no name, no avatar), and the AuthUser's `displayName` is undefined everywhere it is consumed.
 
 **Why it happens:**
-SRS state is typically stored as `(user_id, card_id) → {ease, interval, due_date, repetitions}`. The card_id is stable across content changes, so no foreign key violation fires. The schedule silently persists with stale parameters.
+Google OAuth populates `raw_user_meta_data` with profile info automatically. Email/password signup does not -- `raw_user_meta_data` contains only `{"email_verified": false}` (or nothing). The existing trigger was built when Google OAuth was the only auth method.
 
-**How to avoid:**
-- Add a `content_version` hash (e.g., `SHA256` of card content) to the SRS state row.
-- On each review session start, compare `cards.updated_at` (or a new `content_hash` column) against the value recorded in the SRS row at time of last review.
-- If the card was updated since the last review, reset the SRS state to "new" for that user (equivalent to never having seen it).
-- The Docora webhook already sets `deactivated_at` on questions when `card_updated`. Reuse this signal: when `card_questions` deactivates old questions for a card, also reset SRS state for that card across all users.
-- Alternatively (simpler): reset SRS state whenever `cards.updated_at` is newer than `card_reviews.reviewed_at`. No extra hash column needed.
+**Consequences:**
+- Blank avatar and name in Settings (cosmetic but jarring)
+- Potential null-reference errors in any code that does not guard against missing display_name
+- `public.users.display_name` is NULL for email-signup users, breaking any queries that filter or sort by display_name
 
-**Warning signs:**
-- Users report seeing "easy" cards they've never actually studied under their current form.
-- The `cards.updated_at` timestamp is newer than the `card_reviews.last_reviewed_at` for the same card.
-- After a repo sync, a card's interval jumps to a large value on first review.
+**Prevention:**
+- Update `handle_new_user()` to fall back to the email local part (before @) when no `full_name` is available: `COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1))`
+- Add the `avatar_url` fallback to use the Ionicons person-icon fallback already present in SettingsScreen (no code change needed there -- the fallback already exists)
+- Allow users to pass `display_name` via signUp options.data to pre-populate: `signUp({ email, password, options: { data: { full_name: 'User Name' } } })`
+- Audit all code paths that consume `displayName` or `avatar_url` and ensure they handle NULL gracefully
+
+**Detection:**
+- Create an email-signup test user and check `public.users` row -- `display_name` should be non-null
+- Verify Settings screen renders correctly for email-only users
 
 **Phase to address:**
-Data model phase (schema design for `card_reviews` table). Add `card_updated_at TIMESTAMPTZ` snapshot column to `card_reviews` and stale-detection logic in the card selection RPC.
+Database migration phase (update trigger) + signup form phase (collect display name during registration).
 
 ---
 
-### Pitfall 2: Card Deleted While in Active SRS Schedule
+### Pitfall 2: Supabase signUp with Existing Google Email Returns Obfuscated Response, Not an Error
 
 **What goes wrong:**
-When a card is deleted from GitHub (file removed, repo unlinked, or `.lumioignore` pattern added), the `cards` row is soft-deleted (`is_active = FALSE`) or hard-deleted. If the SRS schedule references `card_id` via FK with `ON DELETE CASCADE`, all SRS state is silently dropped — losing the user's review history for that card. If using `ON DELETE RESTRICT`, the card deletion fails. If using `ON DELETE SET NULL`, you have orphaned SRS rows with no card reference.
+When a user who already signed up via Google OAuth tries to create a new account with `signUp({ email, password })` using the same email, Supabase does NOT return an error. Instead, it returns a "fake" user object that looks like a successful signup. No verification email is sent. The app cannot distinguish between "new account created" and "email already exists" on the client side. This is an intentional Supabase security measure to prevent email enumeration attacks.
+
+The implication: a user signs up with email/password, sees a "check your email for verification" screen, waits forever for an email that never arrives, and assumes the app is broken.
 
 **Why it happens:**
-The existing `card_questions` table uses `ON DELETE CASCADE` on `card_id`. The natural instinct is to do the same for SRS state. But SRS state has dual purpose: it drives future scheduling AND it's part of the user's learning history. Cascading delete destroys both.
+Supabase removed the "User already registered" error message for security. When `enable_confirmations` is true (required for email verification), the obfuscated response is returned for duplicate emails. This is documented in [Supabase Discussion #7632](https://github.com/orgs/supabase/discussions/7632) and [auth-js Issue #513](https://github.com/supabase/auth-js/issues/513).
 
-**How to avoid:**
-- Use `ON DELETE CASCADE` for the SRS state (`card_reviews`) table — it is per-user per-card and has no value without the card. Losing the schedule for a deleted card is acceptable; the card is gone anyway.
-- However: `study_sessions` must **not** store `card_id` as a FK. The existing `study_sessions` schema correctly stores `repository_name TEXT` (nullable, not FK). Follow the same pattern for any session-level card tracking. Use `card_id UUID` (no FK) for audit columns in sessions, so session history survives card deletion.
-- Do NOT add `REFERENCES cards(id) ON DELETE CASCADE` to session detail rows — use `ON DELETE SET NULL` or store `card_id` as plain UUID without FK.
+**Consequences:**
+- User is stuck on "check your email" screen indefinitely
+- No way to inform the user that they should use Google sign-in instead
+- Support burden from confused users
 
-**Warning signs:**
-- After a repo sync that removes files, users see a drop in their "cards studied" stats.
-- `study_sessions` table references a deleted card_id, causing broken lookups.
+**Prevention:**
+- After signUp, check if the returned user object has `identities` array that is empty. An empty `identities` array indicates the email is already taken: `if (data.user && data.user.identities && data.user.identities.length === 0)` means duplicate email.
+- When detecting a duplicate email, show a specific message: "An account with this email already exists. Try signing in with Google instead." or "Sign in with your existing account."
+- Document this detection pattern prominently in the signup handler code with a comment explaining the Supabase behavior.
+
+**Detection:**
+- Test: sign up with Google first, then try email/password signup with same email -- the `identities` array should be empty
+- Check that the "email already exists" message appears in the UI
 
 **Phase to address:**
-Data model phase. Design `card_reviews` with `ON DELETE CASCADE` and session detail tables without hard card FK constraints.
+Signup implementation phase. The empty-identities check must be in the signUp handler from day one.
 
 ---
 
-### Pitfall 3: "Due Today" Counter Uses Server UTC, App Displays Local Date
+### Pitfall 3: Email Verification Deep Link Does Not Work on Android Without Proper Configuration
 
 **What goes wrong:**
-SRS schedules cards with a `due_date TIMESTAMPTZ` stored in UTC. The "due today" dashboard counter runs a query like `WHERE due_date <= NOW()` on the server. But users think in calendar days, not UTC timestamps. A user in UTC+2 who finishes their reviews at 11pm local time (9pm UTC) will see the next day's cards appear at midnight UTC (2am local time) instead of their local midnight. Conversely, a user in UTC-5 whose next due date is "tomorrow" (UTC) has already started that day locally at 7pm.
+After email-signup, Supabase sends a verification email with a link. The link format is `https://[project-ref].supabase.co/auth/v1/verify?token_hash=...&type=signup&redirect_to=...`. The `redirect_to` parameter should open the app via deep link (e.g., `lumio://auth/callback`). But on Android, several things can break:
+1. The `lumio://` custom scheme is registered in `app.json` (`"scheme": "lumio"`) but NOT registered in Supabase's `additional_redirect_urls` for production (only local config.toml has it)
+2. The deep link must extract `access_token` and `refresh_token` from the URL parameters and call `supabase.auth.setSession()` -- there is zero deep link handling code in the app today
+3. Android does not automatically open custom-scheme links from email clients -- the user may end up in the browser instead of the app
+4. The Supabase verification link uses the project's site_url as default redirect, which is `http://localhost:5173` in config.toml -- wrong for production
 
 **Why it happens:**
-`NOW()` in PostgreSQL returns server UTC time. SRS algorithms typically compute `due_date = reviewed_at + interval_days` where `interval_days` is a whole number, so the due date is calculated as a point in time, not a calendar day. Without timezone awareness, "due today" means different things to different users.
+Google OAuth in the current app uses `signInWithIdToken` (native SDK) which never involves browser redirects or deep links. The entire redirect/deep-link infrastructure was never needed or built. Email verification is fundamentally different -- it requires the user to click a link in another app (email client) and return to the app.
 
-**How to avoid:**
-- Store `due_date DATE` (not `TIMESTAMPTZ`) in the `card_reviews` table. A DATE represents a calendar day, not a UTC instant. The query becomes `WHERE due_date <= CURRENT_DATE AT TIME ZONE user_timezone` or simply `WHERE due_date <= (NOW() AT TIME ZONE user_tz)::DATE`.
-- Simpler alternative for a single-developer app with known user base: store `due_date TIMESTAMPTZ` but compute "due today" on the client using the device's local `new Date()` for comparison. Pass `new Date().toISOString()` as `?currentTime=` parameter to the API.
-- Never compute "due today" purely in a Supabase RPC using `NOW()` without accounting for timezone.
-- For this milestone, storing as `DATE` and comparing to `CURRENT_DATE` is the cleanest approach given Lumio's single-user / known-timezone context.
+**Consequences:**
+- User clicks verification link, ends up in browser showing error or blank page
+- Verification succeeds on the server side but the app does not know about it
+- User must manually go back to app and try to log in (confusing UX)
+- If redirect URL is not in the allowed list, Supabase rejects the redirect entirely
 
-**Warning signs:**
-- User says "I finished all my cards but the counter still shows N due".
-- Cards show as due at unexpected times (2am, 7pm instead of midnight).
-- The counter differs by 1 depending on the time of day.
+**Prevention:**
+- **Use OTP (6-digit code) instead of link-based verification.** This avoids deep linking entirely. Supabase supports OTP verification via `verifyOtp({ email, token, type: 'signup' })`. The user stays in the app, enters the code from their email, done. This is the recommended approach for mobile apps.
+- If using links: configure `additional_redirect_urls` in Supabase Dashboard (production) to include `lumio://auth/callback`. Add deep link handling in the app using `expo-linking`. Create a `createSessionFromUrl` handler.
+- For password reset: same choice -- OTP (enter code + new password in-app) vs deep link (redirect back to app). OTP is strongly recommended for mobile.
+- Update Supabase email templates to show the OTP token (not just a link) for mobile-friendly UX.
+
+**Detection:**
+- Test email verification flow on a real Android device (not emulator -- email client behavior differs)
+- Verify the redirect URL is in the allowed list in Supabase Dashboard
 
 **Phase to address:**
-Data model phase. Use `DATE` type for `due_date`, document timezone assumption explicitly in migration comment.
+This is the most critical architectural decision for the milestone. Must be decided BEFORE any implementation. OTP-based flow should be the default choice for this mobile-only app.
 
 ---
 
-### Pitfall 4: Ease Factor Spiraling to Minimum ("Low Interval Hell")
+### Pitfall 4: Password Reset Flow Requires Deep Link or OTP -- Neither Exists Today
 
 **What goes wrong:**
-SM-2's ease factor has a floor of 1.3. When a user repeatedly answers incorrectly, the ease factor hits 1.3 and stays there. The interval formula `next_interval = current_interval * ease_factor` then produces intervals that grow only by 30% each time (e.g., 1 → 1.3 → 1.7 → 2.2 days). Cards that the user genuinely struggles with get scheduled more often than useful, appearing nearly every day. The user sees these "difficult" cards constantly, which creates review fatigue and can cause them to abandon the app.
+`resetPasswordForEmail(email)` sends a password reset email. The email contains a link with a token that establishes a session in "recovery" mode. The `onAuthStateChange` listener fires a `PASSWORD_RECOVERY` event. The app must then show a "set new password" form and call `updateUser({ password })`. But:
+1. The `PASSWORD_RECOVERY` event fires AFTER a `SIGNED_IN` event, which the current `AuthContext` interprets as "user is logged in" and navigates to the main app -- the password reset form never appears
+2. Without deep link handling (see Pitfall 3), the user cannot get back to the app from the reset email link
+3. The current `onAuthStateChange` handler in `AuthContext.tsx` does not distinguish between `SIGNED_IN`, `PASSWORD_RECOVERY`, `TOKEN_REFRESHED`, or any other events -- it treats all of them as "set session, navigate to main"
 
 **Why it happens:**
-SM-2 was designed for 5-point quality ratings (0-5). Lumio's quiz is binary (correct/incorrect). Mapping binary answers to SM-2 quality grades is non-trivial. If "correct" maps to quality=4 and "incorrect" maps to quality=0, the ease factor change for incorrect is `-0.8` per review, which quickly hits the 1.3 floor.
+The `onAuthStateChange` handler was designed for a single auth method (Google OAuth) where the only relevant events are `SIGNED_IN` and `SIGNED_OUT`. Password recovery introduces a new event type that requires different handling.
 
-**How to avoid:**
-- Use a simpler binary-adapted algorithm. Do not implement full SM-2 with 5-point quality scale for a binary correct/wrong quiz. Instead:
-  - **Correct answer:** `new_interval = max(1, round(current_interval * ease_factor))`, ease_factor += 0.1 (up to 2.5 max)
-  - **Wrong answer:** reset interval to 1, ease_factor = max(1.3, ease_factor - 0.2)
-- OR: Use fixed multipliers. Correct: multiply by 2.5 (easy), 2.0 (medium). Wrong: reset to 1 day. No ease factor at all — simpler and sufficient for Lumio's use case.
-- Enforce a floor (`ease_factor >= 1.3`) and ceiling (`ease_factor <= 2.5`) explicitly in the calculation, not just in DB constraints.
-- Cap maximum interval at 365 days to prevent cards from disappearing for over a year after a lucky correct answer streak.
+**Consequences:**
+- User clicks reset link, gets signed in to main app but never sees password reset form
+- Password remains unchanged
+- User is confused and locked out of their account
 
-**Warning signs:**
-- User complains of seeing the same hard cards every day.
-- `card_reviews` table shows many rows where `ease_factor = 1.3` (the floor).
-- Session contains disproportionate number of low-interval cards.
+**Prevention:**
+- **OTP approach (recommended):** Use `resetPasswordForEmail(email)` with a custom email template showing the OTP token. User enters the OTP in-app via `verifyOtp({ email, token, type: 'recovery' })`. On success, show password reset form and call `updateUser({ password })`. No deep link needed.
+- **Link approach (if needed):** Update `onAuthStateChange` to check the `_event` parameter. When `_event === 'PASSWORD_RECOVERY'`, set a state flag (e.g., `needsPasswordReset: true`) and navigate to a password reset screen instead of the main app. Handle the event ordering: `SIGNED_IN` fires first, then `PASSWORD_RECOVERY` -- the handler must wait for or prioritize the recovery event.
+
+**Detection:**
+- Test full password reset flow end-to-end: request reset, receive email, complete reset, verify new password works
+- Check that `onAuthStateChange` correctly routes `PASSWORD_RECOVERY` events
 
 **Phase to address:**
-Algorithm design phase. Decide on SM-2 binary adaptation or simplified fixed multipliers before writing any DB migration.
+AuthContext refactoring phase. The `onAuthStateChange` handler must be updated to handle multiple event types before password reset is implemented.
 
 ---
 
-### Pitfall 5: Session Limit (10/20/50/All) Conflicts With "Due Cards First" Priority
+### Pitfall 5: Account Linking (Email + Google on Same Account) Has Multiple Failure Modes
 
 **What goes wrong:**
-The existing `cardsPerSession` setting (10/20/50/All) was designed for random selection. With spaced repetition, sessions have a different structure: due cards must come first (the user is "late" on those), then new cards fill remaining slots. But if a user sets 10 cards per session and has 15 overdue cards, the current limit logic truncates the session before all due cards are shown. This violates the core SRS contract: due cards should be reviewed when due.
+The milestone requires linking Google OAuth and email/password identities on the same account. Supabase supports this via `linkIdentity()` and automatic linking. But several scenarios cause problems:
+
+**Scenario A -- Existing Google user adds email/password:**
+User is logged in via Google. They want to add a password. The correct approach is `updateUser({ password: 'newpassword' })` which adds an email identity. But the user must also verify their email identity. If the user's Google email is already confirmed, does adding a password auto-confirm the email identity? Supabase behavior: yes, since the email matches the confirmed Google identity, the email identity is auto-confirmed.
+
+**Scenario B -- Existing Google user tries signUp with same email:**
+This hits Pitfall 2 (obfuscated response). The user should NOT be using `signUp` -- they should be using `updateUser` from an authenticated session. But if the UI lets them reach the signup form, they will try.
+
+**Scenario C -- New email user later links Google:**
+User signs up with email/password. Later they want to add Google sign-in. They call `linkIdentity({ provider: 'google' })`. This opens a browser-based OAuth flow (NOT the native Google Sign-In SDK). The `@react-native-google-signin/google-signin` library used in the app is bypassed entirely. The user may see a different Google sign-in UI (browser vs native) which is confusing.
+
+**Scenario D -- Unlinking the last identity:**
+User has both Google and email/password. They try to unlink Google. `unlinkIdentity()` requires at least 2 identities to remain. But what if the user's email identity is unconfirmed? They could end up with only an unconfirmed email identity and be unable to log in.
 
 **Why it happens:**
-The `cardsPerSession` setting was implemented as a hard cap on total cards. It made sense for random selection (any card is equally valid). For SRS, "how many cards" is less important than "which cards" — overdue cards must take priority.
+Account linking is one of the most complex auth features. Supabase's automatic linking simplifies the happy path but the edge cases are numerous.
 
-**How to avoid:**
-- Change the semantics of `cardsPerSession` for SRS: the limit applies to **new** cards only, not due cards. Due cards always appear regardless of the limit.
-- Alternatively: show all due cards first, then fill remaining slots (up to limit) with new cards. Example: limit=10, 7 due cards → show all 7 due + 3 new.
-- If the due card count itself is very high (backlog), cap at 2× the session limit to prevent overwhelming the user, but always show at least `min(due_count, session_limit)` due cards.
-- The `cardsPerSession` UI in Settings may need a label update: "New cards per session" instead of "Cards per session".
+**Consequences:**
+- Confused UI states (link button appears when it should not)
+- User gets locked out after unlinking their only confirmed identity
+- Different Google sign-in experiences (native vs browser) in the same app
 
-**Warning signs:**
-- User studies 10 cards per session but keeps seeing "X cards due" never going to zero.
-- Due cards accumulate over time because they never get shown within the session limit.
+**Prevention:**
+- For Scenario A (Google user adds password): use `updateUser({ password })` only when the user is authenticated. Do not expose a "link email" flow -- just a "set password" form in Settings.
+- For Scenario B: handle in signup form (see Pitfall 2 prevention).
+- For Scenario C (email user adds Google): use `linkIdentity()` but test the browser-based flow thoroughly. Consider whether to show "Link Google Account" only for email-only users.
+- For Scenario D: before allowing `unlinkIdentity()`, check `user.identities.length > 1` AND that the remaining identity is confirmed. Simpler approach: do not allow unlinking in v2.1 -- only allow adding identities.
+- **Simplest viable approach:** Do NOT implement full bidirectional linking in v2.1. Instead: (1) Google users can add a password via Settings, (2) email users can link Google via Settings, (3) no unlinking. Defer unlinking to a future milestone.
+
+**Detection:**
+- Test every combination: Google-first + add password, email-first + link Google, both + try unlink
+- Check `user.identities` after each operation to verify the expected identities exist
 
 **Phase to address:**
-Session design phase (after data model). When implementing `useStudySession` SRS adaptation, the card selection logic must prioritize due cards before new cards, separate from the limit logic.
+Settings/account linking phase. Must be the LAST phase in the milestone after login/signup/verification/reset are solid.
 
 ---
 
-### Pitfall 6: Cold-Start Problem — First-Time User Has No Schedule State
+### Pitfall 6: SecureStore 2048-Byte Limit May Truncate Tokens for Email+Google Users
 
 **What goes wrong:**
-When a user starts their first SRS session, there is no `card_reviews` data. The scheduler has nothing to base intervals on. A naive implementation returns zero cards ("nothing due") or crashes on empty results. The "due today" counter shows 0, making the app look broken. Alternatively, all cards are treated as "new" and the scheduler floods the user with a backlog of hundreds of new cards.
+The current app uses `expo-secure-store` (via `SecureStoreAdapter` in `lib/supabase.ts`) to persist Supabase auth tokens. SecureStore has a hard 2048-byte limit per key on Android. When a user has multiple linked identities (Google + email), the session JWT grows because it contains claims from both providers. Google OAuth alone can produce JWTs close to 2000 bytes (profile data, scopes). Adding email identity metadata pushes it over the limit. SecureStore silently fails or throws, causing the session to not persist -- the user gets logged out on every app restart.
 
 **Why it happens:**
-SRS systems assume some initial state. SM-2 initializes with repetitions=0, ease_factor=2.5, interval=1. Many implementations forget to handle the "no rows in card_reviews" case as "all cards are new" and display them correctly.
+Supabase's JWT includes `user_metadata` from all linked identities. Google provides `full_name`, `avatar_url`, `email_verified`, `iss`, `sub`, and more. Email/password adds its own metadata. The combined size exceeds SecureStore's Android Keystore limit.
 
-**How to avoid:**
-- Define "new card" as: a card with no row in `card_reviews` for this user, OR a card whose `card_reviews.repetitions = 0`.
-- The card selection query must include cards with no `card_reviews` row (LEFT JOIN, not INNER JOIN).
-- On first session, present N new cards (where N = `cardsPerSession` setting, defaulting to 10). Do not dump all cards at once.
-- Initialize the `card_reviews` row on the user's first correct answer, not before (lazy initialization avoids pre-populating thousands of rows).
-- The "due today" counter should show `new_cards_available` as a non-zero starting state, not just due cards.
+**Consequences:**
+- Session not persisted -- user logs out every time app restarts
+- Error is silent or appears as a generic "SecureStore write failed" log
+- Only affects users with multiple linked identities (the account linking feature itself triggers the bug)
 
-**Warning signs:**
-- Dashboard shows "0 cards due" for a new user with 100 cards available.
-- The session starts but immediately completes ("no cards to study").
-- All cards appear in a single session with no SRS limiting.
+**Prevention:**
+- Test with a real Google+email dual-identity user and measure the JWT size before shipping
+- If JWT exceeds 2048 bytes: switch to `expo-secure-store` + MMKV pattern. Generate an encryption key with `expo-crypto`, store it in SecureStore (small, fits in 2048 bytes), use MMKV for the actual session data encrypted with that key
+- Alternative: use `aes-256-gcm` encryption with a SecureStore-stored key and AsyncStorage for the encrypted payload
+- The existing Supabase setup in `lib/supabase.ts` passes `storage: SecureStoreAdapter` to createSupabaseClient. This adapter must be updated if the limit is hit.
+- **Immediate mitigation:** test the current JWT size for a Google-only user. If it is already close to 2048 bytes, this must be fixed in the foundation phase of this milestone, not deferred.
+
+**Detection:**
+- `console.log(JSON.stringify(session).length)` after login -- if over ~1800 bytes, you are at risk
+- Test: link Google + email identity, restart app, check if session persists
 
 **Phase to address:**
-Data model phase and session selection logic. The card selection RPC must LEFT JOIN `card_reviews` and treat NULL rows as "new" cards.
+Foundation phase (before any auth changes). Measure current JWT size. If over 1500 bytes, implement MMKV+SecureStore pattern first.
 
 ---
 
-## Technical Debt Patterns
+## Moderate Pitfalls
 
-Shortcuts that seem reasonable but create long-term problems.
+### Pitfall 7: Supabase config.toml enable_confirmations Is False -- Production Must Enable It
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Store `due_date` as TIMESTAMPTZ instead of DATE | Familiar type, no timezone thinking needed | "Due today" logic breaks subtly for users in non-UTC timezones | Never — use DATE |
-| Skip content-change reset (ignore card updates) | No migration, no webhook changes needed | Users study cards under stale ease factors; wrong content, right difficulty | Never for cards that change frequently |
-| Hard-cap session at `cardsPerSession` regardless of due status | Simple logic, existing code reuse | Due cards accumulate, SRS contract violated, cards never cleared | Only for "all" setting where the cap is effectively infinite |
-| Store SRS state in AsyncStorage instead of DB | Instant, no migration, no server calls | SRS state lost on app reinstall, no multi-device sync possible | Only during prototyping, never in production |
-| Use INNER JOIN on card_reviews in card selection | Simpler query | New cards (no review row) never appear; cold-start broken | Never |
-| Pre-initialize card_reviews rows for all cards | No NULL handling needed | Thousands of rows per user on first login, expensive migration for existing users | Never — use lazy initialization |
-| Use fire-and-forget for SRS state update (no await) | Non-blocking UX | SRS state may not persist if app crashes before write completes; session and schedule get out of sync | Only acceptable if retry is implemented |
+**What goes wrong:**
+The current `config.toml` has `enable_confirmations = false` (line 47). This means email verification is disabled for local development. But production Supabase projects have email verification enabled by default. If the app is developed and tested with confirmations disabled, the signup flow will behave differently in production:
+- Local: signUp immediately creates a confirmed user, session is returned
+- Production: signUp creates an unconfirmed user, no session is returned, user must verify email first
 
----
+The app works perfectly in local development but breaks in production.
 
-## Integration Gotchas
+**Why it happens:**
+The config.toml was set up when Google OAuth was the only auth method. OAuth users are pre-confirmed by the provider. Email verification was irrelevant. Now that email/password is being added, the local config must match production behavior.
 
-Common mistakes when connecting to external services.
+**Prevention:**
+- Set `enable_confirmations = true` in `config.toml` for local development
+- Use the local Inbucket email service (already running on port 54324) to receive verification emails during development
+- Test the full signup-verify-login flow locally before deploying
+- Remember: Supabase's built-in SMTP has a rate limit of 2 emails/hour in production. For production, configure a custom SMTP provider (Resend, Postmark, SendGrid, etc.) via Supabase Dashboard.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Supabase RLS on `card_reviews` | Forgetting RLS, allowing users to read/write other users' SRS state | Add `user_id = auth.uid()` to all policies; index on `(user_id, card_id)` for performance |
-| `study_sessions` (immutable) + SRS state (mutable) | Trying to UPDATE `study_sessions` to store per-card SRS outcomes | Keep sessions immutable (INSERT-only). Store SRS state in separate mutable `card_reviews` table with UPSERT |
-| Docora webhook card update | Not triggering SRS state reset when card content changes | On `sync_success` webhook, check `cards.updated_at`; where it changed, mark `card_reviews` stale or reset interval |
-| `get_study_cards_with_questions` RPC | Using existing RPC which returns cards ordered by `updated_at DESC` (wrong for SRS) | Create new SRS-specific RPC that orders by: (1) overdue first, (2) new cards second, within each group random |
-| `card_questions` vote-based deactivation | A question gets deactivated after bad votes, but SRS state references the question_id | SRS state must reference `card_id` not `question_id`. The question is selected fresh each session; SRS tracks the card, not the question |
-| Supabase `NOW()` in RPC | Computing "due today" with `WHERE due_date <= NOW()` returns UTC-relative results | Use `WHERE due_date <= CURRENT_DATE` (if storing DATE) or pass current timestamp from client |
+**Detection:**
+- Compare config.toml setting with production Dashboard auth settings
+- Test signup flow with `enable_confirmations = true` locally
+
+**Phase to address:**
+Foundation/configuration phase. Change config.toml before any email auth development starts.
 
 ---
 
-## Performance Traps
+### Pitfall 8: signOut Must Clear Google Sign-In State Even for Email-Only Users
 
-Patterns that work at small scale but fail as usage grows.
+**What goes wrong:**
+The current `signOut` handler in `AuthContext.tsx` (line 126-131) calls `GoogleSignin.signOut()` before `supabase.auth.signOut()`. If the user signed in with email/password (not Google), `GoogleSignin.signOut()` throws an error because there is no Google session to sign out of. This crashes the signOut flow, and the user remains logged in.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| N+1 SRS state fetch (one query per card in session) | Session loading takes 2-5 seconds for 20 cards | Batch-fetch all `card_reviews` for the session in one query, join with card selection | At 10+ cards per session |
-| No index on `(user_id, due_date)` in `card_reviews` | "Due today" counter query becomes table scan | Add composite index `CREATE INDEX ON card_reviews(user_id, due_date)` | At 500+ card_reviews rows |
-| Dashboard queries `card_reviews` on every mount | Repeated expensive aggregation calls when switching screens | Cache due-count in component state, invalidate on session completion | At 1000+ rows (single user, not a concern for solo app) |
-| Unindexed `card_id` in `card_reviews` | Card-specific lookups slow during session | Composite unique index on `(user_id, card_id)` is both uniqueness constraint and performance index | At 200+ cards per user |
-| RLS policy using subquery on `user_repositories` | Policy re-evaluates for every row scan | Already an existing concern in the codebase (all RLS policies use this pattern); acceptable given single-user scale | At multi-user scale |
+**Why it happens:**
+The signOut handler was written assuming Google OAuth is the only auth method. It unconditionally calls the Google SDK's signOut.
 
----
+**Consequences:**
+- Email-only users cannot log out
+- Crash or unhandled promise rejection
 
-## Security Mistakes
+**Prevention:**
+- Wrap `GoogleSignin.signOut()` in a try-catch that silently ignores "not signed in" errors
+- Or: check if the user has a Google identity before calling Google signOut: `const hasGoogle = user?.app_metadata?.providers?.includes('google')`
+- Better: check `GoogleSignin.getCurrentUser()` -- if null, skip Google signOut
 
-Domain-specific security issues beyond general web security.
+**Detection:**
+- Test: sign in with email/password, then tap logout -- should not crash
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| No RLS on `card_reviews` | User A can read/modify User B's SRS schedule | Enable RLS immediately; no policy = publicly accessible via API |
-| Allowing UPDATE on other users' SRS rows | User can manipulate their score by resetting difficult cards | Policy: `USING (user_id = auth.uid())` on UPDATE and DELETE |
-| SRS reset endpoint (admin) accessible by regular users | Users could reset their own SRS to fake fresh start | Admin-only reset should use service_role key, not user JWT; no user-facing reset API |
-| Storing raw card content in `card_reviews` | Data duplication risk; stale snapshots if card updates silently diverge | Store only `card_id` + `card_updated_at_snapshot` (timestamp), never full content |
+**Phase to address:**
+AuthContext refactoring phase. Must be updated when adding email/password signIn method.
 
 ---
 
-## UX Pitfalls
+### Pitfall 9: AuthContext Interface Must Expose New Methods Without Breaking Existing Consumers
 
-Common user experience mistakes in this domain.
+**What goes wrong:**
+The current `AuthContextType` interface exposes `signInWithGoogle` and `signOut`. Adding email auth requires `signInWithEmail`, `signUpWithEmail`, `resetPassword`, and potentially `verifyOtp`. If these are added naively, every consumer of `useAuth()` (LoginScreen, SettingsScreen, AppNavigator) needs updating. Worse: if the interface is changed mid-development, TypeScript errors cascade across the codebase.
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Showing SRS algorithm details to users ("ease: 2.3, interval: 7d") | Users over-optimize for algorithm instead of learning | Hide all algorithm state; show only "Review" vs "New" label and streak |
-| No visual distinction between "review" and "new" cards | Users don't understand why some cards keep repeating | Show "Review" badge on due cards, "New" badge on first-time cards during session |
-| Study session immediately jumps to SRS after feature ships | Existing users see all their cards reset to "new" state; disorienting | On first SRS session, initialize `card_reviews` lazily — no visible difference from user perspective, new cards just get scheduled going forward |
-| "Due today" counter shows 0 for genuinely new users | User thinks app is broken or has no content | Show "N new cards available" when due=0 but new cards exist |
-| Session ends immediately when all due cards shown (none new) | User feels punished for being caught up | Show congratulatory "All caught up!" screen instead of abrupt empty session |
-| Backlog anxiety: user returns after a week to find 50+ due cards | User feels overwhelmed, likely to abandon | Cap displayed backlog at "20+" with message "Take it easy, do 20 today" — don't show exact debt |
-| Session history screen shows "all repositories" instead of card count | Confusing; doesn't tell user what was studied | Fix per PROJECT.md requirement: show actual card count from `study_sessions.total_count` |
+**Why it happens:**
+The AuthContext was designed as a thin wrapper around Google OAuth. Adding multiple auth methods requires a richer interface.
+
+**Prevention:**
+- Add new methods incrementally: `signInWithEmail(email, password)`, `signUpWithEmail(email, password, displayName?)`, `resetPassword(email)`, `verifyOtp(email, token, type)`
+- Keep the existing `signInWithGoogle` method unchanged -- no breaking changes for existing consumers
+- Type the new methods as optional initially if needed: `signInWithEmail?: (email: string, password: string) => Promise<void>` -- but this forces null-checks at call sites. Better: add them as required from the start since they will be needed immediately.
+- The `AuthState` type ('loading' | 'logged_out' | 'ready') needs a new state: `'pending_verification'` for users who signed up but have not verified their email. Without this, unverified users either see the login screen (confusing) or the main app (skipping verification).
+
+**Detection:**
+- Run TypeScript check (`pnpm typecheck`) after each AuthContext change
+- Verify all screens that use `useAuth()` still compile
+
+**Phase to address:**
+AuthContext refactoring phase. Must be the first implementation phase.
+
+---
+
+### Pitfall 10: Email Template Customization Required for OTP-Based Flow
+
+**What goes wrong:**
+The default Supabase email templates send a clickable link for verification and password reset. For an OTP-based mobile flow, the email must display a 6-digit code prominently. If the developer uses `verifyOtp()` on the client but does not customize the email template, the user receives an email with a link (not a code) and does not know what to enter in the OTP input field.
+
+**Why it happens:**
+Supabase's default email templates are designed for web apps that use link-based verification. Mobile apps using OTP need customized templates that show `{{ .Token }}` instead of (or in addition to) `{{ .ConfirmationURL }}`.
+
+**Prevention:**
+- Customize the following email templates in Supabase Dashboard (production) and in `supabase/templates/` (local):
+  - **Confirm signup:** Show OTP code `{{ .Token }}` with text "Enter this code in the app: {{ .Token }}"
+  - **Reset password:** Show OTP code `{{ .Token }}` with text "Enter this code to reset your password: {{ .Token }}"
+  - **Email change:** Show OTP code `{{ .Token }}` for both old and new email
+- For local development, create template files in `supabase/templates/` directory (Supabase CLI supports custom templates via config.toml `[auth.email]` section)
+- Keep the clickable link as a fallback for users who open the email on desktop
+
+**Detection:**
+- Send a test verification email (via Inbucket locally) and verify the OTP code is visible
+- Verify the OTP code from the email matches what `verifyOtp()` accepts
+
+**Phase to address:**
+Configuration phase, immediately after enabling email confirmations.
+
+---
+
+## Minor Pitfalls
+
+### Pitfall 11: Login Screen Layout Needs Restructuring for Dual Auth Methods
+
+**What goes wrong:**
+The current `LoginScreen.tsx` centers a single Google Sign-In button. Adding email/password form fields (email input, password input, submit button, "forgot password" link, "sign up" link, separator "or") to this screen creates a crowded layout. The vertical centering that works for a single button breaks with a form.
+
+**Prevention:**
+- Use Google button prominently at top (existing user expectation), then a separator ("or"/"oppure"), then email form below
+- Use `KeyboardAvoidingView` to handle keyboard overlap on the login form
+- Consider a tab or toggle between "Sign In" and "Sign Up" rather than cramming both on one screen
+- The `AuthNavigator` currently has only `Login` screen. Add `SignUp`, `ForgotPassword`, and `VerifyEmail` screens to the auth stack.
+
+**Phase to address:**
+UI implementation phase.
+
+---
+
+### Pitfall 12: Password Strength Validation Not Enforced by Supabase by Default
+
+**What goes wrong:**
+Supabase's `signUp` accepts any password with minimum 6 characters. There is no built-in strength validation. Users can set passwords like "123456" or "password". This is both a security risk and a UX problem (weak passwords lead to account compromise or forgotten passwords).
+
+**Prevention:**
+- Add client-side password validation: minimum 8 characters, at least one uppercase, one lowercase, one number
+- Show real-time strength indicator during signup
+- Supabase does not enforce password complexity server-side -- client validation is the only defense
+- Do NOT over-engineer: avoid requiring symbols or very long passwords. Balance security with usability for a flashcard app.
+
+**Phase to address:**
+Signup form implementation phase.
+
+---
+
+### Pitfall 13: SMTP Rate Limits in Production
+
+**What goes wrong:**
+Supabase's built-in SMTP service is rate-limited to approximately 2-4 emails per hour in production. During testing or if multiple users sign up simultaneously, verification emails are silently dropped. The user never receives the email and cannot verify their account.
+
+**Prevention:**
+- Configure a custom SMTP provider (Resend, Postmark, SendGrid) in Supabase Dashboard before launching email auth
+- For a small user base (single developer's app), the built-in SMTP may suffice initially, but monitor delivery
+- Add a "Resend verification email" button with rate limiting (60-second cooldown) in the UI
+
+**Phase to address:**
+Production configuration phase (can be deferred to deployment, but must be done before public release).
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Config/foundation | config.toml has `enable_confirmations = false` | Set to `true`, test with Inbucket |
+| Config/foundation | SecureStore 2048-byte limit | Measure JWT size before adding email identity |
+| Config/foundation | Production site_url and redirect_urls not set | Configure in Supabase Dashboard |
+| Database migration | handle_new_user trigger assumes OAuth metadata | Update trigger to handle NULL metadata gracefully |
+| AuthContext refactor | signOut crashes for email-only users | Wrap GoogleSignin.signOut in try-catch |
+| AuthContext refactor | onAuthStateChange does not handle PASSWORD_RECOVERY | Check event type, add recovery flow routing |
+| Signup implementation | Duplicate email returns obfuscated response | Check empty identities array to detect duplicates |
+| Signup implementation | No password strength validation | Add client-side validation |
+| Email verification | Deep links do not work on Android without setup | Use OTP-based verification instead of links |
+| Password reset | PASSWORD_RECOVERY event masked by SIGNED_IN event | Use OTP-based reset flow instead of deep links |
+| Account linking | Multiple failure modes for link/unlink | Defer unlinking, start with add-only |
+| Account linking | linkIdentity uses browser OAuth, not native SDK | Test and document the different UX |
+| Email templates | Default templates show links, not OTP codes | Customize templates for mobile OTP flow |
+| Settings UI | Google-only avatar/name not available for email users | Show fallback icon, email-derived name |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
-
-- [ ] **SRS scheduler "working":** Often missing: reset logic when a card's content changes (verify: edit a card in GitHub, sync, check if SRS state resets)
-- [ ] **"Due today" counter accurate:** Often missing: timezone handling (verify: check counter value at 11pm local vs midnight vs 1am)
-- [ ] **New user onboarding:** Often missing: cold-start case where no `card_reviews` rows exist (verify: create new test user, check session loads correctly)
-- [ ] **Session limit with due cards:** Often missing: due cards bypass the cardsPerSession cap (verify: set limit=10 with 15 overdue cards, confirm all 15 show)
-- [ ] **Card deletion handling:** Often missing: SRS rows for deleted/inactive cards are excluded from scheduling (verify: soft-delete a card, confirm it no longer appears in sessions)
-- [ ] **Study history "card count" fix:** Often missing: `repository_name` in old sessions is NULL for cross-repo sessions — the display fix must handle NULL gracefully (verify: check history screen with old sessions that have NULL repository_name)
-- [ ] **SRS state persists after app reinstall:** Often missing if state stored in AsyncStorage (verify: uninstall, reinstall, check SRS state is recovered from DB)
-- [ ] **Ease factor bounds enforced:** Often missing: floor at 1.3 and ceiling at 2.5 in application code, not just DB CHECK constraint (verify: answer a card wrong 20 times, check ease_factor stays at 1.3, not below)
+- [ ] **Signup works:** Test with a brand new email -- check that verification email arrives (local: check Inbucket at port 54324)
+- [ ] **Duplicate email detected:** Test signUp with an existing Google email -- check that the app shows "account exists" message, not a fake success
+- [ ] **Email verification completes:** Test OTP entry -- check that user transitions from unverified to verified state
+- [ ] **Password reset works end-to-end:** Request reset, receive email, enter OTP, set new password, log in with new password
+- [ ] **Google sign-in still works:** After all changes, verify that existing Google OAuth flow is unchanged
+- [ ] **Sign out works for both auth types:** Email-only user can log out without crash; Google user can log out
+- [ ] **Session persists after app restart:** For email user, for Google user, and for dual-identity user
+- [ ] **handle_new_user trigger works for email signup:** Check `public.users` row has non-null display_name
+- [ ] **Settings shows correct account info:** Email-only user sees email and fallback avatar; Google user sees name and Google avatar; dual-identity user sees Google profile
+- [ ] **config.toml matches production:** `enable_confirmations = true`, redirect URLs include `lumio://auth/callback`
 
 ---
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Stale SRS state after card content changes | MEDIUM | Write migration to reset `card_reviews` where `card_updated_at_snapshot < cards.updated_at`; run as one-time script |
-| Wrong due_date type (TIMESTAMPTZ instead of DATE) | MEDIUM | Migration: `ALTER TABLE card_reviews ALTER COLUMN due_date TYPE DATE USING due_date::DATE`; test timezone behavior before deploying |
-| Ease factor below 1.3 in existing data | LOW | `UPDATE card_reviews SET ease_factor = 1.3 WHERE ease_factor < 1.3`; add CHECK constraint going forward |
-| All `card_reviews` rows lost (cascade delete from cards) | HIGH | Restore from Supabase backup; no in-app recovery. Prevention is the only real answer. |
-| Session limit blocking due cards | LOW | Update card selection query; old sessions not affected; client update sufficient |
-| AsyncStorage SRS state (wrong implementation) | HIGH | Migration requires all users to lose their SRS history; no graceful recovery. Must be caught before shipping. |
-
----
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Stale schedule after card content change | Phase: Data model (card_reviews schema) | Check `card_updated_at_snapshot` column in migration; test card edit → SRS reset flow |
-| Card deletion orphaning SRS state | Phase: Data model (FK policy decision) | Verify ON DELETE CASCADE on card_reviews; verify session detail uses UUID (no FK) |
-| UTC vs local date for "due today" | Phase: Data model (due_date type choice) | Test counter at 11pm, midnight, 1am local time |
-| Ease factor minimum floor | Phase: Algorithm implementation | Unit test: 20 wrong answers → ease_factor = 1.3, not lower |
-| Session limit vs due card priority | Phase: Session selection logic | Integration test: 15 due cards + limit=10 → all 15 due cards shown |
-| Cold-start empty state | Phase: Session selection RPC | Test with fresh user account with no card_reviews rows |
-| Study history "card count" display | Phase: Session history UI fix (standalone, minimal) | History screen shows "20 cards" not "all repositories" for old sessions |
-| N+1 SRS fetches | Phase: Session selection RPC | Single query fetches all needed state; verify in Supabase query logs |
-| Missing RLS on card_reviews | Phase: Data model (migration) | Verify RLS enabled before any other work; test cross-user access returns 0 rows |
+| handle_new_user trigger fails for email signup | MEDIUM | Write migration to update trigger; backfill NULL display_names from email |
+| User stuck on verification screen (email never sent) | LOW | Add "Resend" button; check SMTP config; check Supabase email rate limits |
+| signOut crash for email users | LOW | Hotfix: wrap GoogleSignin.signOut in try-catch |
+| SecureStore overflow with dual identity | HIGH | Requires storage adapter migration to MMKV; all users must re-login |
+| Wrong event handling in onAuthStateChange | MEDIUM | Update AuthContext; no data loss but users cannot reset password until fixed |
+| Obfuscated signup response not detected | LOW | Add identities-check logic; no data corruption, just UX confusion |
+| Email templates not customized for OTP | LOW | Update templates in Supabase Dashboard; re-send verification emails |
 
 ---
 
 ## Sources
 
-- Direct inspection: `apps/android/hooks/useStudySession.ts` — existing random card selection logic (PRIMARY)
-- Direct inspection: `supabase/migrations/20260211000001_study_sessions.sql` — study_sessions schema, immutable INSERT-only design (PRIMARY)
-- Direct inspection: `supabase/migrations/20260123000001_card_questions.sql` — card_questions schema, card deletion cascade, deactivation reasons (PRIMARY)
-- Direct inspection: `supabase/migrations/20260115000001_shared_repositories.sql` — RLS patterns, user_repositories join pattern (PRIMARY)
-- Direct inspection: `apps/android/lib/studySettings.ts` — cardsPerSession type and semantics (PRIMARY)
-- [SM-2 algorithm bugs: low interval hell and ease factor floor](https://www.blueraja.com/blog/477/a-better-spaced-repetition-learning-algorithm-sm2) — MEDIUM confidence (WebSearch verified)
-- [FSRS vs SM-2 implementation considerations](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/) — MEDIUM confidence
-- [Effective Spaced Repetition: card design and backlog pitfalls](https://borretti.me/article/effective-spaced-repetition) — MEDIUM confidence
-- [Designing SRS for play not work: UX anti-patterns](https://pine.substack.com/p/designing-spaced-repetition-systems) — MEDIUM confidence
-- [FSRS algorithm data model: D/S/R state per card](https://github.com/open-spaced-repetition/fsrs4anki/wiki/spaced-repetition-algorithm:-a-three%E2%80%90day-journey-from-novice-to-expert) — HIGH confidence
-- [UTC timezone bug patterns in date logic](https://dev.to/kcsujeet/how-to-handle-date-and-time-correctly-to-avoid-timezone-bugs-4o03) — HIGH confidence
-- [Supabase RLS performance and best practices](https://supabase.com/docs/guides/troubleshooting/rls-performance-and-best-practices-Z5Jjwv) — HIGH confidence
-- Anki SM-2 implementation: ease factor floor = 1.3, confirmed in multiple sources — HIGH confidence
+- Direct inspection: `supabase/migrations/20241230000003_auth_trigger.sql` -- handle_new_user trigger extracting OAuth metadata (PRIMARY)
+- Direct inspection: `apps/android/contexts/AuthContext.tsx` -- signOut calls GoogleSignin.signOut unconditionally (PRIMARY)
+- Direct inspection: `apps/android/lib/supabase.ts` -- SecureStoreAdapter for session storage (PRIMARY)
+- Direct inspection: `supabase/config.toml` -- enable_confirmations = false, redirect URLs (PRIMARY)
+- Direct inspection: `apps/android/screens/LoginScreen.tsx` -- single Google button layout (PRIMARY)
+- Direct inspection: `apps/android/screens/SettingsScreen.tsx` -- avatar_url and full_name from user_metadata (PRIMARY)
+- Direct inspection: `apps/android/app.json` -- scheme: "lumio" configured (PRIMARY)
+- [Supabase Identity Linking docs](https://supabase.com/docs/guides/auth/auth-identity-linking) -- automatic linking, manual linking, linkIdentity/unlinkIdentity APIs -- HIGH confidence
+- [Supabase Password-based Auth docs](https://supabase.com/docs/guides/auth/passwords) -- signUp, resetPasswordForEmail, updateUser flows -- HIGH confidence
+- [Supabase Native Mobile Deep Linking docs](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- deep link setup for Expo, createSessionFromUrl pattern -- HIGH confidence
+- [Supabase verifyOtp API Reference](https://supabase.com/docs/reference/javascript/auth-verifyotp) -- OTP types: signup, recovery, email_change -- HIGH confidence
+- [Supabase Discussion #7632](https://github.com/orgs/supabase/discussions/7632) -- signUp duplicate email obfuscated response behavior -- HIGH confidence
+- [Supabase auth-js Issue #513](https://github.com/supabase/auth-js/issues/513) -- signUp not returning error on duplicate email -- HIGH confidence
+- [Supabase Discussion #14306](https://github.com/orgs/supabase/discussions/14306) -- SecureStore 2048-byte limit with OAuth JWT tokens -- HIGH confidence
+- [Supabase Custom SMTP docs](https://supabase.com/docs/guides/auth/auth-smtp) -- SMTP setup, rate limits, link tracking issues -- HIGH confidence
+- [Token-based password reset for mobile](https://dev.to/tanmay_kaushik_/why-i-ditched-deep-linking-for-a-token-based-password-reset-in-supabase-3e69) -- OTP approach for mobile apps, avoiding deep link complexity -- MEDIUM confidence
+- [Supabase Discussion #12324](https://github.com/orgs/supabase/discussions/12324) -- password reset with React Native and Supabase auth flow -- MEDIUM confidence
+- [Supabase onAuthStateChange docs](https://supabase.com/docs/reference/javascript/auth-onauthstatechange) -- PASSWORD_RECOVERY event fires after SIGNED_IN -- HIGH confidence
+- [Supabase auth Issue #1645](https://github.com/supabase/auth/issues/1645) -- linkIdentity does not work natively in React Native (uses browser flow) -- HIGH confidence
 
 ---
-*Pitfalls research for: Lumio v2.0 — Adding spaced repetition to existing flashcard app*
-*Researched: 2026-02-25*
+*Pitfalls research for: Lumio v2.1 -- Adding email/password auth with account linking to existing Google OAuth app*
+*Researched: 2026-02-27*

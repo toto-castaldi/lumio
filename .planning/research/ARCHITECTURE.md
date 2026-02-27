@@ -1,645 +1,519 @@
-# Architecture Patterns: Spaced Repetition Integration
+# Architecture Patterns
 
-**Domain:** Spaced repetition scheduling for existing flashcard study app
-**Researched:** 2026-02-25
-**Confidence:** HIGH (based on codebase analysis + established algorithm research)
+**Domain:** Email/password auth with account linking for existing React Native + Supabase app
+**Researched:** 2026-02-27
 
----
+## Recommended Architecture
 
-## Executive Summary
-
-Lumio's v2.0 spaced repetition feature integrates into the existing architecture through one new database table (`card_review_schedule`), modifications to the card selection logic in `useStudySession`, a new RPC function for due-card counting, and minor dashboard/UI changes. The existing `study_sessions` table (immutable, INSERT-only) stays untouched. The core SM-2 algorithm runs client-side in `@lumio/core` -- no new edge functions needed. The existing `study-planner` edge function stub can be deleted or repurposed later.
-
----
-
-## Current Architecture (Baseline)
-
-### Data Flow: Study Session
+### High-Level Integration Map
 
 ```
-DashboardScreen
-  |-- "Start Study Session" button
-  v
-StudyScreen
-  |-- useStudySession hook (loads data)
-  |     |-- getStudyCardsWithQuestions() --> RPC: get_study_cards_with_questions
-  |     |-- getUserRepositories() --> REST: repositories table
-  |     |-- Deck class filters per .lumioignore
-  |     |-- selectRandomCard() --> random unseen card from pool
-  |     |-- getPreGeneratedQuestion(cardId) --> Edge Function: llm-proxy (get_question action)
-  |     v
-  |-- QuizCard component (displays question, captures answer)
-  |-- handleAnswer() --> sets userAnswer in state
-  |-- handleNext() --> saves answered card, loads next random card
-  |-- On completion:
-  |     |-- saveStudySession() --> REST INSERT into study_sessions
-  |     |-- AsyncStorage.setItem('@lumio/lastStudiedAt')
-  |     v
-  v
-StudySummaryScreen (route params: totalCards, correctCount, etc.)
+EXISTING (unchanged)                    NEW (this milestone)
+========================               ========================
+
+App.tsx
+  AuthProvider -----.
+    ThemeProvider   |
+      I18nProvider  |
+        ...         |
+          AppNavigator
+            |
+     state=='loading' -> Spinner
+     state=='logged_out' -> AuthNavigator ----> NEW: SignUpScreen
+                              |                       ForgotPasswordScreen
+                              |                       EmailVerificationScreen
+                              v
+                          LoginScreen ----> MODIFY: Add email/password form
+     state=='ready' -> RootStack
+                         MainNavigator
+                           SettingsScreen ----> MODIFY: Add account linking section
+                         ResetPassword ----> NEW: Conditional on passwordRecoveryPending
+
+  + NEW: Deep link handler in App.tsx (Linking.useURL + createSessionFromUrl)
 ```
 
-### Key Existing Tables
+### Component Boundaries
 
-| Table | Purpose | Relevant Columns |
-|-------|---------|------------------|
-| `cards` | Flashcard content from Git repos | id, repository_id, file_path, title, content, is_active |
-| `card_questions` | Pre-generated quiz questions per card | id, card_id, question_text, options, correct_answer, is_active |
-| `study_sessions` | Immutable log of completed sessions | id, user_id, correct_count, total_count, duration_seconds |
-| `user_repositories` | Many-to-many: user <-> repo subscription | user_id, repository_id |
-| `platform_config` | Key-value admin settings | key, value |
+| Component | Responsibility | Status | Communicates With |
+|-----------|---------------|--------|-------------------|
+| `AuthContext` | Auth state machine, sign-in/out methods | MODIFY: Add signInWithEmail, signUpWithEmail, resetPassword, linkGoogleIdentity, passwordRecoveryPending | Supabase Auth API |
+| `AuthNavigator` | Stack navigator for unauthenticated screens | MODIFY: Add SignUp, ForgotPassword, EmailVerification screens | LoginScreen, SignUpScreen, ForgotPasswordScreen, EmailVerificationScreen |
+| `LoginScreen` | Login UI | MODIFY: Add email/password form below Google button | AuthContext |
+| `SignUpScreen` | NEW: Registration form | NEW | AuthContext |
+| `ForgotPasswordScreen` | NEW: Password reset request | NEW | AuthContext |
+| `EmailVerificationScreen` | NEW: Post-signup "check your email" | NEW | Navigation only (informational screen) |
+| `ResetPasswordScreen` | NEW: Set new password (after deep link) | NEW | AuthContext, deep link params |
+| `SettingsScreen` | User settings | MODIFY: Add account linking section | AuthContext |
+| `App.tsx` | Root provider tree | MODIFY: Add deep link handler | Linking API, Supabase Auth |
+| `lib/auth.ts` | Google Sign-In config | UNCHANGED | - |
+| `supabase/config.toml` | Local Supabase config | MODIFY: Enable email confirmations, add redirect URLs | - |
+| `handle_new_user()` trigger | Creates public.users from auth.users | Already handles NULL gracefully via COALESCE | DB trigger |
 
-### Key Existing Code Modules
+### Data Flow
 
-| Module | Location | Role |
-|--------|----------|------|
-| `useStudySession` | `apps/android/hooks/useStudySession.ts` | Orchestrates study flow: load cards, random selection, track answers |
-| `study.ts` | `packages/core/src/supabase/study.ts` | API layer: fetch study cards, questions, save sessions |
-| `Deck` | `packages/core/src/deck/Deck.ts` | .lumioignore filtering for card pool |
-| `types/index.ts` | `packages/shared/src/types/index.ts` | Shared TypeScript types |
-| `StudyScreen` | `apps/android/screens/StudyScreen.tsx` | UI: quiz display, navigation |
-| `DashboardScreen` | `apps/android/screens/DashboardScreen.tsx` | UI: stats display, study CTA |
-| `StudyHistoryScreen` | `apps/android/screens/StudyHistoryScreen.tsx` | UI: past session list |
-
----
-
-## Recommended Architecture: Spaced Repetition
-
-### Algorithm Choice: SM-2 (not FSRS)
-
-**Use SM-2 because:**
-1. **Simplicity matches the project scope.** SM-2 requires 3 values per card (ease_factor, interval, repetitions). FSRS requires 5+ values (stability, difficulty, elapsed_days, scheduled_days, state, learning_steps, reps, lapses) plus parameter optimization.
-2. **No ML training needed.** FSRS's advantage (20-30% fewer reviews) comes from training on user history. With a single-user app and low review volume, this advantage is negligible.
-3. **Deterministic and debuggable.** SM-2 is a fixed formula. FSRS is a neural network -- harder to debug when scheduling seems off.
-4. **Proven for 35+ years.** Anki used SM-2 as default for over a decade. It works well enough.
-5. **Zero dependencies.** SM-2 is ~30 lines of code. FSRS via ts-fsrs adds a dependency with its own versioning.
-6. **Existing stub mentions SM-2.** The `study-planner` edge function comment says "SM-2 algorithm."
-
-**SM-2 Core Formula:**
-```
-Per card per user:
-  - ease_factor: starts at 2.5, adjusts per response quality
-  - interval: days until next review (1, 6, then interval * ease_factor)
-  - repetitions: count of consecutive correct answers
-
-On correct answer (quality >= 3):
-  repetitions++
-  if repetitions == 1: interval = 1
-  if repetitions == 2: interval = 6
-  else: interval = round(interval * ease_factor)
-
-On incorrect answer (quality < 3):
-  repetitions = 0
-  interval = 1
-
-Ease factor adjustment:
-  ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-  ease_factor = max(1.3, ease_factor)
-```
-
-**Quality mapping for Lumio (simplified):**
-- Correct answer = quality 4 (Good)
-- Incorrect answer = quality 1 (Bad)
-- Skipped = quality 0 (Complete failure, treated as wrong)
-
-This is a deliberate simplification. Lumio's quiz is multiple-choice with A/B/C/D -- there is no granular "how hard was it" input. Binary correct/incorrect maps cleanly to quality 4 vs quality 1.
-
-### New Database Table: `card_review_schedule`
-
-```sql
-CREATE TABLE public.card_review_schedule (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-
-    -- SM-2 algorithm state
-    ease_factor REAL NOT NULL DEFAULT 2.5,
-    interval_days INTEGER NOT NULL DEFAULT 0,
-    repetitions INTEGER NOT NULL DEFAULT 0,
-
-    -- Scheduling
-    next_review_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_reviewed_at TIMESTAMPTZ,
-
-    -- Metadata
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    -- One schedule per user per card
-    UNIQUE(user_id, card_id)
-);
-
--- Indexes
-CREATE INDEX idx_card_review_schedule_user_due
-    ON card_review_schedule(user_id, next_review_at)
-    WHERE next_review_at <= NOW();
-
-CREATE INDEX idx_card_review_schedule_user_card
-    ON card_review_schedule(user_id, card_id);
-
--- RLS
-ALTER TABLE card_review_schedule ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own review schedule"
-    ON card_review_schedule FOR SELECT
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own review schedule"
-    ON card_review_schedule FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own review schedule"
-    ON card_review_schedule FOR UPDATE
-    USING (auth.uid() = user_id);
-
--- No DELETE policy: schedule entries persist (reset via UPDATE)
-```
-
-**Design decisions:**
-- `ease_factor REAL` not `NUMERIC`: SM-2 values are approximate, REAL (4 bytes) is sufficient, no precision concerns.
-- `interval_days INTEGER`: Whole days, matching SM-2 spec. No sub-day precision needed.
-- `next_review_at TIMESTAMPTZ`: Computed as `last_reviewed_at + interval_days`. Stored pre-computed for efficient querying ("cards due now").
-- `UNIQUE(user_id, card_id)`: One schedule row per user per card. UPSERT pattern for updates.
-- No DELETE policy: Schedule rows are long-lived. When a card is deleted, CASCADE handles cleanup.
-
-### New RPC Function: `get_due_card_count`
-
-```sql
-CREATE OR REPLACE FUNCTION get_due_card_count(p_user_id UUID)
-RETURNS INTEGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    v_count INTEGER;
-BEGIN
-    SELECT COUNT(*)::INTEGER INTO v_count
-    FROM card_review_schedule crs
-    JOIN cards c ON c.id = crs.card_id AND c.is_active = TRUE
-    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
-    WHERE crs.user_id = p_user_id
-      AND crs.next_review_at <= NOW();
-
-    RETURN v_count;
-END;
-$$;
-```
-
-This powers the dashboard "cards due for review" counter.
-
-### New RPC Function: `get_study_cards_for_session`
-
-New RPC that replaces the current `get_study_cards_with_questions` for study session initialization. Returns cards in priority order: due cards first, then new cards.
-
-```sql
-CREATE OR REPLACE FUNCTION get_study_cards_for_session(
-    p_user_id UUID,
-    p_limit INTEGER DEFAULT 20
-)
-RETURNS TABLE (
-    card_id UUID,
-    repository_id UUID,
-    file_path TEXT,
-    title TEXT,
-    content TEXT,
-    raw_content TEXT,
-    tags TEXT[],
-    difficulty INTEGER,
-    question_count BIGINT,
-    is_review BOOLEAN,         -- true = due card, false = new card
-    ease_factor REAL,
-    interval_days INTEGER,
-    repetitions INTEGER
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    v_due_count INTEGER;
-    v_new_limit INTEGER;
-    v_due_limit INTEGER;
-BEGIN
-    -- Count due cards
-    SELECT COUNT(*) INTO v_due_count
-    FROM card_review_schedule crs
-    JOIN cards c ON c.id = crs.card_id AND c.is_active = TRUE
-    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
-    WHERE crs.user_id = p_user_id
-      AND crs.next_review_at <= NOW();
-
-    -- Proportional split: at least 70% due cards, rest new
-    v_due_limit := LEAST(v_due_count, GREATEST(p_limit * 7 / 10, p_limit - 5));
-    v_new_limit := p_limit - v_due_limit;
-
-    RETURN QUERY
-    -- Due cards (review)
-    (SELECT
-        c.id AS card_id,
-        c.repository_id,
-        c.file_path,
-        c.title,
-        c.content,
-        c.raw_content,
-        c.tags,
-        c.difficulty,
-        COUNT(cq.id) AS question_count,
-        TRUE AS is_review,
-        crs.ease_factor,
-        crs.interval_days,
-        crs.repetitions
-    FROM card_review_schedule crs
-    JOIN cards c ON c.id = crs.card_id AND c.is_active = TRUE
-    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
-    LEFT JOIN card_questions cq ON cq.card_id = c.id AND cq.is_active = TRUE
-    WHERE crs.user_id = p_user_id
-      AND crs.next_review_at <= NOW()
-    GROUP BY c.id, c.repository_id, c.file_path, c.title, c.content, c.raw_content, c.tags, c.difficulty,
-             crs.ease_factor, crs.interval_days, crs.repetitions
-    HAVING COUNT(cq.id) > 0
-    ORDER BY crs.next_review_at ASC
-    LIMIT v_due_limit)
-
-    UNION ALL
-
-    -- New cards (never reviewed by this user)
-    (SELECT
-        c.id AS card_id,
-        c.repository_id,
-        c.file_path,
-        c.title,
-        c.content,
-        c.raw_content,
-        c.tags,
-        c.difficulty,
-        COUNT(cq.id) AS question_count,
-        FALSE AS is_review,
-        2.5::REAL AS ease_factor,
-        0 AS interval_days,
-        0 AS repetitions
-    FROM cards c
-    JOIN user_repositories ur ON ur.repository_id = c.repository_id AND ur.user_id = p_user_id
-    LEFT JOIN card_questions cq ON cq.card_id = c.id AND cq.is_active = TRUE
-    LEFT JOIN card_review_schedule crs ON crs.card_id = c.id AND crs.user_id = p_user_id
-    WHERE c.is_active = TRUE
-      AND crs.id IS NULL  -- no review schedule = never seen
-    GROUP BY c.id, c.repository_id, c.file_path, c.title, c.content, c.raw_content, c.tags, c.difficulty
-    HAVING COUNT(cq.id) > 0
-    ORDER BY RANDOM()
-    LIMIT v_new_limit);
-END;
-$$;
-```
-
-### Component Boundaries: What Changes, What Stays
+#### 1. Email Sign-Up Flow
 
 ```
-EXISTING (no changes)              NEW / MODIFIED
-================================   ================================
-cards table                        card_review_schedule table (NEW)
-card_questions table               get_study_cards_for_session RPC (NEW)
-study_sessions table               get_due_card_count RPC (NEW)
-question_votes table
-platform_config table
-
-Deck class (filtering)             sm2.ts in @lumio/core (NEW)
-CardView class                     study.ts: new API functions (MODIFIED)
-                                   types/index.ts: new types (MODIFIED)
-
-StudyScreen.tsx (UI stays same)    useStudySession.ts (MODIFIED: selection logic)
-StudySummaryScreen.tsx             DashboardScreen.tsx (MODIFIED: due count)
-CardListScreen.tsx                 StudyHistoryScreen.tsx (MODIFIED: card count fix)
-CardDetailScreen.tsx
-
-AppNavigator.tsx                   i18n/en.ts, i18n/it.ts (MODIFIED: new strings)
-MainNavigator.tsx
-AuthNavigator.tsx
-
-llm-proxy edge function
-git-sync edge function
-docora-webhook edge function
-question-generator edge function
+User enters email+password on SignUpScreen
+  -> supabase.auth.signUp({ email, password, options: { emailRedirectTo } })
+  -> Supabase sends verification email
+  -> Navigate to EmailVerificationScreen ("Check your email")
+  -> User opens email, taps link
+  -> Deep link: lumio://auth/callback?access_token=...&refresh_token=...
+  -> App.tsx Linking.useURL() captures URL
+  -> createSessionFromUrl() calls supabase.auth.setSession()
+  -> onAuthStateChange fires SIGNED_IN
+  -> AuthContext state -> 'ready'
+  -> AppNavigator renders RootStack (user is in the app)
 ```
 
----
-
-## Detailed Data Flow: After Spaced Repetition
-
-### Study Session Flow (Modified)
+#### 2. Email Sign-In Flow
 
 ```
-DashboardScreen
-  |-- Shows "X cards due for review" (NEW)
-  |-- "Start Study Session" button
-  v
-StudyScreen
-  |-- useStudySession hook (MODIFIED)
-  |     |-- get_study_cards_for_session RPC (NEW) -- returns due + new cards
-  |     |     (replaces getStudyCardsWithQuestions + random selection)
-  |     |-- getUserRepositories() --> REST (unchanged)
-  |     |-- Deck class filters per .lumioignore (unchanged)
-  |     |-- Cards arrive pre-ordered: due first, then new (no random for due)
-  |     |-- Each card tagged: is_review=true/false
-  |     |-- getPreGeneratedQuestion(cardId) --> same as before
-  |     v
-  |-- QuizCard component (unchanged)
-  |-- handleAnswer() --> sets userAnswer (unchanged)
-  |-- handleNext() --> saves answered card + calls updateReviewSchedule (MODIFIED)
-  |     |-- updateReviewSchedule():
-  |     |     1. Compute SM-2 output (client-side in @lumio/core)
-  |     |     2. UPSERT into card_review_schedule via REST
-  |     v
-  |-- On completion:
-  |     |-- saveStudySession() --> same as before
-  |     |-- AsyncStorage.setItem('@lumio/lastStudiedAt') --> same
-  |     v
-  v
-StudySummaryScreen (unchanged, but shows card count instead of "all repos")
+User enters email+password on LoginScreen
+  -> supabase.auth.signInWithPassword({ email, password })
+  -> Returns session immediately (no redirect needed)
+  -> onAuthStateChange fires SIGNED_IN
+  -> AuthContext state -> 'ready'
 ```
 
-### SM-2 Computation: Client-Side in @lumio/core
+#### 3. Password Reset Flow
 
 ```
-packages/core/src/srs/sm2.ts (NEW FILE)
-
-export interface SM2Input {
-  quality: number;       // 0-5
-  easeFactor: number;    // previous, default 2.5
-  interval: number;      // previous, in days
-  repetitions: number;   // previous, default 0
-}
-
-export interface SM2Output {
-  easeFactor: number;
-  interval: number;      // in days
-  repetitions: number;
-  nextReviewAt: Date;    // computed from now + interval
-}
-
-export function computeSM2(input: SM2Input): SM2Output { ... }
+User taps "Forgot password?" on LoginScreen
+  -> Navigate to ForgotPasswordScreen
+  -> User enters email
+  -> supabase.auth.resetPasswordForEmail(email, { redirectTo })
+  -> Supabase sends reset email
+  -> Show "Check your email" confirmation on ForgotPasswordScreen
+  -> User opens email, taps link
+  -> Deep link: lumio://auth/callback?access_token=...&refresh_token=...&type=recovery
+  -> App.tsx Linking.useURL() captures URL
+  -> createSessionFromUrl() creates session
+  -> onAuthStateChange fires PASSWORD_RECOVERY event
+  -> AuthContext sets passwordRecoveryPending = true
+  -> AppNavigator is in state='ready' but passwordRecoveryPending gate
+     forces navigation to ResetPasswordScreen
+  -> User enters new password
+  -> supabase.auth.updateUser({ password: newPassword })
+  -> clearPasswordRecovery()
+  -> Navigate to main app
 ```
 
-**Why client-side, not edge function:**
-- SM-2 is ~30 lines of pure math with no external dependencies.
-- Running server-side would add latency per card answer (network round-trip).
-- The `study-planner` edge function is not needed for SM-2 -- the computation is trivial.
-- Result is written to DB via REST UPSERT (same pattern as saveStudySession).
+#### 4. Account Linking Flow (Settings)
 
-### Schedule Update: UPSERT Pattern
-
-```typescript
-// In packages/core/src/supabase/study.ts (new export)
-
-export async function updateReviewSchedule(
-  cardId: string,
-  sm2Output: SM2Output
-): Promise<void> {
-  // UPSERT via Supabase REST with Prefer: resolution=merge-duplicates
-  // Sets ease_factor, interval_days, repetitions, next_review_at, last_reviewed_at
-}
 ```
+User is logged in with email/password, taps "Link Google Account" in Settings
+  -> GoogleSignin.signIn() (native dialog)
+  -> Gets Google ID token
+  -> supabase.auth.linkIdentity({ provider: 'google', token: idToken })
+  -> Identity linked to existing Supabase user
+  -> UI updates to show linked Google account
 
-This is fire-and-forget (same pattern as saveStudySession). Does not block navigation to next card.
-
-### Dashboard: Due Count
-
-```typescript
-// In packages/core/src/supabase/study.ts (new export)
-
-export async function getDueCardCount(): Promise<number> {
-  // Calls RPC get_due_card_count
-}
+User is logged in with Google, taps "Add Password" in Settings
+  -> Shows inline password form
+  -> supabase.auth.updateUser({ password: newPassword })
+  -> Email identity is added to user
+  -> UI updates to show email+password is configured
 ```
-
-Dashboard calls this alongside existing `getUserStats()` on mount and refresh.
-
----
-
-## Component Architecture: New and Modified Files
-
-### Layer 1: Database (Supabase Migration)
-
-| Change | File | Type |
-|--------|------|------|
-| New table `card_review_schedule` | `supabase/migrations/YYYYMMDD_card_review_schedule.sql` | NEW |
-| New RPC `get_due_card_count` | Same migration file | NEW |
-| New RPC `get_study_cards_for_session` | Same migration file | NEW |
-| Platform config: `new_cards_per_session` | Same migration file | NEW |
-
-### Layer 2: Shared Types (packages/shared)
-
-| Change | File | Type |
-|--------|------|------|
-| `CardReviewSchedule` interface | `packages/shared/src/types/index.ts` | MODIFIED (add type) |
-| `StudyCard` extended with `isReview`, schedule fields | `packages/shared/src/types/index.ts` | MODIFIED (extend) |
-| `SM2Input`, `SM2Output` interfaces | `packages/shared/src/types/index.ts` | MODIFIED (add types) |
-
-### Layer 3: Core Library (packages/core)
-
-| Change | File | Type |
-|--------|------|------|
-| SM-2 algorithm implementation | `packages/core/src/srs/sm2.ts` | NEW |
-| `updateReviewSchedule()` | `packages/core/src/supabase/study.ts` | MODIFIED (add export) |
-| `getDueCardCount()` | `packages/core/src/supabase/study.ts` | MODIFIED (add export) |
-| `getStudyCardsForSession()` | `packages/core/src/supabase/study.ts` | MODIFIED (add export) |
-| Re-export SM-2 + new functions | `packages/core/src/index.ts` | MODIFIED (add exports) |
-
-### Layer 4: Android App
-
-| Change | File | Type |
-|--------|------|------|
-| Use new card selection (due + new mix) | `apps/android/hooks/useStudySession.ts` | MODIFIED |
-| Call `updateReviewSchedule` after each answer | `apps/android/hooks/useStudySession.ts` | MODIFIED |
-| Show due card count on dashboard | `apps/android/screens/DashboardScreen.tsx` | MODIFIED |
-| Show "Review" / "New" badge during study | `apps/android/screens/StudyScreen.tsx` | MODIFIED (minor) |
-| Show card count instead of "all repos" in history | `apps/android/screens/StudyHistoryScreen.tsx` | MODIFIED (minor) |
-| New i18n strings | `apps/android/i18n/en.ts`, `it.ts` | MODIFIED |
-
----
 
 ## Patterns to Follow
 
-### Pattern 1: Fire-and-Forget Database Write
+### Pattern 1: Deep Link Session Handler
 
-**What:** Write review schedule updates without blocking the UI.
-**Why:** Same pattern already used for `saveStudySession()`. User should never wait for DB write to proceed to next card.
+**What:** Centralized deep link handler in App.tsx that intercepts auth-related URLs and creates sessions.
+**When:** Always -- this is the bridge between email links and the app.
+**Why:** The Supabase client is configured with `detectSessionInUrl: false` (already set in `packages/core/src/supabase/client.ts`), so we must manually parse deep link URLs.
 
 ```typescript
-// In useStudySession.ts handleNext():
-const sm2Result = computeSM2({
-  quality: isCorrect ? 4 : 1,
-  easeFactor: currentCard.easeFactor ?? 2.5,
-  interval: currentCard.intervalDays ?? 0,
-  repetitions: currentCard.repetitions ?? 0,
-});
+// In lib/deepLink.ts
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
+import { getSupabaseClient } from '@lumio/core';
 
-// Fire and forget
-updateReviewSchedule(currentCard.id, sm2Result)
-  .catch(err => console.error('Failed to update review schedule:', err));
+export const createSessionFromUrl = async (url: string) => {
+  const { params, errorCode } = QueryParams.getQueryParams(url);
+  if (errorCode) throw new Error(errorCode);
+
+  const { access_token, refresh_token } = params;
+  if (!access_token) return null;
+
+  const { data, error } = await getSupabaseClient().auth.setSession({
+    access_token,
+    refresh_token,
+  });
+  if (error) throw error;
+  return data.session;
+};
+
+// In App.tsx, inside the component:
+import * as Linking from 'expo-linking';
+import { createSessionFromUrl } from './lib/deepLink';
+
+const url = Linking.useURL();
+useEffect(() => {
+  if (url) {
+    createSessionFromUrl(url).catch(err =>
+      console.error('[DeepLink] Failed to create session:', err)
+    );
+  }
+}, [url]);
 ```
 
-### Pattern 2: UPSERT for Schedule Rows
+**Confidence:** HIGH -- This is the official Supabase pattern for Expo deep linking, documented at supabase.com/docs/guides/auth/native-mobile-deep-linking.
 
-**What:** Use PostgreSQL's ON CONFLICT for card_review_schedule writes.
-**Why:** First review of a card creates the row. Subsequent reviews update it. Single code path for both.
+### Pattern 2: Auth Event Type Handling for PASSWORD_RECOVERY
+
+**What:** Extend the existing `onAuthStateChange` listener to detect `PASSWORD_RECOVERY` events.
+**When:** When a user clicks a password reset link and the app receives the deep link.
+**Why:** The reset link creates a valid session, but we must redirect to a password update screen instead of the main app.
 
 ```typescript
-// Via Supabase REST with Prefer: resolution=merge-duplicates
-const response = await fetch(`${supabaseUrl}/rest/v1/card_review_schedule`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-    apikey: getSupabaseAnonKey(),
-    Prefer: 'resolution=merge-duplicates',
-  },
-  body: JSON.stringify({
-    user_id: userId,
-    card_id: cardId,
-    ease_factor: sm2Output.easeFactor,
-    interval_days: sm2Output.interval,
-    repetitions: sm2Output.repetitions,
-    next_review_at: sm2Output.nextReviewAt.toISOString(),
-    last_reviewed_at: new Date().toISOString(),
-  }),
+// In AuthContext.tsx, extend the existing onAuthStateChange
+const [passwordRecoveryPending, setPasswordRecoveryPending] = useState(false);
+
+getSupabaseClient().auth.onAuthStateChange((event, newSession) => {
+  setSession(newSession);
+  setUser(newSession?.user ?? null);
+  setState(newSession ? 'ready' : 'logged_out');
+
+  // NEW: Handle password recovery flow
+  if (event === 'PASSWORD_RECOVERY') {
+    setPasswordRecoveryPending(true);
+  }
 });
 ```
 
-### Pattern 3: Server-Side Card Ordering, Client-Side Algorithm
+**Confidence:** HIGH -- PASSWORD_RECOVERY is a documented Supabase onAuthStateChange event type.
 
-**What:** Database RPC returns cards in priority order (due first, then new). SM-2 math runs in the app.
-**Why:** Querying "which cards are due" requires efficient database indexing. Computing "what happens after this answer" is pure math that belongs client-side for zero latency.
+### Pattern 3: Conditional Auth Navigator Routing
 
-### Pattern 4: Progressive Enhancement of StudyCard Type
-
-**What:** Extend the existing `StudyCard` interface with optional SRS fields rather than creating a new type.
-**Why:** Keeps the `useStudySession` hook working with both the old and new data shape during transition. Existing fields remain, new fields are optional.
+**What:** Expand AuthNavigator from single-screen (Login only) to multi-screen stack.
+**When:** Auth flow now has 4 screens instead of just Login.
 
 ```typescript
-// In packages/shared/src/types/index.ts
-export interface StudyCard extends Card {
-  questionCount: number;
-  // NEW: spaced repetition metadata (optional for backward compat)
-  isReview?: boolean;
-  easeFactor?: number;
-  intervalDays?: number;
-  repetitions?: number;
+export type AuthStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+  ForgotPassword: undefined;
+  EmailVerification: { email: string };
+};
+
+const Stack = createNativeStackNavigator<AuthStackParamList>();
+
+export function AuthNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
+    </Stack.Navigator>
+  );
 }
 ```
 
----
+**Confidence:** HIGH -- Standard react-navigation pattern already used in the codebase.
+
+### Pattern 4: Password Recovery Screen in Root Stack (Not Auth Stack)
+
+**What:** Add ResetPasswordScreen to the root stack (authenticated navigator), not AuthNavigator.
+**When:** After deep link creates a session with PASSWORD_RECOVERY event.
+**Why:** When a user clicks a password reset link, Supabase creates a valid session (the user is technically logged in with state='ready'). AuthNavigator only renders when state='logged_out'. Placing ResetPassword in AuthNavigator means the user would never see it -- they would jump straight to the main app.
+
+```typescript
+// In AppNavigator.tsx, inside the authenticated stack:
+const { passwordRecoveryPending } = useAuth();
+
+// Inside the Stack.Navigator:
+<Stack.Screen name="Main" component={MainNavigator} />
+{/* ... existing screens ... */}
+{passwordRecoveryPending && (
+  <Stack.Screen
+    name="ResetPassword"
+    component={ResetPasswordScreen}
+    options={{ presentation: 'card', gestureEnabled: false }}
+  />
+)}
+```
+
+**Confidence:** HIGH -- Password recovery creates a valid session, so the user is in the 'ready' state.
+
+### Pattern 5: Account Linking via User Identity Inspection
+
+**What:** In SettingsScreen, inspect `user.identities` to determine which providers are linked and offer appropriate actions.
+**When:** Always on SettingsScreen render.
+
+```typescript
+const { user } = useAuth();
+
+const identities = user?.identities ?? [];
+const hasGoogleIdentity = identities.some(i => i.provider === 'google');
+const hasEmailIdentity = identities.some(i => i.provider === 'email');
+
+// Show appropriate linking options:
+// If has Google but no email -> Show "Add Password" form
+// If has email but no Google -> Show "Link Google Account" button
+// If has both -> Show both as linked (checkmarks, no action needed)
+```
+
+**Confidence:** HIGH -- `user.identities` is a standard Supabase Auth property available on the User object. The `linkIdentity` with ID token support was shipped in supabase-js (late 2025) and is available with the project's `^2.45.0` semver range.
+
+### Pattern 6: Redirect URL with makeRedirectUri
+
+**What:** Use `expo-auth-session`'s `makeRedirectUri()` to generate the correct deep link URI.
+**When:** For all email-based auth operations that need a redirect (signUp, resetPasswordForEmail).
+
+```typescript
+import { makeRedirectUri } from 'expo-auth-session';
+
+const redirectTo = makeRedirectUri();
+// Returns something like: lumio:// (based on app.json scheme: "lumio")
+```
+
+**Confidence:** HIGH -- expo-auth-session is the standard Expo utility for this. The app already has `scheme: "lumio"` in app.json.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Edge Function for SM-2 Calculation
+### Anti-Pattern 1: Separate AuthContext for Email Auth
 
-**What:** Moving SM-2 computation to the study-planner edge function.
-**Why bad:** Adds 50-200ms latency per card answer for a 30-line calculation. Creates unnecessary coupling and deployment dependency.
-**Instead:** Pure function in `@lumio/core`, called synchronously in the hook.
+**What:** Creating a new EmailAuthContext alongside the existing AuthContext.
+**Why bad:** Two auth contexts would both listen to the same `onAuthStateChange` and fight over state. The Supabase client is singular.
+**Instead:** Extend the existing AuthContext with new methods (signUpWithEmail, signInWithEmail, etc.).
 
-### Anti-Pattern 2: Storing Schedule in study_sessions
+### Anti-Pattern 2: In-App OTP Code Instead of Deep Links
 
-**What:** Trying to derive review schedule from the immutable study_sessions table.
-**Why bad:** study_sessions is aggregate (per-session), not per-card. It lacks card_id. Reconstructing per-card state from session history is fragile and slow.
-**Instead:** Dedicated `card_review_schedule` table with per-card per-user state.
+**What:** Asking users to copy a verification code from their email instead of using deep link redirect.
+**Why bad:** Supabase's email verification default flow uses URL-based confirmation, not OTP codes. Fighting this requires custom email templates and server-side workarounds.
+**Instead:** Use the standard Supabase email-link-based verification with deep link handling.
 
-### Anti-Pattern 3: Random Selection for Due Cards
+### Anti-Pattern 3: ResetPasswordScreen in AuthNavigator
 
-**What:** Continuing to use `selectRandomCard()` for cards that are due for review.
-**Why bad:** Due cards should be reviewed in order of urgency (most overdue first). Randomizing defeats the purpose of spaced repetition.
-**Instead:** Due cards ordered by `next_review_at ASC` from the RPC. New cards can remain random.
+**What:** Placing ResetPasswordScreen inside the AuthNavigator (the logged-out stack).
+**Why bad:** When a user clicks a password reset link, Supabase creates a valid session (the user is technically logged in). AuthNavigator only renders when `state === 'logged_out'`. The user would skip directly to the main app, never seeing the password reset form.
+**Instead:** Place ResetPasswordScreen in the root stack (authenticated navigator) gated by a `passwordRecoveryPending` flag.
 
-### Anti-Pattern 4: Blocking UI on Schedule Update
+### Anti-Pattern 4: Using updateUser for Google Linking
 
-**What:** Awaiting the UPSERT before allowing navigation to the next card.
-**Why bad:** Adds perceived latency. If the write fails, the user still studied the card -- the worst case is a slightly suboptimal next review date.
-**Instead:** Fire-and-forget with error logging, same as existing saveStudySession pattern.
+**What:** Trying to link a Google identity by calling `updateUser()` with Google metadata.
+**Why bad:** `updateUser()` updates email/password/metadata, not identity providers. Identity linking requires `linkIdentity()` which creates a new identity record.
+**Instead:** Use `linkIdentity({ provider: 'google', token: idToken })` for Google linking.
 
-### Anti-Pattern 5: Modifying study_sessions Table
+### Anti-Pattern 5: Disabling Email Confirmation
 
-**What:** Adding SRS columns to the immutable study_sessions table.
-**Why bad:** study_sessions has no UPDATE/DELETE RLS policies by design. It is an append-only audit log. SRS state is mutable (changes every review).
-**Instead:** Separate table with UPDATE policy.
+**What:** Setting `enable_confirmations: false` to avoid deep link complexity.
+**Why bad:** Allows anyone to create accounts with unverified emails. Users could sign up with emails they don't own. This also breaks automatic identity linking security (which requires verified emails to safely merge accounts).
+**Instead:** Enable email confirmations and implement proper deep link handling. The complexity is one-time setup.
 
----
+## Detailed Component Specifications
 
-## Suggested Build Order
+### New Files
 
-Build order follows dependency chain: schema first, then core library, then app integration, then UI.
+| File | Type | Purpose |
+|------|------|---------|
+| `screens/SignUpScreen.tsx` | Screen | Email+password registration form with validation |
+| `screens/ForgotPasswordScreen.tsx` | Screen | Enter email, request password reset |
+| `screens/EmailVerificationScreen.tsx` | Screen | "Check your email" informational screen post-signup |
+| `screens/ResetPasswordScreen.tsx` | Screen | New password entry form (after deep link from reset email) |
+| `lib/deepLink.ts` | Utility | createSessionFromUrl: parse deep link, create Supabase session |
 
-### Phase 1: Database + SM-2 Algorithm
-**Dependencies:** None
-**Delivers:** Foundation that everything else builds on
+### Modified Files
 
-1. Write migration: `card_review_schedule` table + RLS + indexes
-2. Write migration: `get_due_card_count` RPC
-3. Write migration: `get_study_cards_for_session` RPC
-4. Implement `packages/core/src/srs/sm2.ts` (pure function, easily unit-testable)
-5. Add new types to `packages/shared/src/types/index.ts`
-6. Add `updateReviewSchedule()`, `getDueCardCount()`, `getStudyCardsForSession()` to `packages/core/src/supabase/study.ts`
-7. Re-export from `packages/core/src/index.ts`
-8. Run `pnpm build:packages`
+| File | Change | Impact |
+|------|--------|--------|
+| `contexts/AuthContext.tsx` | Add signUpWithEmail, signInWithEmail, resetPassword, updatePassword, linkGoogleIdentity, passwordRecoveryPending state, clearPasswordRecovery, PASSWORD_RECOVERY event handler | Core -- all new auth flows depend on this |
+| `navigation/AuthNavigator.tsx` | Add SignUp, ForgotPassword, EmailVerification to AuthStackParamList and Stack.Navigator | Navigation -- new screens in logged-out flow |
+| `navigation/AppNavigator.tsx` | Add ResetPassword to RootStackParamList, conditionally render when passwordRecoveryPending is true | Navigation -- password recovery after deep link |
+| `screens/LoginScreen.tsx` | Add email/password form below Google button with "or" separator, "Forgot password?" link, "Sign up" link | UI -- largest visual change |
+| `screens/SettingsScreen.tsx` | Add account linking section: display linked identities, offer "Add Password" or "Link Google" based on current identities | UI -- new section in settings |
+| `App.tsx` | Add Linking.useURL() hook + createSessionFromUrl for deep link handling | Core -- bridges email links to app sessions |
+| `i18n/en.ts` | Add ~25 new translation keys for signup, verification, password reset, account linking | i18n |
+| `i18n/it.ts` | Add corresponding Italian translations | i18n |
+| `supabase/config.toml` | Set `enable_confirmations = true`, add `lumio://**` to redirect URLs | Backend config for local dev |
+| `packages/core/src/supabase/auth.ts` | Add signUpWithEmail, signInWithEmail, resetPasswordForEmail exports | Shared auth functions |
+| `packages/core/src/index.ts` | Re-export new auth functions | Package public API |
 
-### Phase 2: Study Session Integration
-**Dependencies:** Phase 1 (schema + core library)
-**Delivers:** Core spaced repetition behavior
+### Unchanged Files (Explicitly No Touch Needed)
 
-1. Modify `useStudySession.ts`:
-   - Replace `getStudyCardsWithQuestions()` with `getStudyCardsForSession()`
-   - Remove `selectRandomCard()` for due cards (use ordered list)
-   - Keep random for new cards within the session
-   - Add `updateReviewSchedule()` call in `handleNext()` after answer
-   - Track `isReview` flag per card for UI indicator
-2. Modify `StudyScreen.tsx`:
-   - Show "Review" / "New" badge on current card (small UI addition)
+| File | Why Unchanged |
+|------|---------------|
+| `lib/supabase.ts` | Client config already correct: `detectSessionInUrl: false`, `flowType: 'pkce'`, SecureStore adapter |
+| `lib/auth.ts` | Google Sign-In config unchanged -- still needed for Google login and account linking |
+| `App.tsx` provider tree order | AuthProvider remains outermost -- new email auth methods go in same context |
+| `handle_new_user()` trigger | `COALESCE` on `display_name`/`avatar_url` already handles NULL for email signups (no Google metadata) |
+| All edge functions | They use session tokens (auth.uid()), not provider-specific logic |
+| All RLS policies | Policies are based on `auth.uid()`, not auth provider type |
+| `lib/theme.ts`, `lib/i18n.ts`, `lib/studySettings.ts` | Unrelated to auth |
+| Study-related files | `useStudySession.ts`, `StudyScreen.tsx`, etc. -- no auth changes needed |
 
-### Phase 3: Dashboard + History Fixes
-**Dependencies:** Phase 1 (RPC for due count)
-**Delivers:** Visible spaced repetition value on home screen
+## AuthContext Extended Interface
 
-1. Modify `DashboardScreen.tsx`:
-   - Add `getDueCardCount()` call alongside `getUserStats()`
-   - Show "X cards due for review" stat card
-2. Modify `StudyHistoryScreen.tsx`:
-   - Show `totalCount` (card count) instead of repository_name when null
-   - This is the "Fix storico sessioni" from the milestone description
-3. Add i18n strings to `en.ts` and `it.ts`:
-   - `dashboard.dueForReview`: "Due for Review"
-   - `dashboard.cardsToReview`: "%{count} cards"
-   - `study.reviewBadge`: "Review"
-   - `study.newBadge`: "New"
+```typescript
+export interface AuthContextType {
+  // EXISTING (unchanged)
+  user: User | null;
+  session: Session | null;
+  state: AuthState;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
 
-### Phase 4: Validation + Polish
-**Dependencies:** Phases 1-3
-**Delivers:** Confidence that it works correctly
+  // NEW: Email auth
+  signUpWithEmail: (email: string, password: string) => Promise<{ needsVerification: boolean }>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 
-1. Manual testing: verify SM-2 intervals are computed correctly
-2. Verify schedule UPSERT works for first review and subsequent reviews
-3. Verify due count updates after completing a study session
-4. Verify mix of due + new cards in session
-5. Verify `.lumioignore` filtering still works with new card selection
+  // NEW: Account linking
+  linkGoogleIdentity: () => Promise<void>;
 
----
+  // NEW: Password recovery state
+  passwordRecoveryPending: boolean;
+  clearPasswordRecovery: () => void;
+}
+```
+
+## Navigation Structure (Updated)
+
+```
+App.tsx
+  NavigationContainer
+    AppNavigator
+      state='loading' -> ActivityIndicator spinner
+      state='logged_out' -> AuthNavigator (NativeStack)
+        Login              (EXISTING, modified with email form)
+        SignUp             (NEW)
+        ForgotPassword     (NEW)
+        EmailVerification  (NEW)
+      state='ready' -> RootStack (NativeStack)
+        Main               (EXISTING - bottom tab navigator)
+        Study              (EXISTING)
+        StudySummary       (EXISTING)
+        CardList           (EXISTING)
+        CardDetail         (EXISTING)
+        StudyHistory       (EXISTING)
+        ResetPassword      (NEW, conditional: rendered only when passwordRecoveryPending)
+```
+
+## Deep Link Configuration
+
+### app.json (Already Correct -- No Changes)
+
+```json
+{
+  "expo": {
+    "scheme": "lumio"
+  }
+}
+```
+
+### supabase/config.toml Updates (Local Dev)
+
+```toml
+[auth]
+site_url = "lumio://auth/callback"
+additional_redirect_urls = [
+  "http://localhost:5173/auth/callback",
+  "http://localhost:5174/auth/callback",
+  "https://m-lumio.toto-castaldi.com/auth/callback",
+  "lumio://auth/callback",
+  "lumio://**"
+]
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true   # CHANGE from false -- required for email verification
+```
+
+### Production Supabase Dashboard
+
+- Add `lumio://auth/callback` and `lumio://**` to Redirect URL allow list
+- Ensure email confirmations are enabled
+- Default email templates are sufficient for MVP (they include {{ .RedirectTo }})
+
+### Required New Package
+
+```bash
+pnpm --filter @lumio/android add expo-auth-session
+```
+
+`expo-linking` is already installed (`~8.0.11`). `expo-auth-session` is needed for `makeRedirectUri()` and `QueryParams.getQueryParams()` -- these are the standard Expo utilities for deep link URL parsing.
+
+No native rebuild is required for `expo-auth-session` (pure JS package).
+
+## Supabase Email Templates
+
+For local development, emails are captured by Inbucket (http://127.0.0.1:54324). For production, Supabase Cloud provides default email delivery (rate limited to 2/hour in free tier -- sufficient for single dev but needs Custom SMTP for real usage).
+
+The email templates use `{{ .RedirectTo }}` which Supabase populates from the `emailRedirectTo` parameter passed in `signUp()` and `resetPasswordForEmail()`.
+
+No custom email templates are needed for this milestone.
+
+## Build Order (Dependency-Driven)
+
+```
+Phase 1: Deep Link Foundation
+  1. supabase/config.toml: enable email confirmations, add redirect URLs
+  2. Install expo-auth-session
+  3. lib/deepLink.ts: createSessionFromUrl utility
+  4. App.tsx: add Linking.useURL() handler
+  -> Validates: deep links arrive in the app, session can be created from URL
+
+Phase 2: Email Auth Core
+  5. packages/core/src/supabase/auth.ts: add signUpWithEmail, signInWithEmail, resetPasswordForEmail
+  6. packages/core/src/index.ts: re-export new functions
+  7. contexts/AuthContext.tsx: add new methods + PASSWORD_RECOVERY event handling
+  8. i18n/en.ts + it.ts: add all new translation keys
+  -> Validates: email signup/signin round-trips through AuthContext
+
+Phase 3: Auth Screens
+  9. screens/SignUpScreen.tsx
+  10. screens/EmailVerificationScreen.tsx
+  11. screens/ForgotPasswordScreen.tsx
+  12. navigation/AuthNavigator.tsx: register new screens
+  13. screens/LoginScreen.tsx: add email/password form + "or" separator + navigation links
+  -> Validates: full signup -> verification email -> deep link -> logged in
+
+Phase 4: Password Reset
+  14. screens/ResetPasswordScreen.tsx
+  15. navigation/AppNavigator.tsx: add conditional ResetPassword screen gated by passwordRecoveryPending
+  -> Validates: reset email -> deep link -> new password form -> password updated
+
+Phase 5: Account Linking
+  16. contexts/AuthContext.tsx: add linkGoogleIdentity method
+  17. screens/SettingsScreen.tsx: add linked identities display + linking actions
+  -> Validates: Google user can add password, email user can link Google
+
+Phase 6: Production Config
+  18. Supabase Dashboard: add redirect URLs, verify email confirmations enabled
+  19. End-to-end test with production Supabase (not just local Inbucket)
+```
+
+**Phase ordering rationale:**
+- Phase 1 first because deep links are the foundation for email verification and password reset. Without them, signUp confirmation is broken.
+- Phase 2 before Phase 3 because screens need the auth methods to exist.
+- Phase 3 before Phase 4 because ForgotPasswordScreen (in auth stack) must exist before ResetPasswordScreen (in root stack) can be useful.
+- Phase 5 last because it requires both email and Google auth to already work independently.
+- Phase 6 last because local development testing should pass before touching production.
 
 ## Scalability Considerations
 
-| Concern | Current Scale | At 1K cards | At 10K cards |
-|---------|--------------|-------------|--------------|
-| Due count query | Trivial | Index on (user_id, next_review_at) handles it | Same index, sub-ms |
-| Card selection query | ~50 cards total | RPC with LIMIT handles it | May need pagination |
-| Schedule table size | 0 rows | 1 row per card studied | 10K rows max per user |
-| SM-2 computation | N/A | Instant (pure math) | Instant |
-
-The architecture handles 10K+ cards per user without modification. The indexed `next_review_at` query is the critical path and is O(log n).
-
----
+| Concern | Current (single dev) | At 100 users | At 1000+ users |
+|---------|---------------------|--------------|----------------|
+| Email delivery | Inbucket (local), Supabase default (prod) | Supabase default OK for low volume | Custom SMTP needed (2/hour rate limit) |
+| Account merging conflicts | Rare | Occasional same-email Google + email signups | Need clear error messages for linking failures |
+| Session management | SecureStore, single device | Fine | Fine (server-managed sessions) |
+| Password reset abuse | N/A | Rate limiting built into Supabase Auth | Monitor for email enumeration attempts |
 
 ## Sources
 
-- [SM-2 Algorithm Original Specification](https://super-memory.com/english/ol/sm2.htm) - HIGH confidence
-- [SM-2 ES6 Implementation (cnnrhill/sm-2)](https://github.com/cnnrhill/sm-2) - HIGH confidence
-- [SuperMemo TypeScript Package (VienDinhCom/supermemo)](https://github.com/VienDinhCom/supermemo) - HIGH confidence
-- [FSRS vs SM-2 Comparison](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/) - MEDIUM confidence
-- [ts-fsrs npm package](https://www.npmjs.com/package/ts-fsrs) - HIGH confidence (evaluated but not recommended)
-- [Spaced Repetition in PostgreSQL (sivers/srs)](https://github.com/sivers/srs) - MEDIUM confidence
-- [FSRS Algorithm: Next-Gen Spaced Repetition](https://www.quizcat.ai/blog/fsrs-algorithm-next-gen-spaced-repetition) - MEDIUM confidence
-- Lumio codebase analysis (direct code reading) - HIGH confidence
+- [Supabase Identity Linking Docs](https://supabase.com/docs/guides/auth/auth-identity-linking) -- HIGH confidence
+- [Supabase Native Mobile Deep Linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- HIGH confidence
+- [Supabase signUp API Reference](https://supabase.com/docs/reference/javascript/auth-signup) -- HIGH confidence
+- [Supabase resetPasswordForEmail API](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail) -- HIGH confidence
+- [Supabase Password-Based Auth Guide](https://supabase.com/docs/guides/auth/passwords) -- HIGH confidence
+- [Supabase signInWithIdToken API](https://supabase.com/docs/reference/javascript/auth-signinwithidtoken) -- HIGH confidence
+- [Supabase PKCE Flow Docs](https://supabase.com/docs/guides/auth/sessions/pkce-flow) -- HIGH confidence
+- [linkIdentityWithIdToken support issue #1591](https://github.com/supabase/supabase-js/issues/1591) -- MEDIUM confidence (feature shipped Nov 2025, exact API surface should be verified at build time)
+- [linkIdentity React Native discussion #25976](https://github.com/orgs/supabase/discussions/25976) -- MEDIUM confidence
+- [Expo Using Supabase guide](https://docs.expo.dev/guides/using-supabase/) -- HIGH confidence
+- Lumio codebase analysis (direct code reading) -- HIGH confidence

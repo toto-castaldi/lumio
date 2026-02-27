@@ -1,200 +1,365 @@
 # Feature Landscape
 
-**Domain:** Spaced repetition system and study history UX fix for Lumio v2.0
-**Researched:** 2026-02-25
-**Confidence:** HIGH (SM-2 is thoroughly documented, Anki is open-source reference, existing codebase reviewed in detail)
+**Domain:** Email/password authentication with account linking for React Native/Expo Android app
+**Researched:** 2026-02-27
+**Existing auth:** Google OAuth via @react-native-google-signin + Supabase signInWithIdToken
 
 ## Table Stakes
 
-Features users expect from any spaced repetition flashcard app. Missing = product feels like "just another random quiz" instead of a learning system.
+Features users expect. Missing = product feels incomplete.
 
-| Feature | Why Expected | Complexity | Dependencies on Existing | Notes |
-|---------|--------------|------------|--------------------------|-------|
-| Per-card scheduling based on answer correctness | Core of spaced repetition. Correct = see later, wrong = see sooner. Every SRS app (Anki, Quizlet, RemNote, Mochi) does this. Without it, Lumio is just a random quiz. | **Med** | New `card_progress` table; modify `useStudySession` hook to query due cards instead of random selection from `selectRandomCard()` | SM-2 uses 0-5 grade scale but Lumio has binary correct/wrong from multiple choice. Map correct to grade 4 (EF unchanged, interval advances), wrong to grade 1 (EF decreases, interval resets to 1 day). Simpler than full SM-2 but preserves the core scheduling benefit. |
-| Due cards queue (review before new) | Users expect to review cards that are "due" before seeing new material. Anki's default gathering order: learning cards, then reviews, then new cards. Without this, spaced repetition intervals are meaningless. | **Med** | Replaces random `selectRandomCard()` in `useStudySession`; needs new RPC function to get due cards ordered by `next_review_at` | Current hook picks randomly from all cards with `const randomIndex = Math.floor(Math.random() * unseenCards.length)`. Must change to: 1) fetch due cards (`next_review_at <= now`), 2) fill remaining session slots with new cards (cards with no `card_progress` row). |
-| Dashboard "cards due today" counter | Users need to know at a glance how many cards need review. Anki, RemNote, Mochi all show this prominently on their home screen. It is the primary motivator to study. | **Low** | New RPC function `get_due_card_count(p_user_id)`; modify `DashboardScreen.tsx` to show count alongside existing repo/card `StatCard` components | Simple count query: cards joined with `card_progress` WHERE `next_review_at <= NOW()` for user's subscribed repositories. Returns a single integer. |
-| Session mix: due cards + new cards | A pure review-only session is boring; a pure new-cards session is overwhelming. The mix is standard in every SRS app. Anki offers configurable new/review ordering. | **Med** | Builds on due cards queue; modify session card selection in `useStudySession` to prioritize due then fill with new | Lumio approach: fill session with due cards first (most overdue first), pad remaining slots with new cards up to the session limit (10/20/50/All presets already exist). Simpler than Anki's three-queue system. |
-| Review/New indicator during study | Users need to know if the current card is a review (seen before, being reinforced) or new (first encounter). Provides learning context and sets expectations. | **Low** | Check if card has a `card_progress` row; show small badge/label near `ProgressBar` component or in `QuizCard` header area | Small UI addition: colored text badge "Ripasso"/"Review" or "Nuova"/"New" near the progress bar. No new screens or navigation changes. |
-| Study history: show card count instead of "All repositories" | Current bug: `StudyHistoryScreen` shows `item.repositoryName ?? t('history.allRepos')` which always renders "All repositories" / "Tutti i repository" because `repository_name` is always null (sessions are cross-repo). Meaningless text confuses users. | **Low** | Modify display logic in `StudyHistoryScreen.tsx` to show `total_count` (which already exists and is correctly saved) instead of the null `repository_name` | The `study_sessions.total_count` column contains the actual card count. Replace the repo label with something like "10 cards" / "10 carte". Alternatively, show `correct_count/total_count` more prominently and drop the repo column entirely. |
+| Feature | Why Expected | Complexity | Dependencies on Existing |
+|---------|--------------|------------|--------------------------|
+| Email + password signup | Standard alternative to social login; users who distrust OAuth or lack Google accounts need this | Medium | Supabase `signUp({ email, password })`. New SignupScreen. Requires `auth.email.enable_confirmations = true` in config.toml (currently `false`). |
+| Email + password login | Complement to signup; returning users must be able to sign in | Low | `signInWithPassword({ email, password })`. Modify existing LoginScreen to add email form below Google button with "or"/"oppure" separator (per PROJECT.md requirement). |
+| Email verification after signup (OTP) | Prevents fake account spam; required for secure identity linking | Medium | Supabase `verifyOtp({ email, token, type: 'email' })`. New VerifyEmailScreen. Custom email template using `{{ .Token }}` instead of `{{ .ConfirmationURL }}` to send 6-digit OTP code instead of deep link. |
+| Password reset via email (OTP) | 75% of users who start reset flows drop off; must be frictionless | Medium | `resetPasswordForEmail()` sends recovery code. Custom recovery template with `{{ .Token }}`. New ForgotPasswordScreen + ResetPasswordScreen. User enters OTP + new password in-app. |
+| Password visibility toggle | Users expect show/hide on password fields; removing "confirm password" + adding toggle increases conversion 56% | Low | Single password field + eye icon toggle using Ionicons (already installed). No "confirm password" field. |
+| Form validation with inline errors | Users expect immediate feedback on invalid email format, weak password | Low | Client-side validation before API call. Inline error text near fields. Supabase minimum password: 6 characters. |
+| Loading states during auth operations | Network calls take time; spinners prevent double-taps | Low | Already have this pattern in LoginScreen for Google sign-in. Replicate for email auth. |
+| Bilingual auth strings (IT/EN) | App is already bilingual; new screens must match | Low | Add ~30 new i18n keys to en.ts and it.ts. |
 
 ## Differentiators
 
-Features that set Lumio apart from basic SRS implementations. Not expected by all users, but valued.
+Features that set product apart. Not expected, but valued.
 
-| Feature | Value Proposition | Complexity | Dependencies on Existing | Notes |
-|---------|-------------------|------------|--------------------------|-------|
-| Automatic new/review proportioning | Unlike Anki's manual "new cards per day" setting (default 20), Lumio auto-calculates: if many cards are due, fewer new cards get mixed in; if few are due, more new cards appear. Zero configuration required from user. | **Low** | Uses session card count preset (10/20/50/All) already built in v1.2; proportioning logic is just: `dueCards.slice(0, limit)` then fill remaining with new cards | Eliminates Anki's most confusing setting. Lumio already has cards-per-session presets. The proportioning is implicit: take `min(dueCount, sessionLimit)` due cards, fill remaining with new. No settings UI needed. |
-| Easiness factor per card (adaptive difficulty) | Cards that are consistently hard get shorter review intervals; consistently easy cards get much longer intervals. More sophisticated than simple fixed-ratio doubling. Matches how memory actually works. | **Med** | `easiness_factor` column in `card_progress` table; SM-2 EF formula applied on each answer | EF starts at 2.5. Correct (grade 4): EF unchanged. Wrong (grade 1): EF decreases by 0.54 (min 1.3). Next interval = `previous_interval * EF`. This is the core SM-2 math, well-proven over 35+ years. |
-| Overdue card priority boost | Cards significantly overdue (e.g., due 5 days ago but user skipped studying) surface first in the session queue. Prevents important forgotten cards from being buried behind barely-due cards. | **Low** | Sort due cards by `next_review_at ASC` (most overdue first) in the RPC query | Simple `ORDER BY` in the database function. Most overdue cards naturally surface first. No additional logic or UI needed. |
-| No "ease hell" (EF floor at 1.3) | Anki's notorious problem: EF drops too low over time and cards become annoying daily reviews forever ("ease hell"). Lumio prevents this with SM-2's built-in EF minimum of 1.3, meaning even consistently-wrong cards never get stuck at sub-daily intervals. | **Low** | Built into EF formula as `EF = max(EF', 1.3)` | SM-2 specification already includes this floor. Just enforce it in the update logic. |
+| Feature | Value Proposition | Complexity | Dependencies on Existing |
+|---------|-------------------|------------|--------------------------|
+| Account linking: add Google to email account | Users who signed up with email can later connect Google for faster login | Medium | Supabase `linkIdentity({ provider: 'google', token: idToken })` uses same native Google Sign-In SDK already installed. Requires `auth.enable_manual_linking = true` in config.toml. New section in SettingsScreen. |
+| Account linking: add password to Google account | Google OAuth users can add email+password as fallback auth method | Low | Supabase `updateUser({ password })` adds email identity to existing OAuth account. No email verification needed since Google already verified the email. New "Set password" option in SettingsScreen. |
+| Visual account identities in Settings | Show which auth methods are connected (Google checkmark, email checkmark) | Low | `getUserIdentities()` to list linked providers. New "Connected Accounts" section in SettingsScreen. |
+| Unlink identity | Users can remove a linked auth method if they have 2+ methods | Low | `unlinkIdentity(identity)`. Supabase enforces minimum 1 identity. Show "Disconnect" only when 2+ identities exist. |
+| Auto-login after email verification | After confirming email OTP, immediately create session instead of forcing re-login | Low | `verifyOtp()` returns a session. Navigate directly to Dashboard via AuthContext state change. |
+| Auto-login after password reset | After setting new password, keep user logged in | Low | `updateUser({ password })` on active recovery session. User stays authenticated. |
+| Pre-filled email on password reset | Carry email from login screen to forgot password screen | Low | Pass email as navigation param from LoginScreen to ForgotPasswordScreen. |
+| Resend verification/reset email | Users who don't receive email need retry with cooldown | Low | `resend({ type: 'signup', email })` with 60s cooldown matching Supabase `max_frequency`. Visual countdown timer. |
 
 ## Anti-Features
 
-Features to explicitly NOT build for v2.0.
+Features to explicitly NOT build.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Full SM-2 grade scale (0-5 buttons) | Lumio uses multiple choice with binary correct/wrong outcome. Asking users to self-rate recall quality ("Easy"/"Good"/"Hard"/"Again") after answering a multiple choice question is redundant and confusing. The MC answer IS the assessment. | Map correct to grade 4, wrong to grade 1. Binary mapping. No extra buttons after answering. |
-| FSRS algorithm | FSRS is demonstrably superior to SM-2 (20-30% fewer reviews for same retention per benchmarks). However, FSRS requires ML model training and 400+ reviews per user to calibrate effectively. Overkill for v2.0 with a small user base. | Start with simplified SM-2. Can upgrade to FSRS in a future milestone when review data exists. The `card_progress` table schema is compatible with future FSRS migration. |
-| Custom interval settings per user | Anki exposes graduating interval, easy interval, learning steps, new cards/day, max reviews/day, etc. These are power-user features that create decision paralysis and support burden for a solo developer. | Use sensible SM-2 defaults: I(1)=1 day, I(2)=6 days, EF=2.5 initial. Store defaults in `platform_config` table (already exists) for admin tuning if needed. |
-| Separate "learning" card state | Anki has three states: New, Learning, Review. "Learning" cards are in-progress (seen today but not yet graduated to Review). This adds state machine complexity for marginal UX benefit. | Two states only: **New** (no `card_progress` row exists) and **Review** (has `card_progress` row). A card becomes Review after its first answer. Simpler mental model for users and developers. |
-| Undo/Reschedule button | Letting users manually reschedule or undo answers undermines the algorithm's integrity and adds significant UI complexity (undo stack, confirmation dialogs). | Trust the algorithm. If a card keeps coming back frequently, the EF naturally adjusts. The existing forward-only study flow (v1.3 decision) aligns with this. |
-| Push notifications for due cards | Out of scope per PROJECT.md. Requires notification permission, background services, FCM setup, and notification content localization. | Dashboard counter is sufficient for v2.0. User opens app, sees "X cards due today," and studies. |
-| Per-card statistics detail | Out of scope per PROJECT.md. Individual card history (review timeline, EF curve, interval history) is complex UI with low value for most users. | Session-level stats are sufficient. Individual card mastery is implicit in the scheduling algorithm. |
-| Streak/gamification | Explicitly excluded in PRD section 5.2. Distracts from core learning value. | Due card counter provides natural daily motivation without artificial gamification mechanics. |
-| Spaced repetition for skipped cards | Currently skipped cards increment `skipped_count` but have no progress tracked. Making skipped cards count as "wrong" would penalize users for skipping unknown content. | Skipped cards remain untracked in `card_progress`. They stay as "new" cards and will appear in future sessions naturally. |
+| Phone/SMS authentication | Requires SMS provider (Twilio/MessageBird), recurring cost, phone recycling security risks, overkill for a study app | Email-only authentication |
+| Magic link login (passwordless email) | Adds third auth method creating confusion; deep link handling unreliable on Android; OTP is simpler | Use email+password with OTP verification |
+| Social providers beyond Google (Apple, GitHub, Facebook) | Android-only app; each provider adds OAuth config complexity; Google covers social login use case | Keep Google as sole social provider |
+| Biometric authentication (fingerprint/face) | Requires native module, additional native rebuild; SecureStore already persists session across app restarts | Rely on persistent sessions via SecureStore |
+| Multi-factor authentication (TOTP/SMS 2FA) | Over-engineering for a flashcard study app; Supabase MFA adds significant UI complexity (QR code enrollment, recovery codes) | Single-factor auth is sufficient |
+| Username-based login (no email) | Cannot do email verification or password reset without email; violates Supabase auth model | Always require email |
+| "Confirm password" field on signup/reset | Studies show removing it + adding show/hide toggle increases conversions 56%; reduces form friction | Show/hide password toggle instead |
+| Email enumeration protection bypass | Supabase returns obfuscated responses when email already exists (security feature); don't try to give specific "email already registered" messages | Show generic "Check your email" message for all signup attempts |
+| Deep link-based email verification | Deep links on Android are inconsistent, fail in some email clients, require intent filter configuration | Use 6-digit OTP code entry in-app |
+| Deep link-based password reset | Same deep link reliability issues; user leaves app, clicks link, may not return correctly | Use 6-digit OTP code entry in-app for recovery token |
+| Custom SMTP for local dev | Supabase local already has Inbucket (port 54324) for email capture; no need for external SMTP | Use Inbucket for local testing; configure production SMTP in Supabase dashboard |
+| Password strength meter (animated bar) | Over-engineering; clear requirements text + inline validation is sufficient | Show password requirements as text with real-time validation checkmark |
+| Change password screen (standalone) | Low priority; users can use "forgot password" as workaround. Adds another screen and UX flow. | Defer. "Forgot password" flow works as reset mechanism. |
 
 ## Feature Dependencies
 
 ```
-card_progress table (DB migration)
-    |
-    +---> Per-card scheduling logic (SM-2 formula in RPC)
-    |         |
-    |         +---> Due cards query (get_due_cards_for_study RPC)
-    |         |         |
-    |         |         +---> Session card selection rewrite (useStudySession)
-    |         |         |         |
-    |         |         |         +---> Automatic due/new proportioning
-    |         |         |         |
-    |         |         |         +---> Review/New indicator during study
-    |         |         |
-    |         |         +---> Dashboard "cards due" counter (get_due_card_count RPC)
-    |         |
-    |         +---> Easiness factor tracking (column in card_progress)
-    |         |
-    |         +---> Overdue priority boost (ORDER BY in query)
+Email+password signup --> Email verification (OTP) --> Auto-login after verification
+                                                   --> Dashboard access
 
-Study history display fix -- INDEPENDENT, no dependencies on card_progress
+Email+password login --> Dashboard access
+                    --> "Forgot password?" link
+
+Forgot password --> Recovery OTP email --> Enter OTP + new password --> Auto-login
+
+Google OAuth login (existing) --> Dashboard access (unchanged)
+
+Account linking: add Google --> Requires active email+password session
+                             --> Requires @react-native-google-signin (already installed)
+                             --> Requires auth.enable_manual_linking = true
+
+Account linking: add password --> Requires active Google OAuth session
+                               --> updateUser({ password }) call
+
+Unlink identity --> Requires 2+ linked identities (enforced by Supabase)
+
+Resend email --> Requires knowing which email was used (state from signup/reset flow)
+             --> 60s cooldown (Supabase max_frequency)
 ```
 
-## SM-2 Algorithm Specification for Lumio
+## Login Screen Layout
 
-Since Lumio uses multiple choice (not self-rated recall), the SM-2 adaptation works as follows:
-
-### Grade Mapping (Binary from MC)
-
-| MC Result | SM-2 Grade (q) | EF Change | Interval Effect |
-|-----------|-----------------|-----------|-----------------|
-| Correct answer | 4 | EF' = EF + 0.0 (no change) | I(n) = I(n-1) * EF (advances) |
-| Wrong answer | 1 | EF' = EF - 0.54 (significant decrease, min 1.3) | Resets to I(1) = 1 day |
-
-### Core Formulas
-
-**EF update formula:** `EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))`
-- Correct (q=4): `EF' = EF + (0.1 - 1 * (0.08 + 1 * 0.02)) = EF + 0.0` (unchanged)
-- Wrong (q=1): `EF' = EF + (0.1 - 4 * (0.08 + 4 * 0.02)) = EF - 0.54`
-- **Floor:** `EF = max(EF', 1.3)`
-
-**Interval formula:**
-- I(1) = 1 day (first review after wrong answer, or first review of new card)
-- I(2) = 6 days
-- For n > 2: I(n) = round(I(n-1) * EF)
-- On wrong answer: reset repetition_count to 0, interval back to I(1) = 1
-
-**Initial values:** EF = 2.5, interval = 0 days, repetition_count = 0
-
-### Concrete Example Walkthrough
-
-Card first seen and answered correctly:
-1. repetition_count: 0 -> 1, interval: 0 -> 1 day, EF: 2.5 (unchanged), next_review: tomorrow
-2. Reviewed tomorrow, correct: rep 1 -> 2, interval: 1 -> 6 days, EF: 2.5, next: +6 days
-3. Reviewed in 6 days, correct: rep 2 -> 3, interval: 6 -> 15 days (6 * 2.5), next: +15 days
-4. Reviewed in 15 days, wrong: rep 3 -> 0, interval: 15 -> 1 day, EF: 2.5 -> 1.96, next: tomorrow
-5. Reviewed tomorrow, correct: rep 0 -> 1, interval: 0 -> 1, EF: 1.96, next: tomorrow
-6. Reviewed, correct: rep 1 -> 2, interval: 1 -> 6, EF: 1.96, next: +6 days
-7. Reviewed, correct: rep 2 -> 3, interval: 6 -> 12 (6 * 1.96), next: +12 days
-
-### Proposed card_progress Table
-
-```sql
-CREATE TABLE card_progress (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-    easiness_factor REAL NOT NULL DEFAULT 2.5,
-    interval_days INTEGER NOT NULL DEFAULT 0,
-    repetition_count INTEGER NOT NULL DEFAULT 0,
-    next_review_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_reviewed_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, card_id)
-);
-```
-
-### Session Card Selection Algorithm (Pseudocode)
+Per PROJECT.md: "Google OAuth prominente in alto, form email sotto separatore 'oppure'":
 
 ```
-1. Fetch due cards:
-   SELECT c.*, cp.* FROM cards c
-   JOIN card_progress cp ON cp.card_id = c.id
-   WHERE cp.user_id = :user_id
-     AND cp.next_review_at <= NOW()
-     AND c.is_active = TRUE
-   ORDER BY cp.next_review_at ASC  -- most overdue first
-
-2. Fetch new cards (never reviewed by this user):
-   SELECT c.* FROM cards c
-   JOIN user_repositories ur ON ur.repository_id = c.repository_id
-   WHERE ur.user_id = :user_id
-     AND c.is_active = TRUE
-     AND c.id NOT IN (SELECT card_id FROM card_progress WHERE user_id = :user_id)
-   ORDER BY RANDOM()
-
-3. Build session queue:
-   session = due_cards.slice(0, sessionLimit)
-   remaining = sessionLimit - session.length
-   session += new_cards.slice(0, remaining)
-
-4. For each card answered:
-   IF no card_progress row exists:
-     CREATE row with defaults (EF=2.5, rep=0, interval=0)
-   Apply SM-2 formula based on correct/wrong:
-     IF correct AND rep < 2: increment rep, set interval per I(1)/I(2) rules
-     IF correct AND rep >= 2: increment rep, interval = round(interval * EF)
-     IF wrong: reset rep=0, interval=1, decrease EF
-   SET next_review_at = NOW() + interval_days
-   SET last_reviewed_at = NOW()
++----------------------------------+
+|         [Lumio Logo]             |
+|           Lumio                  |
+|  "Your flashcards, supercharged" |
+|                                  |
+|  [G] Sign in with Google         |  <-- Primary, prominent (existing)
+|                                  |
+|  ---------- or ----------        |  <-- "oppure" in IT
+|                                  |
+|  [Email field                 ]  |
+|  [Password field         [eye]]  |
+|                                  |
+|  [      Sign In              ]   |  <-- Primary button
+|                                  |
+|  Forgot password?    No account? |
+|                      Sign up     |
+|                                  |
+|  {Error message if any}          |
++----------------------------------+
 ```
+
+## Signup Screen Layout
+
+```
++----------------------------------+
+|  <-- Back                        |
+|                                  |
+|        Create Account            |
+|                                  |
+|  [Email field                 ]  |
+|  [Password field         [eye]]  |
+|                                  |
+|  At least 6 characters  [check]  |
+|                                  |
+|  [     Create Account        ]   |
+|                                  |
+|  Already have an account?        |
+|  Sign in                         |
+|                                  |
+|  {Error message if any}          |
++----------------------------------+
+```
+
+## Email Verification Screen (OTP)
+
+```
++----------------------------------+
+|  <-- Back                        |
+|                                  |
+|     Verify Your Email            |
+|                                  |
+|  We sent a 6-digit code to      |
+|  user@example.com                |
+|                                  |
+|  [  _  _  _  _  _  _  ]         |  <-- 6-digit OTP input
+|                                  |
+|  [      Verify              ]    |
+|                                  |
+|  Didn't receive the email?       |
+|  Resend (available in 45s)       |  <-- Cooldown timer
+|                                  |
+|  {Error message if any}          |
++----------------------------------+
+```
+
+## Password Reset Flow (2 screens)
+
+**Screen 1: Request Reset**
+```
++----------------------------------+
+|  <-- Back                        |
+|                                  |
+|     Reset Password               |
+|                                  |
+|  Enter your email and we'll      |
+|  send you a reset code.          |
+|                                  |
+|  [Email field                 ]  |  <-- Pre-filled if from login
+|                                  |
+|  [     Send Reset Code       ]   |
+|                                  |
+|  {Error/success message}         |
++----------------------------------+
+```
+
+**Screen 2: Enter Code + New Password**
+```
++----------------------------------+
+|  <-- Back                        |
+|                                  |
+|     New Password                 |
+|                                  |
+|  Enter the code sent to          |
+|  user@example.com                |
+|                                  |
+|  [  _  _  _  _  _  _  ]         |  <-- 6-digit OTP
+|  [New password field     [eye]]  |
+|                                  |
+|  [    Reset Password         ]   |
+|                                  |
+|  Didn't receive the code?        |
+|  Resend                          |
+|                                  |
+|  {Error message if any}          |
++----------------------------------+
+```
+
+## Account Linking in Settings
+
+New section added to existing SettingsScreen (between ACCOUNT and APPEARANCE):
+
+```
++----------------------------------+
+|  ACCOUNT                         |
+|  +----------------------------+  |
+|  | [Avatar]  Display Name     |  |
+|  |           user@email.com   |  |
+|  +----------------------------+  |
+|                                  |
+|  CONNECTED ACCOUNTS              |
+|  +----------------------------+  |
+|  | [G] Google    [Connected]  |  |  <-- "Disconnect" if 2+ identities
+|  | [E] Email     [Set up]     |  |  <-- Tapping opens password setup
+|  +----------------------------+  |
+|                                  |
+|  APPEARANCE                      |
+|  ...existing settings...         |
++----------------------------------+
+```
+
+## Edge Cases and Behavioral Expectations
+
+### Automatic Identity Linking (Supabase built-in)
+- User signs up with email+password, verifies email, then later signs in with Google using same email: Supabase automatically links both identities to one account. All data (repos, study history, SRS schedule) preserved.
+- User signs in with Google first, then tries to sign up with email+password using same email: Supabase returns obfuscated response (no verification email sent) to prevent user enumeration. Correct path: sign in with Google, then add password via `updateUser()` from Settings.
+- Automatic linking only works when the email identity is verified. Unverified email identities are removed when a new identity can be linked.
+
+### Session and Token Handling
+- Email+password sessions use the same JWT/refresh token mechanism as Google OAuth -- no changes needed to SecureStore adapter or token refresh logic in AuthContext.
+- `onAuthStateChange` fires for all auth events (SIGNED_IN, SIGNED_UP, TOKEN_REFRESHED, PASSWORD_RECOVERY) -- existing AuthContext listener handles all cases.
+- The `PASSWORD_RECOVERY` event fires when a user arrives via recovery flow. Must detect this to show the new password form.
+
+### Password Requirements
+- Supabase default minimum: 6 characters. No uppercase/number/symbol requirements by default.
+- Client-side validation should enforce the same minimum before API call to avoid unnecessary network requests.
+
+### OTP Specifics
+- Default OTP length: 6 digits (configurable 6-10 in config.toml via `otp_length`).
+- Default OTP expiry: 3600 seconds (1 hour).
+- Rate limit: 1 email per 60 seconds (`max_frequency: "1m"`).
+- Each OTP is single-use; entering it verifies and consumes the token.
+- For signup verification: use `verifyOtp({ email, token, type: 'email' })`.
+- For password recovery: use `verifyOtp({ email, token, type: 'recovery' })`.
+
+### Error Scenarios
+- **Wrong password on login:** Supabase returns `"Invalid login credentials"`. Display generic error, don't clear email field.
+- **Unverified email on login:** With `enable_confirmations = true`, login returns error until email is verified. Show "Please verify your email" with resend option.
+- **Expired OTP:** Returns verification error. Show "Code expired, please request a new one" with resend button.
+- **Email already registered (signup):** Obfuscated response, no error exposed. Show generic "If this email is registered, you'll receive a verification code."
+- **Weak password:** Supabase returns error if < 6 chars. Client-side validation prevents this.
+- **Rate limited (too many emails):** Supabase returns 429. Show "Please wait before requesting another email."
+- **User tries to unlink only identity:** Supabase returns error. UI should hide Disconnect button when only 1 identity exists.
+
+### Display Name and Avatar After Email Signup
+- Google OAuth provides `full_name` and `avatar_url` in user_metadata. Email signup does NOT.
+- SettingsScreen and Dashboard already handle missing avatar (fallback icon exists at line 99-103 of SettingsScreen).
+- Display name defaults to null for email users. Consider showing email as display name when `full_name` is missing (already handled: line 109-111 shows email).
+- When email user later links Google, user_metadata updates with Google profile data.
+
+## Supabase Config Changes Required
+
+| Setting | Current Value | New Value | Why |
+|---------|--------------|-----------|-----|
+| `auth.email.enable_confirmations` | `false` | `true` | Required for email verification flow |
+| `auth.enable_manual_linking` | not set (`false`) | `true` | Required for linkIdentity/unlinkIdentity APIs |
+| Email confirmation template | default (uses ConfirmationURL) | Custom with `{{ .Token }}` | Send 6-digit OTP code instead of deep link |
+| Email recovery template | default (uses ConfirmationURL) | Custom with `{{ .Token }}` | Send 6-digit OTP code for password reset |
+
+Production Supabase project requires matching changes in the dashboard:
+- Auth > Providers > Email: enable confirmations
+- Auth > Email Templates: confirmation and recovery templates with `{{ .Token }}`
+- Auth > General: enable manual identity linking
+
+## New Screens Required
+
+| Screen | Navigation Route | Purpose |
+|--------|-----------------|---------|
+| SignupScreen | LoginScreen --> SignupScreen | Email+password registration form |
+| VerifyEmailScreen | SignupScreen --> VerifyEmailScreen | OTP code entry after signup |
+| ForgotPasswordScreen | LoginScreen --> ForgotPasswordScreen | Enter email to receive reset code |
+| ResetPasswordScreen | ForgotPasswordScreen --> ResetPasswordScreen | Enter OTP + set new password |
+
+Account linking fits within existing SettingsScreen as a new section. No new screen needed.
+
+## New i18n Keys Required (~30 keys)
+
+Login screen additions:
+- `login.or` / "or" / "oppure"
+- `login.email` / "Email"
+- `login.password` / "Password"
+- `login.signIn` / "Sign In" / "Accedi"
+- `login.forgotPassword` / "Forgot password?" / "Password dimenticata?"
+- `login.noAccount` / "No account?" / "Non hai un account?"
+- `login.signUp` / "Sign up" / "Registrati"
+
+Signup screen:
+- `signup.title` / "Create Account" / "Crea Account"
+- `signup.createAccount` / "Create Account" / "Crea Account"
+- `signup.hasAccount` / "Already have an account?" / "Hai gia un account?"
+- `signup.passwordMin` / "At least 6 characters" / "Almeno 6 caratteri"
+
+Email verification screen:
+- `verify.title` / "Verify Your Email" / "Verifica la tua Email"
+- `verify.codeSent` / "We sent a 6-digit code to %{email}" / "Abbiamo inviato un codice a 6 cifre a %{email}"
+- `verify.verify` / "Verify" / "Verifica"
+- `verify.resend` / "Resend" / "Reinvia"
+- `verify.resendIn` / "Resend in %{seconds}s" / "Reinvia tra %{seconds}s"
+- `verify.didntReceive` / "Didn't receive the email?" / "Non hai ricevuto l'email?"
+
+Password reset screens:
+- `forgot.title` / "Reset Password" / "Reimposta Password"
+- `forgot.description` / "Enter your email and we'll send you a reset code" / "Inserisci la tua email e ti invieremo un codice di reset"
+- `forgot.sendCode` / "Send Reset Code" / "Invia Codice di Reset"
+- `reset.title` / "New Password" / "Nuova Password"
+- `reset.codeSent` / "Enter the code sent to %{email}" / "Inserisci il codice inviato a %{email}"
+- `reset.newPassword` / "New password" / "Nuova password"
+- `reset.resetPassword` / "Reset Password" / "Reimposta Password"
+
+Settings account linking:
+- `settings.connectedAccounts` / "Connected Accounts" / "Account Collegati"
+- `settings.google` / "Google"
+- `settings.emailPassword` / "Email & Password"
+- `settings.connected` / "Connected" / "Collegato"
+- `settings.setUp` / "Set up" / "Configura"
+- `settings.disconnect` / "Disconnect" / "Scollega"
+- `settings.addPassword` / "Set password" / "Imposta password"
+
+Error messages:
+- `auth.invalidCredentials` / "Invalid email or password" / "Email o password non validi"
+- `auth.emailNotVerified` / "Please verify your email first" / "Verifica prima la tua email"
+- `auth.codeExpired` / "Code expired. Please request a new one." / "Codice scaduto. Richiedine uno nuovo."
+- `auth.rateLimited` / "Please wait before requesting another email" / "Attendi prima di richiedere un'altra email"
+- `auth.checkEmail` / "If this email is registered, you'll receive a code" / "Se questa email e registrata, riceverai un codice"
 
 ## MVP Recommendation
 
-Prioritize in this order:
+**Phase 1 -- Core Email Auth (must ship together):**
+1. Supabase config changes (enable_confirmations, email templates with OTP)
+2. Email+password signup with OTP email verification (SignupScreen + VerifyEmailScreen)
+3. Email+password login (refactored LoginScreen with Google button + email form + separator)
+4. Password reset via OTP (ForgotPasswordScreen + ResetPasswordScreen)
+5. Bilingual strings for all new screens
 
-1. **card_progress table + SM-2 RPC functions** (table stakes foundation, everything depends on this)
-   - DB migration creating `card_progress` with RLS policies
-   - RPC: `upsert_card_progress(p_user_id, p_card_id, p_is_correct)` applying SM-2 formula server-side
-   - RPC: `get_due_cards_for_study(p_user_id, p_limit)` returning due cards ordered by overdue-ness
-   - RPC: `get_due_card_count(p_user_id)` returning count for dashboard
+**Phase 2 -- Account Linking:**
+6. Connected accounts section in Settings (show identities)
+7. Add password to Google account (updateUser)
+8. Add Google to email account (linkIdentity)
+9. Unlink identity (with 2+ identity guard)
 
-2. **Rewrite useStudySession for SRS card selection** (table stakes, replaces random selection)
-   - Replace `selectRandomCard` with due-first-then-new selection
-   - Call `upsert_card_progress` after each answer (alongside existing `saveStudySession`)
-   - Track card type (review/new) in session state
-
-3. **Dashboard "cards due today" counter** (table stakes, visible user value)
-   - Add new `StatCard` to `DashboardScreen` showing due count
-   - Use the color coding pattern already established (like the amber clock icon for "last studied")
-
-4. **Review/New indicator during study** (differentiator, small UI addition)
-   - Badge near progress bar showing "Review" or "New" for current card
-   - i18n strings for both IT and EN
-
-5. **Study history display fix** (table stakes bug fix, independent of SRS)
-   - Replace `item.repositoryName ?? t('history.allRepos')` with card count display
-   - Show something like "10 carte" / "10 cards" using existing `item.totalCount`
-
-Defer to future milestone: FSRS upgrade (needs review data), push notifications, per-card statistics.
+**Defer:**
+- Change password (standalone flow) -- users can use "forgot password" as workaround
+- Security notification emails (password_changed, identity_linked) -- Supabase sends automatically if templates configured, not critical for MVP
+- Password strength meter beyond basic validation
 
 ## Sources
 
-- [SM-2 Algorithm Original Specification](https://www.supermemo.com/en/archives1990-2015/english/ol/sm2) - Original SM-2 by Piotr Wozniak, 1987. Formulas and rating scale. (HIGH confidence)
-- [Anki Manual - Studying](https://docs.ankiweb.net/studying.html) - Study session UX: card counts, answer buttons, queue order (HIGH confidence)
-- [Anki Manual - Deck Options](https://docs.ankiweb.net/deck-options.html) - New cards/day, review limits, learning steps, new/review mix (HIGH confidence)
-- [FSRS vs SM-2 Guide](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/) - Algorithm comparison showing FSRS 20-30% more efficient (MEDIUM confidence)
-- [FSRS ABC Wiki](https://github.com/open-spaced-repetition/fsrs4anki/wiki/abc-of-fsrs) - Why FSRS outperforms SM-2, 99.6% superiority metric (MEDIUM confidence)
-- [SM-2 Explained - Tegaru](https://tegaru.app/en/blog/sm2-algorithm-explained) - Simplified SM-2 explanation with grade effects (MEDIUM confidence)
-- [Spaced Repetition Algorithm Journey](https://github.com/open-spaced-repetition/fsrs4anki/wiki/spaced-repetition-algorithm:-a-three%E2%80%90day-journey-from-novice-to-expert) - Evolution from SM-0 to FSRS, practical implementation approaches (HIGH confidence)
-- [Quizlet Spaced Repetition](https://medium.com/tech-quizlet/spaced-repetition-for-all-cognitive-science-meets-big-data-in-a-procrastinating-world-59e4d2c8ede1) - Industry approach to SRS in consumer apps (MEDIUM confidence)
-- Lumio codebase analysis: `useStudySession.ts`, `study.ts`, `StudyScreen.tsx`, `StudyHistoryScreen.tsx`, `DashboardScreen.tsx`, study_sessions migration, card_questions migration (HIGH confidence)
+- [Supabase Identity Linking](https://supabase.com/docs/guides/auth/auth-identity-linking) -- HIGH confidence
+- [Supabase Password-Based Auth](https://supabase.com/docs/guides/auth/passwords) -- HIGH confidence
+- [Supabase resetPasswordForEmail](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail) -- HIGH confidence
+- [Supabase verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp) -- HIGH confidence
+- [Supabase Native Mobile Deep Linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- HIGH confidence
+- [Supabase Email Templates](https://supabase.com/docs/guides/local-development/customizing-email-templates) -- HIGH confidence
+- [Supabase CLI Config Reference](https://supabase.com/docs/guides/local-development/cli/config) -- HIGH confidence
+- [Login & Signup UX Guide 2025](https://www.authgear.com/post/login-signup-ux-guide) -- MEDIUM confidence
+- [Token-Based Password Reset for Supabase (dev.to)](https://dev.to/tanmay_kaushik_/why-i-ditched-deep-linking-for-a-token-based-password-reset-in-supabase-3e69) -- MEDIUM confidence
+- [Supabase Password Reset Discussion #12324](https://github.com/orgs/supabase/discussions/12324) -- MEDIUM confidence
+- [Supabase Password Reset Ghost Password Discussion #37737](https://github.com/orgs/supabase/discussions/37737) -- MEDIUM confidence
+- Lumio codebase: LoginScreen.tsx, AuthContext.tsx, auth.ts, SettingsScreen.tsx, config.toml, app.json -- HIGH confidence

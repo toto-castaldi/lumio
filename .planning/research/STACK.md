@@ -1,241 +1,436 @@
-# Stack Research: v2.0 Spaced Repetition
+# Technology Stack: v2.1 Email Auth
 
-**Domain:** SRS algorithm + card progress tracking + dashboard counter for Lumio Android
-**Researched:** 2026-02-25
-**Scope:** NEW additions only. Existing stack (Expo SDK 54, RN 0.81, react-navigation, Supabase, i18n-js, etc.) is validated and not re-researched.
+**Project:** Lumio
+**Researched:** 2026-02-27
+**Focus:** Email/password authentication with email verification, password reset, and Google OAuth account linking
 **Confidence:** HIGH
+
+---
+
+## Executive Summary
+
+No new npm dependencies are needed. The existing stack (`@supabase/supabase-js@2.89.0`, `expo-linking@8.0.11`, `expo-secure-store@15.0.8`) provides all required APIs for email/password auth, OTP-based email verification, password reset, and account linking. The work is purely integration: wiring Supabase Auth methods already present in the installed SDK, updating `config.toml` for email confirmations and manual identity linking, creating OTP-based email templates, and building new UI screens.
 
 ---
 
 ## Recommended Stack Additions
 
-### SRS Algorithm Library
+### No New npm Packages Required
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| supermemo | ^2.0.23 | SM-2 spaced repetition scheduling | **The right weight class for this use case.** Lumio uses binary correct/incorrect answers (quiz: 4-option multiple choice). SM-2 maps directly to this: correct = grade 5, incorrect = grade 0. Three fields to persist per card (interval, repetition, efactor). Zero dependencies, pure TypeScript, 2KB. Published March 2025. The algorithm is correct and universally understood. |
+All required auth functionality exists in the already-installed `@supabase/supabase-js@2.89.0`. The following Supabase Auth JS methods are needed but already available:
 
-**Why `supermemo` over `ts-fsrs`:**
+| Method | Purpose | Exists in 2.89.0 |
+|--------|---------|:-:|
+| `auth.signUp()` | Register with email + password | Yes |
+| `auth.signInWithPassword()` | Login with email + password | Yes |
+| `auth.verifyOtp()` | Verify email (OTP code) and verify recovery OTP | Yes |
+| `auth.resetPasswordForEmail()` | Send password reset email | Yes |
+| `auth.updateUser()` | Set new password after reset, add password to OAuth account | Yes |
+| `auth.linkIdentity()` | Link Google OAuth to email account | Yes |
+| `auth.getUserIdentities()` | List linked auth providers | Yes |
+| `auth.unlinkIdentity()` | Remove linked identity | Yes |
 
-ts-fsrs (v5.2.3, Sep 2025) implements FSRS v6 — the modern Anki algorithm trained on 700M reviews. FSRS is measurably better for long-term scheduling. However, it requires 4-level ratings (Again/Hard/Good/Easy) to work properly, and it persists 7+ fields per card (stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review, due). Lumio's quiz is binary (right/wrong) — mapping two outcomes to four FSRS grades loses the precision that makes FSRS better than SM-2. **When your input is binary, SM-2's simpler model is appropriate.**
-
-supermemo persists exactly 3 fields: `interval` (days until next review), `repetition` (consecutive correct count), `efactor` (ease factor, initialized to 2.5). The new table is 4 columns. FSRS would need 8+ columns and a review_log table.
-
-**Why NOT a hand-rolled SM-2:**
-
-The `supermemo` package is a correct, battle-tested, 2KB SM-2 implementation. Hand-rolling saves nothing and introduces bugs.
-
-**Confidence:** HIGH — version verified via npm registry, algorithm match to Lumio's binary quiz confirmed from codebase analysis.
-
-### No New React Native Libraries Needed
-
-The dashboard counter, study session badge, and card mix logic require only:
-- New Supabase DB table (`user_card_progress`)
-- New Supabase DB function (`get_due_card_count`)
-- New functions in `@lumio/core/src/supabase/study.ts`
-- New types in `@lumio/shared/src/types/index.ts`
-- UI changes to existing screens (DashboardScreen, StudyScreen, StudyHistoryScreen)
-
-No new React Native packages are required. All UI components (StatCard, badges, counters) are built with existing StyleSheet + Ionicons patterns already in the project.
+**Confidence:** HIGH -- all methods verified in [Supabase JS API Reference](https://supabase.com/docs/reference/javascript/auth-signup).
 
 ---
 
-## Database: New Table Required
+## What Already Exists (DO NOT add)
 
-### `user_card_progress` Table
-
-This is the central new addition for SRS. It tracks SM-2 state **per user per card**.
-
-```sql
-CREATE TABLE public.user_card_progress (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-  -- SM-2 algorithm state (from supermemo package)
-  interval INTEGER NOT NULL DEFAULT 0,       -- days until next review
-  repetition INTEGER NOT NULL DEFAULT 0,     -- consecutive correct count
-  efactor REAL NOT NULL DEFAULT 2.5,         -- ease factor (initialized to 2.5 per SM-2 spec)
-  -- Scheduling
-  due_date TIMESTAMPTZ NOT NULL DEFAULT NOW(), -- when this card is next due
-  last_reviewed_at TIMESTAMPTZ,
-  -- Constraint: one row per user+card
-  UNIQUE(user_id, card_id)
-);
-```
-
-**Why `UNIQUE(user_id, card_id)` not a composite PK:** Allows `INSERT ... ON CONFLICT (user_id, card_id) DO UPDATE` (upsert) pattern from the app, which is the natural update primitive.
-
-**Why `efactor REAL` not `NUMERIC(4,2)`:** The SM-2 formula produces floating-point values. REAL matches the JS `number` type without truncation risk.
-
-**Why `due_date` stored (not computed):** The query `WHERE due_date <= NOW()` for the dashboard counter must use an index. Storing `due_date` enables a simple indexed query. If derived from `last_reviewed_at + interval`, the query would need a computed expression index.
-
-**RLS:** `USING (auth.uid() = user_id)` for SELECT and INSERT/UPDATE. Users only see/modify their own progress.
-
-### Supporting DB Function
-
-```sql
--- Returns count of cards due for review for the authenticated user
-CREATE OR REPLACE FUNCTION get_due_card_count(p_user_id UUID)
-RETURNS INTEGER AS $$
-  SELECT COUNT(*)::INTEGER
-  FROM user_card_progress
-  WHERE user_id = p_user_id
-    AND due_date <= NOW();
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
-```
-
-**Why a DB function, not a raw REST query:** The dashboard needs a single integer. The function hides the query complexity and is callable via `rpc/get_due_card_count` without exposing table structure.
+| Technology | Version | Already Used For |
+|------------|---------|------------------|
+| @supabase/supabase-js | 2.89.0 | Google OAuth via `signInWithIdToken`, session mgmt, DB queries |
+| expo-linking | 8.0.11 | Installed in package.json (not yet used in code), provides `Linking.addEventListener`, `Linking.createURL` |
+| expo-secure-store | 15.0.8 | SecureStore adapter for Supabase auth token persistence |
+| @react-native-google-signin/google-signin | 16.1.1 | Native Google Sign-In with ID token exchange |
+| react-native-toast-message | 2.3.3 | User notifications (success/error/info) |
+| @expo/vector-icons (Ionicons) | 15.0.3 | Icons throughout the app |
+| i18n-js | 4.5.2 | EN/IT translations |
 
 ---
 
-## Integration Points
+## Configuration Changes Required
 
-### `@lumio/core` — New Functions Needed
+### 1. Supabase config.toml (Local Development)
 
-Add to `packages/core/src/supabase/study.ts`:
+**Confidence: HIGH** -- verified via [Supabase CLI config docs](https://supabase.com/docs/guides/local-development/cli/config) and [GitHub Discussion #22214](https://github.com/orgs/supabase/discussions/22214).
+
+Current state and required changes:
+
+```toml
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = [
+  "http://localhost:5173/auth/callback",
+  "http://localhost:5174/auth/callback",
+  "https://m-lumio.toto-castaldi.com/auth/callback",
+  "lumio://auth/callback"                              # Already present
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_manual_linking = true   # ADD: Required for linkIdentity() API
+
+[auth.email]
+enable_signup = true            # Already true
+double_confirm_changes = true   # Already true
+enable_confirmations = true     # CHANGE from false -> true
+
+# ADD: Custom email templates for OTP-based verification
+[auth.email.template.confirmation]
+content_path = "./templates/confirmation.html"
+
+[auth.email.template.recovery]
+content_path = "./templates/recovery.html"
+```
+
+**Why `enable_confirmations = true`:** Currently `false`, meaning any email signup gets an immediate session. For production email auth, users must verify their email first. This prevents fake signups and is standard practice.
+
+**Why `enable_manual_linking = true`:** Required for `supabase.auth.linkIdentity()`. Without this, only automatic linking (same-email identities auto-merge) is available. Manual linking enables the Settings "Link Google account" feature.
+
+### 2. Email Templates (OTP-based)
+
+**Confidence: HIGH** -- verified via [Supabase Email Templates docs](https://supabase.com/docs/guides/auth/auth-email-templates).
+
+Create `supabase/templates/` directory with OTP-based templates:
+
+| Template | File | Key Variable |
+|----------|------|-------------|
+| Confirm signup | `supabase/templates/confirmation.html` | `{{ .Token }}` (6-digit OTP) |
+| Password recovery | `supabase/templates/recovery.html` | `{{ .Token }}` (6-digit OTP) |
+
+**Critical Decision: OTP vs Deep Link for email verification**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **OTP (6-digit code)** | No deep link complexity, works in every email client, user stays in app, no fragment parsing issues | User must type/paste 6 digits |
+| **Deep link** | One-tap experience | URL fragment parsing issues in React Native ([GitHub #10754](https://github.com/orgs/supabase/discussions/10754)), email client compatibility varies, complex Linking setup |
+
+**Use OTP.** The user receives a 6-digit code via email and enters it in-app. This avoids the well-documented deep link fragment parsing issues in React Native and works reliably across all email clients. The trade-off (typing 6 digits) is negligible for a one-time verification and occasional password reset.
+
+Template example (`confirmation.html`):
+```html
+<h2>Confirm your Lumio account</h2>
+<p>Your verification code is:</p>
+<h1 style="letter-spacing: 8px; font-size: 32px;">{{ .Token }}</h1>
+<p>Enter this code in the Lumio app to verify your email.</p>
+<p>This code expires in 1 hour.</p>
+```
+
+### 3. Supabase Dashboard (Production)
+
+| Setting | Location | Value |
+|---------|----------|-------|
+| Enable email confirmations | Auth > Providers > Email | ON |
+| Enable Manual Linking | Auth > General | ON |
+| Redirect URL | Auth > URL Configuration | `lumio://auth/callback` (verify present) |
+| Email templates | Auth > Email Templates | Update Confirmation and Recovery templates to show OTP code |
+
+### 4. app.json (No Changes Needed)
+
+The `"scheme": "lumio"` is already configured. The redirect URL `lumio://auth/callback` is already in `config.toml`. No changes needed here since we are using OTP approach, not deep links.
+
+---
+
+## Supabase Auth API Integration Guide
+
+### Sign Up (email + password)
 
 ```typescript
-// Upsert SRS progress after each card answer
-export async function updateCardProgress(
-  cardId: string,
-  grade: 0 | 5  // correct = 5, incorrect = 0
-): Promise<void>
-
-// Get count of cards due for review today
-export async function getDueCardCount(): Promise<number>
-
-// Get ordered list of cards for SRS study session
-// Returns: expired due cards first, then new cards, up to limit
-export async function getSRSStudyQueue(limit: number): Promise<StudyCard[]>
+const { data, error } = await supabase.auth.signUp({
+  email,
+  password,
+});
+// With enable_confirmations=true:
+//   data.user exists but data.session is NULL
+//   User receives 6-digit OTP email
+//   Must verify before they can sign in
 ```
 
-### `@lumio/shared` — New Types Needed
-
-Add to `packages/shared/src/types/index.ts`:
+### Verify Email (OTP after signup)
 
 ```typescript
-// SRS progress for a single card (stored in user_card_progress table)
-export interface CardProgress {
-  id: string;
-  userId: string;
-  cardId: string;
-  interval: number;        // days until next review (SM-2)
-  repetition: number;      // consecutive correct count (SM-2)
-  efactor: number;         // ease factor, initialized to 2.5 (SM-2)
-  dueDate: string;         // ISO timestamp of next review
-  lastReviewedAt: string | null;
-}
-
-// Input for upserting card progress
-export interface UpdateCardProgressOptions {
-  cardId: string;
-  interval: number;
-  repetition: number;
-  efactor: number;
-  dueDate: string;
-}
-
-// Card with SRS state attached (for study queue)
-export interface SRSStudyCard extends StudyCard {
-  isDue: boolean;          // true if due_date <= now
-  isNew: boolean;          // true if no progress record exists
-  dueDate: string | null;  // null for new cards
-}
+const { data, error } = await supabase.auth.verifyOtp({
+  email,
+  token: otpCode,  // 6-digit code from email
+  type: 'email',
+});
+// On success: data.session is returned, user is now logged in
 ```
 
-### Hook Changes
-
-The existing `useStudySession` hook needs extension, not replacement:
-
-- Add SRS mode flag to distinguish random (legacy) vs SRS scheduling
-- After `handleAnswer`, call `updateCardProgress` with grade 5 (correct) or 0 (incorrect)
-- Card loading in SRS mode uses `getSRSStudyQueue` instead of `getStudyCardsWithQuestions`
-- Track `isDue` / `isNew` on current card for the in-session badge
-
-### Dashboard Changes
-
-`DashboardScreen.tsx` — add a fourth StatCard:
+### Sign In (email + password)
 
 ```typescript
-const [dueCount, setDueCount] = useState(0);
-
-// In fetchStats():
-const count = await getDueCardCount();
-setDueCount(count);
+const { data, error } = await supabase.auth.signInWithPassword({
+  email,
+  password,
+});
+// Fails if email not yet confirmed
 ```
 
-StatCard with icon `"refresh-outline"` and orange/amber color (matching the last-studied card).
+### Request Password Reset
 
-### Study History Fix
+```typescript
+const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+// Sends OTP to email via recovery template
+```
 
-The `StudyHistoryScreen` shows `item.repositoryName ?? t('history.allRepos')` for the repo column. The bug: when `repositoryName` is null (cross-repo sessions), it shows "All Repos" which is misleading. Fix: store `total_count` (already stored) and display `N cards` instead of repo name in the center column. No schema change needed.
+### Verify Recovery OTP + Set New Password
+
+```typescript
+// Step 1: Verify the OTP
+const { data, error } = await supabase.auth.verifyOtp({
+  email,
+  token: otpCode,
+  type: 'recovery',
+});
+// On success: authenticated session with PASSWORD_RECOVERY event
+
+// Step 2: Set new password (user is now authenticated)
+const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+  password: newPassword,
+});
+```
+
+### Add Password to Google-Only Account (Settings)
+
+```typescript
+// User logged in via Google, wants to add email/password
+const { data, error } = await supabase.auth.updateUser({
+  password: newPassword,
+});
+// Adds email identity to the existing Google OAuth account
+// The email is already set (from Google profile)
+```
+
+### Link Google to Email-Only Account (Settings)
+
+```typescript
+// User logged in with email/password, wants to link Google
+const googleResponse = await GoogleSignin.signIn();
+if (googleResponse.type === 'success' && googleResponse.data.idToken) {
+  // Option A: linkIdentity (if it supports native ID token)
+  const { data, error } = await supabase.auth.linkIdentity({
+    provider: 'google',
+  });
+  // Note: linkIdentity uses redirect-based PKCE flow
+  // For native Android, may need alternative approach (see Open Questions)
+}
+```
+
+**WARNING:** `linkIdentity()` is designed for browser-based redirect flows. For native Android with `@react-native-google-signin`, the ID token approach may not work directly with `linkIdentity()`. The fallback is to use Supabase's automatic linking behavior (same email = auto-merge) by having the user sign in with Google, which will auto-link if the emails match and `enable_confirmations` is enabled.
+
+### Get Linked Identities (Settings display)
+
+```typescript
+const { data, error } = await supabase.auth.getUserIdentities();
+// data.identities: Array<{ provider: 'google' | 'email', ... }>
+// Show which auth methods are linked
+```
+
+### Unlink Identity (Settings)
+
+```typescript
+const { data, error } = await supabase.auth.unlinkIdentity(identity);
+// Requires at least 2 identities linked
+// Prevents user from removing their only login method
+```
 
 ---
 
-## Installation
+## Integration Points with Existing Code
 
-```bash
-# From monorepo root — add to @lumio/android
-pnpm --filter @lumio/android add supermemo
+### @lumio/core/src/supabase/auth.ts -- New Exports
+
+Add alongside existing `signInWithGoogle`, `signOut`, `getSession`, `getCurrentUser`:
+
+```typescript
+export async function signUpWithEmail(email: string, password: string): Promise<...>
+export async function signInWithEmail(email: string, password: string): Promise<...>
+export async function verifyEmailOtp(email: string, token: string, type: 'email' | 'recovery'): Promise<...>
+export async function requestPasswordReset(email: string): Promise<...>
+export async function updatePassword(newPassword: string): Promise<...>
+export async function getUserIdentities(): Promise<...>
+export async function addPasswordToAccount(password: string): Promise<...>
 ```
 
-No native rebuild required. `supermemo` is pure JavaScript/TypeScript with no native modules.
+### AuthContext.tsx -- Extended Interface
 
-Also add to `@lumio/core` dependencies if the SRS scheduling logic lives there:
-
-```bash
-pnpm --filter @lumio/core add supermemo
+```typescript
+export interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  state: AuthState;
+  signInWithGoogle: () => Promise<void>;          // Existing
+  signInWithEmail: (email: string, password: string) => Promise<void>;     // NEW
+  signUpWithEmail: (email: string, password: string) => Promise<SignUpResult>; // NEW
+  verifyOtp: (email: string, token: string, type: string) => Promise<void>;   // NEW
+  resetPassword: (email: string) => Promise<void>;                             // NEW
+  updatePassword: (password: string) => Promise<void>;                         // NEW
+  signOut: () => Promise<void>;                   // Existing
+}
 ```
 
-**Recommendation:** Place the `supermemo(card, grade)` call in `@lumio/core` alongside the Supabase upsert. This keeps the algorithm + persistence co-located and the app only calls `updateCardProgress(cardId, isCorrect)`.
+### AuthNavigator.tsx -- New Screens
 
----
+```typescript
+export type AuthStackParamList = {
+  Login: undefined;                                // Existing
+  SignUp: undefined;                               // NEW
+  VerifyEmail: { email: string };                  // NEW
+  ForgotPassword: undefined;                       // NEW
+  ResetPassword: { email: string };                // NEW
+};
+```
 
-## Alternatives Considered
+### LoginScreen.tsx -- Layout Change
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| supermemo (SM-2) | ts-fsrs (FSRS v6) | If Lumio adds multi-level ratings (Again/Hard/Good/Easy) in a future milestone. FSRS is genuinely better for nuanced recall grading. Current binary correct/wrong maps better to SM-2. |
-| supermemo (SM-2) | Hand-rolled SM-2 | Never — the package is correct, tiny, and battle-tested. Nothing to gain. |
-| supermemo (SM-2) | @open-spaced-repetition/sm-2-ts | Both implement the same algorithm. supermemo (2.0.23, Mar 2025) has more downloads, is slightly older/more proven, and the README is clearer. Either works. |
-| Supabase DB upsert | AsyncStorage for SRS state | AsyncStorage is local-only. SRS progress must survive reinstall and be shared if user logs in on another device. DB is correct here. |
-| Dedicated `user_card_progress` table | Add SRS columns to `cards` table | `cards` is shared across users (one card row per card, not per user). SRS progress is per-user, so it must be a separate table with `user_id`. |
+Current: Google Sign-In button only.
+New layout:
+1. Google Sign-In button (prominent, at top -- existing)
+2. "oppure" / "or" divider (horizontal line with text)
+3. Email input field
+4. Password input field
+5. "Login" button
+6. "Forgot password?" link -> ForgotPassword screen
+7. "Don't have an account? Sign up" link -> SignUp screen
+
+### SettingsScreen.tsx -- New Section
+
+Add "Linked Accounts" section between Account and Appearance:
+- Show list of linked identities (Google icon, Email icon)
+- "Link Google account" button (if only email identity)
+- "Add password" button (if only Google identity)
+- "Unlink" option (if 2+ identities)
 
 ---
 
 ## What NOT to Add
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| ts-fsrs | FSRS requires 4-rating input (Again/Hard/Good/Easy). Lumio's binary quiz loses FSRS's advantage. 7+ DB columns vs 3. Over-engineered for binary grading. | supermemo (SM-2) |
-| react-native-reanimated | No new animations needed. Dashboard counter and session badges are static UI. | Not needed |
-| @gorhom/bottom-sheet | Already decided against in prior research. Custom Modal pattern works. | Existing Modal pattern |
-| Supabase Realtime for due counter | Dashboard counter refreshes on pull-to-refresh and screen focus. Real-time push for a study counter is over-engineering. | Simple fetch in `fetchStats()` |
-| expo-background-fetch | SRS review reminders are out of scope per PROJECT.md. | Out of scope |
+| Library | Why NOT | Use Instead |
+|---------|---------|-------------|
+| expo-auth-session | Not needed. Google Sign-In uses native SDK. Email auth uses direct API calls. | @supabase/supabase-js direct methods |
+| expo-web-browser | Not needed. No browser-based OAuth flows. Google Sign-In is native. | @react-native-google-signin |
+| react-native-keychain | Already using expo-secure-store for tokens. | expo-secure-store |
+| formik / react-hook-form | Auth forms are simple (2-3 fields). useState is sufficient. Same pattern as all existing screens. | useState + inline validation |
+| yup / zod | Email regex + password min length check. 2 validations do not need a schema library. | Inline validation functions |
+| react-native-otp-input | TextInput with `keyboardType="number-pad"` and `maxLength={6}` is sufficient. One less dep. | Standard TextInput |
+| @gorhom/bottom-sheet | No bottom sheets needed for auth flows. Standard screen navigation. | react-navigation stack screens |
+| Additional Supabase packages | @supabase/supabase-js 2.89.0 contains everything needed. No @supabase/auth-helpers or similar. | Already installed SDK |
 
 ---
 
-## Version Compatibility
+## Password Validation
 
-| Package | Compatible With | Requires Native Rebuild | Notes |
-|---------|-----------------|------------------------|-------|
-| supermemo ^2.0.23 | Any JS runtime, Expo SDK 54 | No | Pure TypeScript, no native deps, ESM + CJS exports |
-| New Supabase migration | Existing Supabase local + production | No | Standard `supabase/migrations/` pattern |
-| `@lumio/core` additions | @lumio/android as-is | No | Adding functions to existing module |
-| `@lumio/shared` additions | @lumio/android as-is | No | Adding types to existing module |
+No library needed. Supabase GoTrue enforces minimum password length server-side (default 6, configurable in dashboard). Client-side validation mirrors this:
+
+```typescript
+const PASSWORD_MIN_LENGTH = 6;
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPassword = (password: string) => password.length >= PASSWORD_MIN_LENGTH;
+```
+
+---
+
+## i18n Additions Required
+
+New translation keys needed (EN + IT) for:
+
+| Screen | Estimated Keys |
+|--------|---------------|
+| Login (email form, divider, links) | ~8 |
+| Sign Up (fields, validation, submit) | ~10 |
+| Verify Email (instructions, OTP input, resend, timer) | ~8 |
+| Forgot Password (instructions, email input, submit) | ~6 |
+| Reset Password (OTP input, new password, confirm, submit) | ~8 |
+| Settings (linked accounts, link/unlink buttons) | ~6 |
+| Error messages (invalid email, weak password, email taken, wrong OTP, expired OTP, etc.) | ~10 |
+| **Total** | **~56 keys** |
+
+---
+
+## Database Changes
+
+No new tables needed for email auth. Supabase Auth manages identities in `auth.users` and `auth.identities` (internal schema). The existing `users` table in public schema remains unchanged.
+
+The only DB-related work is:
+- Supabase dashboard/config: Enable email confirmations + manual linking
+- No new migrations needed for email auth itself
+
+---
+
+## Local Development Testing
+
+Supabase local includes Inbucket (email capture) at `http://127.0.0.1:54324`. All verification and password reset emails sent locally are captured here. OTP codes can be read from Inbucket UI during development.
+
+| Step | How to Test |
+|------|-------------|
+| Sign up | Submit form -> check Inbucket -> copy 6-digit code -> enter in app |
+| Verify email | Enter OTP -> session created -> navigate to dashboard |
+| Password reset | Request reset -> check Inbucket -> copy code -> enter new password |
+| Google linking | Tap "Link Google" in Settings -> native Google Sign-In flow |
+
+---
+
+## Alternatives Considered
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| OTP (6-digit code) for email verification | Deep link from email | Fragment parsing issues in RN, email client compatibility, extra Linking setup. OTP is simpler and more reliable on mobile. |
+| OTP for password reset | Deep link + PASSWORD_RECOVERY event | Same deep link issues. OTP + verifyOtp + updateUser is a clean 2-step flow. |
+| Manual inline validation | formik + yup | 2-3 fields per form. Library overhead unjustified. Consistent with existing codebase pattern (no form libraries used anywhere). |
+| Standard TextInput for OTP | react-native-otp-input | Extra dependency for a single 6-character input. Not worth the maintenance cost. |
+| `updateUser({password})` for adding password to OAuth account | Custom edge function | Supabase natively supports this. No custom backend needed. |
+| Automatic linking (same email auto-merge) as fallback for Google linking | Only manual `linkIdentity()` | Automatic linking handles the common case (user signs up with email, later signs in with Google using same email). Manual linking via `linkIdentity()` is the explicit Settings action. Both work together. |
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Reason |
+|------|------------|--------|
+| signUp / signInWithPassword | HIGH | Official JS API docs, well-documented, standard usage |
+| verifyOtp (type: email) | HIGH | Official docs, multiple Supabase examples |
+| verifyOtp (type: recovery) | HIGH | Official docs, recovery flow documented |
+| updateUser for password | HIGH | Official docs, standard pattern |
+| enable_manual_linking config | HIGH | Verified via GitHub discussion + CLI config docs |
+| OTP approach for mobile | HIGH | Official email template docs, widely used RN pattern |
+| Email template content_path | HIGH | CLI config docs, content_path parameter documented |
+| linkIdentity for native Google | MEDIUM | Web redirect flow documented. Native mobile ID token approach unclear for linkIdentity specifically. May need fallback to auto-linking. |
+| No new npm dependencies | HIGH | All required methods verified in @supabase/supabase-js@2.89.0 |
+| getUserIdentities / unlinkIdentity | HIGH | Official JS API docs |
+
+---
+
+## Open Questions (Flag for Phase-Specific Research)
+
+1. **`linkIdentity()` with native Google Sign-In:** The `linkIdentity()` API is designed for browser redirect (PKCE). For native Android using `@react-native-google-signin`, this may need: (a) a redirect-based flow via WebBrowser, or (b) relying on Supabase's automatic email-based linking instead of manual `linkIdentity()`. Test both approaches during the account linking phase.
+
+2. **Automatic linking interaction with manual linking:** When `enable_manual_linking = true`, verify that automatic linking (same-email auto-merge on signup) still functions for new users. The docs suggest both modes coexist, but confirm locally.
+
+3. **OTP expiration and resend:** Default OTP expiration is 1 hour, resend cooldown is 60 seconds. Verify these defaults work for the UX or if they need adjustment in dashboard settings.
+
+4. **Email deliverability in production:** Supabase uses its built-in email service for auth emails. For production, consider whether custom SMTP is needed for better deliverability and branding. This is a post-launch consideration, not a blocker.
 
 ---
 
 ## Sources
 
-- [supermemo npm registry](https://registry.npmjs.org/supermemo) — version 2.0.23, published 2025-03-20, verified via Node.js fetch
-- [supermemo GitHub (VienDinhCom/supermemo)](https://github.com/VienDinhCom/supermemo) — SuperMemoItem type: `{interval, repetition, efactor}`, grade range 0-5, API verified
-- [ts-fsrs npm registry](https://registry.npmjs.org/ts-fsrs) — version 5.2.3, published 2025-09-05, zero peer deps, verified via Node.js fetch
-- [open-spaced-repetition/ts-fsrs GitHub](https://github.com/open-spaced-repetition/ts-fsrs) — FSRS v6, Card type fields (due, stability, difficulty, elapsed_days, state), 4-level Rating enum
-- FSRS vs SM-2 comparison — [MemoForge Blog 2025](https://memoforge.app/blog/fsrs-vs-sm2-anki-algorithm-guide-2025/): FSRS better for nuanced grading, SM-2 simpler and correct for binary outcomes
-- Codebase analysis: `apps/android/hooks/useStudySession.ts`, `packages/core/src/supabase/study.ts`, `packages/shared/src/types/index.ts`, `supabase/migrations/20260211000001_study_sessions.sql` — confirmed binary correct/wrong quiz model, existing DB patterns, study.ts architecture
+- [Supabase Auth Identity Linking Guide](https://supabase.com/docs/guides/auth/auth-identity-linking) -- HIGH confidence
+- [Supabase JS auth.signUp() Reference](https://supabase.com/docs/reference/javascript/auth-signup) -- HIGH confidence
+- [Supabase JS auth.signInWithPassword() Reference](https://supabase.com/docs/reference/javascript/auth-signinwithpassword) -- HIGH confidence
+- [Supabase JS auth.verifyOtp() Reference](https://supabase.com/docs/reference/javascript/auth-verifyotp) -- HIGH confidence
+- [Supabase JS auth.resetPasswordForEmail() Reference](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail) -- HIGH confidence
+- [Supabase JS auth.updateUser() Reference](https://supabase.com/docs/reference/javascript/auth-updateuser) -- HIGH confidence
+- [Supabase JS auth.linkIdentity() Reference](https://supabase.com/docs/reference/javascript/auth-linkidentity) -- MEDIUM confidence
+- [Supabase Native Mobile Deep Linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- HIGH confidence
+- [Supabase CLI Config Reference](https://supabase.com/docs/guides/local-development/cli/config) -- HIGH confidence
+- [Supabase Email Templates](https://supabase.com/docs/guides/auth/auth-email-templates) -- HIGH confidence
+- [GitHub Discussion: Manual Linking Locally #22214](https://github.com/orgs/supabase/discussions/22214) -- HIGH confidence
+- [GitHub Discussion: Deep Linking with Expo #10754](https://github.com/orgs/supabase/discussions/10754) -- HIGH confidence (informed OTP recommendation)
+- Codebase analysis: `apps/android/contexts/AuthContext.tsx`, `packages/core/src/supabase/auth.ts`, `packages/core/src/supabase/client.ts`, `supabase/config.toml`, `apps/android/app.json`, `apps/android/package.json` -- verified existing setup
 
 ---
 
-*Stack research for: Lumio v2.0 Spaced Repetition — SRS algorithm, card progress tracking, dashboard review counter*
-*Researched: 2026-02-25*
+*Stack research for: Lumio v2.1 Email Auth -- email/password authentication, OTP verification, password reset, account linking*
+*Researched: 2026-02-27*
