@@ -109,7 +109,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 **Milestone Goal:** Add email/password authentication with OTP verification, password reset, and account linking alongside existing Google OAuth.
 
 - [x] **Phase 27: Foundation & Database** - Supabase config, email templates, DB trigger fix for email signups (completed 2026-02-27)
-- [ ] **Phase 28: Auth Context & Infrastructure** - Extend AuthContext with email auth methods, fix signOut for email-only users, add i18n strings
+- [x] **Phase 28: Auth Context & Infrastructure** - Extend AuthContext with email auth methods, fix signOut for email-only users, add i18n strings (completed 2026-02-27)
 - [ ] **Phase 29: Email Signup & Verification** - SignUp screen, OTP verification screen, login screen layout with email form
 - [ ] **Phase 30: Email Login & Password Reset** - Email login flow, forgot password screen, reset password screen with OTP
 - [ ] **Phase 31: Account Linking** - Connected accounts display, add Google to email account, add email to Google account, unlink method
@@ -207,7 +207,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 20-22. GSD Versioning | v1.7 | 6/6 | Complete | 2026-02-21 |
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27. Foundation & Database | 2/2 | Complete    | 2026-02-27 | - |
-| 28. Auth Context & Infrastructure | v2.1 | 0/? | Not started | - |
+| 28. Auth Context & Infrastructure | 2/2 | Complete   | 2026-02-27 | - |
 | 29. Email Signup & Verification | v2.1 | 0/? | Not started | - |
 | 30. Email Login & Password Reset | v2.1 | 0/? | Not started | - |
 | 31. Account Linking | v2.1 | 0/? | Not started | - |

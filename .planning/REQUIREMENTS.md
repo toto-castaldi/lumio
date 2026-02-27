@@ -30,7 +30,7 @@ Requirements for email/password authentication milestone. Each maps to roadmap p
 - [x] **INFRA-03**: Supabase config enables email confirmations and manual linking
 - [x] **INFRA-04**: OTP email templates customized with Lumio branding
 - [ ] **INFRA-05**: Login screen shows Google OAuth button on top and email form below with separator
-- [ ] **INFRA-06**: All new UI strings available in IT and EN
+- [x] **INFRA-06**: All new UI strings available in IT and EN
 
 ## Future Requirements
 
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-03 | Phase 27 | Complete |
 | INFRA-04 | Phase 27 | Complete |
 | INFRA-05 | Phase 29 | Pending |
-| INFRA-06 | Phase 28 | Pending |
+| INFRA-06 | Phase 28 | Complete |
 
 **Coverage:**
 - v2.1 requirements: 16 total

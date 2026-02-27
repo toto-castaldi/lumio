@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email Auth
 status: unknown
-last_updated: "2026-02-27T10:52:15.515Z"
+last_updated: "2026-02-27T12:40:05.250Z"
 progress:
-  total_phases: 17
-  completed_phases: 17
-  total_plans: 40
-  completed_plans: 40
+  total_phases: 18
+  completed_phases: 18
+  total_plans: 42
+  completed_plans: 42
 ---
 
 # Project State
@@ -18,17 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 Email Auth -- Phase 27 Foundation & Database
+**Current focus:** v2.1 Email Auth -- Phase 28 Auth Context Infrastructure
 
 ## Current Position
 
 Milestone: v2.1 Email Auth
-Phase: 27 of 31 (Foundation & Database)
+Phase: 28 of 31 (Auth Context Infrastructure)
 Plan: 2 of 2 in current phase
-Status: Phase 27 plans complete
-Last activity: 2026-02-27 -- Completed 27-02 Email Auth Trigger
+Status: Phase 28 plan 02 complete
+Last activity: 2026-02-27 -- Completed 28-02 Auth i18n Keys
 
-Progress: [##........] 20%
+Progress: [####......] 40%
 
 ## Performance Metrics
 
@@ -41,6 +41,8 @@ Progress: [##........] 20%
 |-------|------|----------|-------|-------|
 | 27 | 01 | 1min | 2 | 3 |
 | 27 | 02 | 1min | 1 | 1 |
+| 28 | 02 | 1min | 1 | 2 |
+| Phase 28 P01 | 2min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -49,6 +51,11 @@ Progress: [##........] 20%
 All decisions logged in PROJECT.md Key Decisions table (50 entries).
 - [Phase 27]: OTP templates use table-based layout with inline CSS for email client compatibility
 - [Phase 27]: Use raw_app_meta_data provider field for explicit provider detection in handle_new_user trigger
+- [Phase 28]: Auth i18n keys organized by screen: auth.login.*, auth.signup.*, auth.reset.*, auth.updatePassword.*
+- [Phase 28]: Italian translations use informal "tu" tone for auth screens
+- [Phase 28]: Error messages include corrective action guidance
+- [Phase 28]: Guard GoogleSignin.signOut() with hasPreviousSignIn() for email-only user safety
+- [Phase 28]: Persist recovery state to AsyncStorage to survive app restarts during password reset flow
 
 ### Pending Todos
 
@@ -71,9 +78,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 27-02-PLAN.md
+Stopped at: Completed 28-02-PLAN.md
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-27 (27-02 Email Auth Trigger completed)*
+*Last updated: 2026-02-27 (28-02 Auth i18n Keys completed)*
