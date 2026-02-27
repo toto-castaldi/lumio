@@ -138,10 +138,11 @@ Plans:
   1. An email-only user can sign out without the app crashing (GoogleSignin.signOut guarded)
   2. All new auth-related strings (approximately 30 keys) are available in both IT and EN
   3. AuthContext exposes signUpWithEmail, signInWithEmail, resetPassword, updatePassword, and passwordRecoveryPending state
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 28-01: TBD
+- [ ] 28-01-PLAN.md — Extend AuthContext with email auth methods, signOut guard, recovery state machine
+- [ ] 28-02-PLAN.md — Add ~30 i18n keys for auth screens in EN and IT
 
 ### Phase 29: Email Signup & Verification
 **Goal**: Users can create an account with email/password and verify their email via OTP code
