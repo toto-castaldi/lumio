@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
+milestone: v1.1
 milestone_name: Email Auth
-status: active
-last_updated: "2026-02-27T00:00:00.000Z"
+status: unknown
+last_updated: "2026-02-27T10:19:51.630Z"
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 17
+  completed_phases: 17
+  total_plans: 40
+  completed_plans: 40
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Milestone: v2.1 Email Auth
 Phase: 27 of 31 (Foundation & Database)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-27 — Roadmap created for v2.1
+Plan: 2 of 2 in current phase
+Status: Phase 27 plans complete
+Last activity: 2026-02-27 — Completed 27-02 Email Auth Trigger
 
-Progress: [..........] 0%
+Progress: [##........] 20%
 
 ## Performance Metrics
 
@@ -42,6 +42,8 @@ Progress: [..........] 0%
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (50 entries).
+- [Phase 27]: Use raw_app_meta_data provider field for explicit provider detection in handle_new_user trigger
+- [Phase 27]: OTP templates use table-based layout with inline CSS for email client compatibility
 
 ### Pending Todos
 
@@ -60,11 +62,12 @@ None.
 | 2 | Fix APK download: add create-release CI job with softprops/action-gh-release, create v1.7 release with lumio.apk | 2026-02-23 | d4036ea | [2-fix-apk-download-github-release-apk-is-o](./quick/2-fix-apk-download-github-release-apk-is-o/) |
 | 3 | Fix APK version display: pass BUILD_NUMBER and GIT_SHA env vars to build-apk CI job | 2026-02-23 | 54b502f | [3-fix-apk-version-display-pass-build-numbe](./quick/3-fix-apk-version-display-pass-build-numbe/) |
 | 4 | Fix version.ts: hardcode build metadata as string literals (not process.env) | 2026-02-23 | 353f6fa | [4-fix-version-ts-hardcode-build-number-and](./quick/4-fix-version-ts-hardcode-build-number-and/) |
+| Phase 27 P01 | 1min | 2 tasks | 3 files |
 
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Roadmap created for v2.1 Email Auth (5 phases, 27-31)
+Stopped at: Completed 27-02-PLAN.md
 Resume file: None
 
 ---

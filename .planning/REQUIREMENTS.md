@@ -27,8 +27,8 @@ Requirements for email/password authentication milestone. Each maps to roadmap p
 
 - [ ] **INFRA-01**: Database trigger handles email signups (no Google metadata)
 - [ ] **INFRA-02**: Sign-out works correctly for email-only users
-- [ ] **INFRA-03**: Supabase config enables email confirmations and manual linking
-- [ ] **INFRA-04**: OTP email templates customized with Lumio branding
+- [x] **INFRA-03**: Supabase config enables email confirmations and manual linking
+- [x] **INFRA-04**: OTP email templates customized with Lumio branding
 - [ ] **INFRA-05**: Login screen shows Google OAuth button on top and email form below with separator
 - [ ] **INFRA-06**: All new UI strings available in IT and EN
 
@@ -77,8 +77,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINK-04 | Phase 31 | Pending |
 | INFRA-01 | Phase 27 | Pending |
 | INFRA-02 | Phase 28 | Pending |
-| INFRA-03 | Phase 27 | Pending |
-| INFRA-04 | Phase 27 | Pending |
+| INFRA-03 | Phase 27 | Complete |
+| INFRA-04 | Phase 27 | Complete |
 | INFRA-05 | Phase 29 | Pending |
 | INFRA-06 | Phase 28 | Pending |
 
