@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { User, Session } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabaseClient } from '@lumio/core';
 import '../lib/supabase'; // Side-effect import to ensure @lumio/core initialization
 import { configureGoogleSignIn, statusCodes } from '../lib/auth';
@@ -20,12 +21,58 @@ import { configureGoogleSignIn, statusCodes } from '../lib/auth';
  */
 export type AuthState = 'loading' | 'logged_out' | 'ready';
 
+/**
+ * Recovery flow state machine:
+ * - 'idle': No recovery in progress
+ * - 'email_sent': Reset email sent, waiting for user to click link
+ * - 'link_clicked': User clicked recovery link, PASSWORD_RECOVERY event received
+ * - 'updating': Password update in progress
+ */
+export type RecoveryState = 'idle' | 'email_sent' | 'link_clicked' | 'updating';
+
+const RECOVERY_STATE_KEY = '@lumio/recovery-state';
+
+async function loadRecoveryState(): Promise<RecoveryState> {
+  try {
+    const stored = await AsyncStorage.getItem(RECOVERY_STATE_KEY);
+    if (stored === 'email_sent' || stored === 'link_clicked' || stored === 'updating') {
+      return stored;
+    }
+    return 'idle';
+  } catch {
+    return 'idle';
+  }
+}
+
+async function saveRecoveryState(state: RecoveryState): Promise<void> {
+  if (state === 'idle') {
+    await AsyncStorage.removeItem(RECOVERY_STATE_KEY);
+  } else {
+    await AsyncStorage.setItem(RECOVERY_STATE_KEY, state);
+  }
+}
+
 export interface AuthContextType {
   user: User | null;
   session: Session | null;
   state: AuthState;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+
+  // Email auth methods
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+
+  // Per-operation loading states
+  signUpLoading: boolean;
+  signInLoading: boolean;
+  resetLoading: boolean;
+  updatePasswordLoading: boolean;
+
+  // Recovery flow state
+  recoveryState: RecoveryState;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -45,12 +92,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [state, setState] = useState<AuthState>('loading');
+  const [signUpLoading, setSignUpLoading] = useState(false);
+  const [signInLoading, setSignInLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
+  const [recoveryState, setRecoveryStateLocal] = useState<RecoveryState>('idle');
+
+  const setRecoveryState = useCallback(async (newState: RecoveryState) => {
+    setRecoveryStateLocal(newState);
+    await saveRecoveryState(newState);
+  }, []);
 
   useEffect(() => {
     console.log('[Auth] Initializing auth...');
 
     // Configure Google Sign-In SDK
     configureGoogleSignIn();
+
+    // Load persisted recovery state
+    loadRecoveryState().then(setRecoveryStateLocal);
 
     // Restore persisted session
     getSupabaseClient().auth.getSession()
@@ -71,10 +131,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = getSupabaseClient().auth.onAuthStateChange((_event, newSession) => {
+    } = getSupabaseClient().auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setState(newSession ? 'ready' : 'logged_out');
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryState('link_clicked');
+      }
     });
 
     return () => {
@@ -124,12 +188,68 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
-    // Sign out from Google
-    await GoogleSignin.signOut();
+    // Guard: only call GoogleSignin.signOut() if there's a cached Google sign-in
+    if (GoogleSignin.hasPreviousSignIn()) {
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        console.warn('[Auth] GoogleSignin.signOut failed, continuing:', e);
+      }
+    }
 
     // Sign out from Supabase
     await getSupabaseClient().auth.signOut();
   }, []);
+
+  const signUpWithEmail = useCallback(async (email: string, password: string): Promise<void> => {
+    setSignUpLoading(true);
+    try {
+      const { data, error } = await getSupabaseClient().auth.signUp({ email, password });
+      if (error) throw error;
+      // Detect fake success for existing emails (email enumeration protection)
+      if (data.user && data.user.identities?.length === 0) {
+        throw new Error('email_exists');
+      }
+      // When enable_confirmations=true: data.session is null, confirmation email sent
+      // Caller should show "check your email" UI
+    } finally {
+      setSignUpLoading(false);
+    }
+  }, []);
+
+  const signInWithEmail = useCallback(async (email: string, password: string): Promise<void> => {
+    setSignInLoading(true);
+    try {
+      const { error } = await getSupabaseClient().auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // onAuthStateChange fires SIGNED_IN, session auto-updates
+    } finally {
+      setSignInLoading(false);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string): Promise<void> => {
+    setResetLoading(true);
+    try {
+      const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      await setRecoveryState('email_sent');
+    } finally {
+      setResetLoading(false);
+    }
+  }, [setRecoveryState]);
+
+  const updatePassword = useCallback(async (newPassword: string): Promise<void> => {
+    setUpdatePasswordLoading(true);
+    try {
+      await setRecoveryState('updating');
+      const { error } = await getSupabaseClient().auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      await setRecoveryState('idle');
+    } finally {
+      setUpdatePasswordLoading(false);
+    }
+  }, [setRecoveryState]);
 
   const value: AuthContextType = {
     user,
@@ -137,6 +257,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     state,
     signInWithGoogle,
     signOut,
+    signUpWithEmail,
+    signInWithEmail,
+    resetPassword,
+    updatePassword,
+    signUpLoading,
+    signInLoading,
+    resetLoading,
+    updatePasswordLoading,
+    recoveryState,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
