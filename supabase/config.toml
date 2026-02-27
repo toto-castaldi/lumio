@@ -40,11 +40,22 @@ additional_redirect_urls = [
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
+enable_manual_linking = true
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
+enable_confirmations = true
+otp_length = 6
+otp_expiry = 3600
+
+[auth.email.template.confirmation]
+subject = "Lumio - Your verification code"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Lumio - Password reset code"
+content_path = "./supabase/templates/recovery.html"
 
 [auth.external.google]
 enabled = true
