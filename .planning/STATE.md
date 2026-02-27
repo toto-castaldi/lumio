@@ -1,52 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Spaced Repetition
-status: shipped
-last_updated: "2026-02-26T23:00:00.000Z"
+milestone: v2.1
+milestone_name: Email Auth
+status: active
+last_updated: "2026-02-27T00:00:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-26)
+See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** v2.1 Email Auth
 
 ## Current Position
 
-Milestone: v2.0 Spaced Repetition (SHIPPED 2026-02-26)
-Phase: 26 of 26 (all complete)
-Status: Milestone Shipped
-Last activity: 2026-02-26 — v2.0 milestone archived
-
-Progress (v2.0): [██████████] 100%
-Progress (overall): 62/62 plans across 8 milestones
+Milestone: v2.1 Email Auth
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-27 — Milestone v2.1 started
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 62 (54 across v1.1-v1.7 + 8 in v2.0)
+- Total plans completed: 62 (across v1.1-v2.0)
 - Total milestones shipped: 8
 - Timeline: 29 days (2026-01-29 to 2026-02-26)
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 23    | 01   | 3min     | 2     | 7     |
-| 23    | 02   | 3min     | 2     | 3     |
-| 24    | 01   | 2min     | 2     | 3     |
-| 24    | 02   | 2min     | 2     | 4     |
-| 24    | 03   | 1min     | 1     | 1     |
-| 25    | 01   | 3min     | 2     | 5     |
-| 26    | 01   | 3min     | 2     | 2     |
-| 26    | 02   | 2min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -73,10 +60,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: v2.0 milestone completed and archived
+Last session: 2026-02-27
+Stopped at: Defining requirements for v2.1
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-26 (v2.0 milestone shipped)*
+*Last updated: 2026-02-27 (v2.1 milestone started)*

@@ -79,7 +79,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(No active milestone — run `/gsd:new-milestone` to start next)
+**Current Milestone: v2.1 Email Auth**
+
+**Goal:** Aggiungere autenticazione email/password con verifica email, reset password e account linking con Google OAuth.
+
+**Target features:**
+- Signup con email + password
+- Login con email + password (Google OAuth prominente in alto, form email sotto separatore "oppure")
+- Verifica email dopo registrazione
+- Reset password via email
+- Account linking Google ↔ email/password da Settings
 
 ### Out of Scope
 
@@ -178,4 +187,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | CHECK constraints on card_review_schedule | Database-level enforcement of EF floor/ceiling and interval bounds | ✓ Good — v2.0 |
 
 ---
-*Last updated: 2026-02-26 after v2.0 milestone*
+*Last updated: 2026-02-27 after v2.1 milestone start*
