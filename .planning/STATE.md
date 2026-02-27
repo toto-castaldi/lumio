@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email Auth
 status: unknown
-last_updated: "2026-02-27T12:43:04.894Z"
+last_updated: "2026-02-27T13:28:00.000Z"
 progress:
   total_phases: 18
   completed_phases: 18
   total_plans: 42
-  completed_plans: 42
+  completed_plans: 43
 ---
 
 # Project State
@@ -18,17 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 Email Auth -- Phase 28 Auth Context Infrastructure
+**Current focus:** v2.1 Email Auth -- Phase 29 Email Signup & Verification
 
 ## Current Position
 
 Milestone: v2.1 Email Auth
-Phase: 28 of 31 (Auth Context Infrastructure)
-Plan: 2 of 2 in current phase
-Status: Phase 28 plan 02 complete
-Last activity: 2026-02-27 -- Completed 28-02 Auth i18n Keys
+Phase: 29 of 31 (Email Signup & Verification)
+Plan: 1 of 2 in current phase
+Status: Phase 29 plan 01 complete
+Last activity: 2026-02-27 -- Completed 29-01 Login Redesign & Auth Infrastructure
 
-Progress: [####......] 40%
+Progress: [#####.....] 50%
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [####......] 40%
 | 27 | 02 | 1min | 1 | 1 |
 | 28 | 02 | 1min | 1 | 2 |
 | Phase 28 P01 | 2min | 1 tasks | 1 files |
+| 29 | 01 | 3min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -56,6 +57,9 @@ All decisions logged in PROJECT.md Key Decisions table (50 entries).
 - [Phase 28]: Error messages include corrective action guidance
 - [Phase 28]: Guard GoogleSignin.signOut() with hasPreviousSignIn() for email-only user safety
 - [Phase 28]: Persist recovery state to AsyncStorage to survive app restarts during password reset flow
+- [Phase 29]: Email-first progressive disclosure: email + Continue button reveals password field
+- [Phase 29]: Dual-auth layout with equal visual weight: Google button -> separator -> email form
+- [Phase 29]: Read-only email field with pencil icon as back affordance in password step
 
 ### Pending Todos
 
@@ -78,9 +82,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 28-01-PLAN.md and 28-02-PLAN.md (parallel execution)
+Stopped at: Completed 29-01-PLAN.md
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-27 (28-02 Auth i18n Keys completed)*
+*Last updated: 2026-02-27 (29-01 Login Redesign & Auth Infrastructure completed)*
