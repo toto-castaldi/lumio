@@ -124,11 +124,11 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
   1. A user signing up with email/password gets a non-null display_name in public.users (derived from email prefix)
   2. Supabase config.toml has email confirmations enabled and manual identity linking enabled
   3. OTP email templates with Lumio branding exist and deliver 6-digit codes (testable via Inbucket locally)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 27-01: TBD
-- [ ] 27-02: TBD
+- [ ] 27-01-PLAN.md — Supabase config for email auth + branded OTP email templates
+- [ ] 27-02-PLAN.md — Provider-aware database trigger for email signups
 
 ### Phase 28: Auth Context & Infrastructure
 **Goal**: AuthContext supports email auth lifecycle and all new UI strings are translatable
