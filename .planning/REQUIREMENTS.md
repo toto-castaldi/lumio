@@ -25,7 +25,7 @@ Requirements for email/password authentication milestone. Each maps to roadmap p
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Database trigger handles email signups (no Google metadata)
+- [x] **INFRA-01**: Database trigger handles email signups (no Google metadata)
 - [ ] **INFRA-02**: Sign-out works correctly for email-only users
 - [x] **INFRA-03**: Supabase config enables email confirmations and manual linking
 - [x] **INFRA-04**: OTP email templates customized with Lumio branding
@@ -75,7 +75,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINK-02 | Phase 31 | Pending |
 | LINK-03 | Phase 31 | Pending |
 | LINK-04 | Phase 31 | Pending |
-| INFRA-01 | Phase 27 | Pending |
+| INFRA-01 | Phase 27 | Complete |
 | INFRA-02 | Phase 28 | Pending |
 | INFRA-03 | Phase 27 | Complete |
 | INFRA-04 | Phase 27 | Complete |
