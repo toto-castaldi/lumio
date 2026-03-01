@@ -167,13 +167,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can log in with email and password from the login screen
   2. User can tap "Forgot password?" and receive a reset OTP code via email
-  3. User can enter the reset OTP code and set a new password, then is logged in automatically
+  3. User can enter the reset OTP code and set a new password, then is signed out and redirected to login
   4. Invalid credentials and unverified email show appropriate error messages
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 30-01: TBD
-- [ ] 30-02: TBD
+- [ ] 30-01-PLAN.md — Auth infrastructure: verifyRecoveryOtp, global signOut, navigation guard, wire forgot password & resend verification
+- [ ] 30-02-PLAN.md — ForgotPasswordScreen + UpdatePasswordScreen with OTP entry and new password
 
 ### Phase 31: Account Linking
 **Goal**: Users can connect multiple auth methods to a single account from Settings
