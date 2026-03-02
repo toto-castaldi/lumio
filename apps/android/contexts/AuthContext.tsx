@@ -77,6 +77,10 @@ export interface AuthContextType {
   verifyLoading: boolean;
   resendLoading: boolean;
 
+  // Recovery OTP verification
+  verifyRecoveryOtp: (email: string, token: string) => Promise<void>;
+  verifyRecoveryLoading: boolean;
+
   // Recovery flow state
   recoveryState: RecoveryState;
 }
@@ -104,6 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [verifyRecoveryLoading, setVerifyRecoveryLoading] = useState(false);
   const [recoveryState, setRecoveryStateLocal] = useState<RecoveryState>('idle');
 
   const setRecoveryState = useCallback(async (newState: RecoveryState) => {
@@ -250,9 +255,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const updatePassword = useCallback(async (newPassword: string): Promise<void> => {
     setUpdatePasswordLoading(true);
     try {
-      await setRecoveryState('updating');
       const { error } = await getSupabaseClient().auth.updateUser({ password: newPassword });
       if (error) throw error;
+      // Invalidate ALL sessions across devices per CONTEXT.md decision
+      await getSupabaseClient().auth.signOut({ scope: 'global' });
+      // Clear recovery state — this triggers navigation back to login
       await setRecoveryState('idle');
     } finally {
       setUpdatePasswordLoading(false);
@@ -287,6 +294,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const verifyRecoveryOtp = useCallback(async (email: string, token: string): Promise<void> => {
+    setVerifyRecoveryLoading(true);
+    try {
+      const { error } = await getSupabaseClient().auth.verifyOtp({
+        email,
+        token,
+        type: 'recovery',
+      });
+      if (error) throw error;
+      // User is now authenticated; transition to 'updating' so navigation guard keeps auth flow
+      await setRecoveryState('updating');
+    } finally {
+      setVerifyRecoveryLoading(false);
+    }
+  }, [setRecoveryState]);
+
   const value: AuthContextType = {
     user,
     session,
@@ -305,6 +328,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resendOtp,
     verifyLoading,
     resendLoading,
+    verifyRecoveryOtp,
+    verifyRecoveryLoading,
     recoveryState,
   };
 
