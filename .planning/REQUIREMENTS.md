@@ -18,10 +18,10 @@ Requirements for email/password authentication milestone. Each maps to roadmap p
 
 ### Account Linking
 
-- [ ] **LINK-01**: User can see connected authentication methods in Settings
-- [ ] **LINK-02**: User can add Google to an email-only account
+- [x] **LINK-01**: User can see connected authentication methods in Settings
+- [x] **LINK-02**: User can add Google to an email-only account
 - [ ] **LINK-03**: User can add email/password to a Google-only account
-- [ ] **LINK-04**: User can unlink an authentication method (if at least one remains)
+- [x] **LINK-04**: User can unlink an authentication method (if at least one remains)
 
 ### Infrastructure
 
@@ -71,10 +71,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-04 | Phase 30 | Complete |
 | AUTH-05 | Phase 30 | Complete |
 | AUTH-06 | Phase 30 | Complete |
-| LINK-01 | Phase 31 | Pending |
-| LINK-02 | Phase 31 | Pending |
+| LINK-01 | Phase 31 | Complete |
+| LINK-02 | Phase 31 | Complete |
 | LINK-03 | Phase 31 | Pending |
-| LINK-04 | Phase 31 | Pending |
+| LINK-04 | Phase 31 | Complete |
 | INFRA-01 | Phase 27 | Complete |
 | INFRA-02 | Phase 28 | Complete |
 | INFRA-03 | Phase 27 | Complete |

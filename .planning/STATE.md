@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email Auth
 status: in-progress
-last_updated: "2026-03-02T09:44:32Z"
+last_updated: "2026-03-02T13:04:01Z"
 progress:
   total_phases: 19
   completed_phases: 19
-  total_plans: 45
-  completed_plans: 45
+  total_plans: 46
+  completed_plans: 46
 ---
 
 # Project State
@@ -18,17 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 Email Auth -- Phase 30 Email Login & Password Reset
+**Current focus:** v2.1 Email Auth -- Phase 31 Account Linking
 
 ## Current Position
 
 Milestone: v2.1 Email Auth
-Phase: 30 of 31 (Email Login & Password Reset)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 30 Complete
-Last activity: 2026-03-02 -- Completed 30-02 Password Reset Screens
+Phase: 31 of 31 (Account Linking)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-02 -- Completed 31-01 Account Linking Infrastructure & Settings UI
 
-Progress: [##########] 100%
+Progress: [#########-] 95%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [##########] 100%
 | 29 | 02 | 2min | 2 | 3 |
 | 30 | 01 | 3min | 2 | 6 |
 | 30 | 02 | 3min | 2 | 3 |
+| 31 | 01 | 4min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ All decisions logged in PROJECT.md Key Decisions table (50 entries).
 - [Phase 30]: Resend verification navigates to OtpVerification for immediate code entry
 - [Phase 30]: Single password field on UpdatePasswordScreen, no confirm password (per CONTEXT.md)
 - [Phase 30]: Two-phase screen pattern: OTP verification transitions to password entry within same component
+- [Phase 31]: Guard PASSWORD_RECOVERY with addPasswordModeRef to prevent recovery nav during add-password OTP flow
+- [Phase 31]: Identity rows inside existing account section (not separate) per CONTEXT.md
+- [Phase 31]: Supabase linkIdentity with queryParams for Google token exchange
 
 ### Pending Todos
 
@@ -94,9 +98,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 30-02-PLAN.md
+Stopped at: Completed 31-01-PLAN.md
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-02 (30-02 Password Reset Screens completed)*
+*Last updated: 2026-03-02 (31-01 Account Linking Infrastructure completed)*
