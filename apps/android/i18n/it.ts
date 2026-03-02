@@ -184,6 +184,8 @@ const it: Translations = {
       continue: 'Continua',
       signInAction: 'Accedi',
       signingIn: 'Accesso in corso...',
+      resendVerification: 'Reinvia email di verifica',
+      verificationResent: 'Codice di verifica inviato',
     },
     signup: {
       title: 'Crea Account',

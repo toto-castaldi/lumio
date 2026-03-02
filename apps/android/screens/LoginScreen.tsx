@@ -43,7 +43,7 @@ const isGoogleConfigured = !!googleClientId;
  * - "Non hai un account? Registrati" link
  */
 export function LoginScreen() {
-  const { signInWithGoogle, signInWithEmail, signInLoading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signInLoading, resendOtp, resendLoading } = useAuth();
   const { colors } = useTheme();
   const { t } = useI18n();
   const navigation = useNavigation<LoginNavProp>();
@@ -53,12 +53,14 @@ export function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showResendLink, setShowResendLink] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const passwordRef = useRef<TextInput>(null);
 
   const handleContinue = useCallback(() => {
     setError(null);
+    setShowResendLink(false);
     const trimmed = email.trim();
     if (!trimmed || !EMAIL_REGEX.test(trimmed)) {
       setError(t('auth.login.invalidCredentials'));
@@ -71,6 +73,7 @@ export function LoginScreen() {
 
   const handleSignIn = useCallback(async () => {
     setError(null);
+    setShowResendLink(false);
     try {
       await signInWithEmail(email.trim(), password);
       // Navigation happens automatically via AuthContext state change
@@ -78,6 +81,7 @@ export function LoginScreen() {
       if (e instanceof Error) {
         if (e.message.includes('Email not confirmed')) {
           setError(t('auth.login.emailNotConfirmed'));
+          setShowResendLink(true);
         } else {
           setError(t('auth.login.invalidCredentials'));
         }
@@ -100,10 +104,23 @@ export function LoginScreen() {
     }
   }, [signInWithGoogle, t]);
 
+  const handleResendVerification = useCallback(async () => {
+    try {
+      await resendOtp(email.trim());
+      setError(null);
+      setShowResendLink(false);
+      // Navigate to OTP screen so user can enter the code
+      navigation.navigate('OtpVerification', { email: email.trim() });
+    } catch {
+      // Keep error visible if resend fails
+    }
+  }, [email, resendOtp, navigation]);
+
   const handleBackToEmail = useCallback(() => {
     setStep('email');
     setPassword('');
     setError(null);
+    setShowResendLink(false);
   }, []);
 
   return (
@@ -173,7 +190,20 @@ export function LoginScreen() {
 
           {/* Error message */}
           {error && (
-            <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
+            <View style={styles.errorContainer}>
+              <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
+              {showResendLink && (
+                <TouchableOpacity
+                  onPress={handleResendVerification}
+                  disabled={resendLoading}
+                  style={styles.resendLinkContainer}
+                >
+                  <Text style={[styles.resendLinkText, { color: colors.primary }]}>
+                    {resendLoading ? t('auth.login.verificationResent') : t('auth.login.resendVerification')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
 
           {/* Email form section */}
@@ -278,10 +308,7 @@ export function LoginScreen() {
                 {/* Forgot password link */}
                 <TouchableOpacity
                   style={styles.forgotPasswordContainer}
-                  onPress={() => {
-                    // Phase 30 implements the actual screen - no-op for now
-                    console.log('[LoginScreen] Forgot password tapped - coming in Phase 30');
-                  }}
+                  onPress={() => navigation.navigate('ForgotPassword')}
                 >
                   <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
                     {t('auth.login.forgotPassword')}
@@ -417,10 +444,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   // Error
+  errorContainer: {
+    width: '100%',
+    marginBottom: 12,
+    alignItems: 'center',
+  },
   error: {
     fontSize: 14,
-    marginBottom: 12,
     textAlign: 'center',
+  },
+  resendLinkContainer: {
+    marginTop: 8,
+  },
+  resendLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   // Form
   formContainer: {

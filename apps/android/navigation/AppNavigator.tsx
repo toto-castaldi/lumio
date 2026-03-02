@@ -44,7 +44,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  * - StudySummary: End-of-session results (card presentation)
  */
 export function AppNavigator() {
-  const { state } = useAuth();
+  const { state, recoveryState } = useAuth();
   const { colors } = useTheme();
 
   // Show loading indicator while checking auth state
@@ -56,8 +56,8 @@ export function AppNavigator() {
     );
   }
 
-  // Show auth flow when logged out
-  if (state === 'logged_out') {
+  // Show auth flow when logged out OR when in recovery flow (even if authenticated)
+  if (state === 'logged_out' || (state === 'ready' && recoveryState !== 'idle')) {
     return <AuthNavigator />;
   }
 

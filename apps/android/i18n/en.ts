@@ -181,6 +181,8 @@ const en = {
       continue: 'Continue',
       signInAction: 'Sign in',
       signingIn: 'Signing in...',
+      resendVerification: 'Resend verification email',
+      verificationResent: 'Verification code sent',
     },
     signup: {
       title: 'Create Account',
