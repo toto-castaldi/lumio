@@ -4,9 +4,6 @@
 
 AI-powered flashcard study platform
 
-```
-Leggi CLAUDE.md, README.md e tutta la cartella DOCS. Ora sei pronto.
-```
 
 **Production**: https://lumio.toto-castaldi.com/
 
