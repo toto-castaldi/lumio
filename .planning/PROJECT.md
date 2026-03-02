@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2 (carte scadute prima, nuove dopo), sessioni di studio configurabili, counter "carte da ripassare oggi" sulla dashboard, navigazione carte nei repository, storico sessioni con conteggio carte, gestione errori sync con aggiornamento token in-app, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2 (carte scadute prima, nuove dopo), sessioni di studio configurabili, counter "carte da ripassare oggi" sulla dashboard, navigazione carte nei repository, storico sessioni con conteggio carte, gestione errori sync con aggiornamento token in-app, autenticazione dual-mode (Google OAuth + email/password con verifica OTP), account linking bidirezionale (Google ↔ email), password reset via OTP, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
 
 ## Core Value
 
@@ -77,18 +77,18 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Storico sessioni con conteggio carte, date relative, e CTA per nuovi utenti — v2.0
 - ✓ RPCs timezone-aware con AT TIME ZONE e CHECK constraints per integrità dati — v2.0
 
+- ✓ Signup con email/password e verifica OTP a 6 cifre via email brandizzata Lumio — v2.1
+- ✓ Login email con progressive disclosure (Google OAuth prominente in alto, form email sotto separatore) — v2.1
+- ✓ Reset password via OTP con schermata two-phase (OTP poi nuova password) e invalidazione globale sessioni — v2.1
+- ✓ Account linking: aggiunta Google ad account email e email/password ad account Google, unlink con protezione singola identità — v2.1
+- ✓ Trigger database provider-aware per signup email (display_name da prefisso email, avatar generato) — v2.1
+- ✓ 71 chiavi i18n per auth in IT e EN con validazione DeepStringify a compile-time — v2.1
+- ✓ SignOut guard per utenti email-only (GoogleSignin.signOut condizionale) — v2.1
+- ✓ Recovery state machine con persistenza AsyncStorage per reset password — v2.1
+
 ### Active
 
-**Current Milestone: v2.1 Email Auth**
-
-**Goal:** Aggiungere autenticazione email/password con verifica email, reset password e account linking con Google OAuth.
-
-**Target features:**
-- Signup con email + password
-- Login con email + password (Google OAuth prominente in alto, form email sotto separatore "oppure")
-- Verifica email dopo registrazione
-- Reset password via email
-- Account linking Google ↔ email/password da Settings
+(Next milestone not yet defined — run `/gsd-new-milestone`)
 
 ### Out of Scope
 
@@ -111,25 +111,32 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - Undo/reschedule button — compromette integrità algoritmo; studio forward-only
 - FSRS algorithm — richiede 400+ review per calibrare ML; prematuro
 - Per-card statistics detail — risultato sessione sufficiente
+- Deep link email verification — OTP approach chosen, più affidabile su Android
+- Social login (Apple, GitHub, etc.) — Google + email copre gli utenti target
+- Custom password policy (oltre default Supabase) — 6 char minimo sufficiente per app studio personale
+- Bilingual email templates — Supabase invia un template per tipo; EN singola lingua accettabile
+- SMTP configuration — config dashboard produzione, non codice
 
 ## Context
 
-**Stato attuale (post v2.0):**
+**Stato attuale (post v2.1):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
-- Backend Supabase: auth, DB, storage, edge functions, Docora webhook + study_sessions + card_review_schedule tables
+- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions, Docora webhook + study_sessions + card_review_schedule tables
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23, vitest@4.0.18
 - CI/CD: lint → build-apk → deploy-landing → deploy-migrations → deploy-functions (version from STATE.md)
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
+- Auth: dual-mode Google OAuth + email/password con OTP verification, password reset, account linking bidirezionale
 - App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app
-- 16,320 LOC (TS/TSX/SQL)
-- 8 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition)
+- ~26,000 LOC (TS/TSX/SQL) — +9,897 lines in v2.1
+- 9 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth)
 
 ## Constraints
 
 - **Platform**: Solo Android
 - **Distribution**: APK diretto via GitHub Releases
-- **Backend**: Modifiche DB per statistiche sessioni; Edge Functions invariate dove possibile
+- **Backend**: Supabase (auth, DB, storage, edge functions)
 - **Build**: Expo prebuild + Gradle (no EAS Build)
+- **Auth**: Google OAuth + email/password (no social login beyond Google)
 
 ## Key Decisions
 
@@ -185,6 +192,17 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | useFocusEffect for dashboard refresh | Refreshes on every screen focus including return from study | ✓ Good — v2.0 |
 | AT TIME ZONE with fallback for timezone-aware RPCs | Local date comparison near midnight, degrades to CURRENT_DATE on invalid timezone | ✓ Good — v2.0 |
 | CHECK constraints on card_review_schedule | Database-level enforcement of EF floor/ceiling and interval bounds | ✓ Good — v2.0 |
+| OTP over deep link for email verification | More reliable on Android, no deep link infrastructure needed | ✓ Good — v2.1 |
+| Email-first progressive disclosure on login | Email + Continue reveals password, reduces cognitive load | ✓ Good — v2.1 |
+| Google OAuth button on top, email below separator | Dual-auth layout with equal visual weight | ✓ Good — v2.1 |
+| Provider-aware trigger (raw_app_meta_data->>'provider') | Explicit provider detection with COALESCE default 'email' | ✓ Good — v2.1 |
+| Recovery state machine with AsyncStorage | Password reset flow survives app restarts | ✓ Good — v2.1 |
+| Guard GoogleSignin.signOut with hasPreviousSignIn | Prevents crash for email-only users | ✓ Good — v2.1 |
+| Global signOut on password change | Invalidates all sessions across devices for security | ✓ Good — v2.1 |
+| Two-phase screen pattern (OTP then password) | Single component for OTP verification + password entry | ✓ Good — v2.1 |
+| addPasswordModeRef to suppress PASSWORD_RECOVERY | Prevents recovery nav during add-password OTP flow | ✓ Good — v2.1 |
+| Supabase linkIdentity with queryParams | Google token exchange for account linking | ✓ Good — v2.1 |
+| Session JSON size logging after identity change | SecureStore monitoring for dual-identity JWT stability | ✓ Good — v2.1 |
 
 ---
-*Last updated: 2026-02-27 after v2.1 milestone start*
+*Last updated: 2026-03-02 after v2.1 milestone*

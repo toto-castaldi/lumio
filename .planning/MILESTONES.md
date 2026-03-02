@@ -225,3 +225,35 @@
 
 ---
 
+
+## v2.1 Email Auth (Shipped: 2026-03-02)
+
+**Delivered:** Email/password authentication with OTP verification, password reset, and account linking alongside existing Google OAuth.
+
+**Phases completed:** 27-31 (10 plans total)
+
+**Key accomplishments:**
+
+- Email/password signup with 6-digit OTP verification via branded Lumio email templates
+- Email login with progressive disclosure UX (Google OAuth prominent on top, email form below separator)
+- Password reset flow with two-phase OTP-then-password screen pattern and global session invalidation
+- Account linking: add Google to email account, add email/password to Google account, unlink methods with single-identity protection
+- Provider-aware database trigger for email signups with display name from email prefix (initcap)
+- 71 auth i18n keys in both IT and EN with DeepStringify compile-time validation
+
+**Stats:**
+
+- 52 files changed (+9,897 / -153 lines)
+- 5 phases, 10 plans, 16 requirements (all satisfied)
+- 4 days (2026-02-27 to 2026-03-02)
+- 47 commits (16 feat + docs/fix/context)
+
+**Git range:** `v2.0` → `v2.1` (bedcad0 → a0d3ca9)
+
+**Tech debt (non-blocking):**
+- ForgotPasswordScreen.tsx L89-93: dead else branch in error handling — both if/else paths set same `rateLimited` error message
+
+**What's next:** TBD
+
+---
+

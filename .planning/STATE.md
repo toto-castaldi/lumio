@@ -1,48 +1,47 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
+milestone: v2.1
 milestone_name: Email Auth
-status: in-progress
-last_updated: "2026-03-02T13:09:36Z"
+status: shipped
+last_updated: "2026-03-02T17:35:00Z"
 progress:
-  total_phases: 19
-  completed_phases: 19
-  total_plans: 46
-  completed_plans: 46
+  total_phases: 31
+  completed_phases: 31
+  total_plans: 66
+  completed_plans: 66
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-27)
+See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 Email Auth -- Phase 31 Account Linking
+**Current focus:** v2.1 shipped — planning next milestone
 
 ## Current Position
 
-Milestone: v2.1 Email Auth
-Phase: 31 of 31 (Account Linking)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-03-02 -- Completed 31-02 SetPassword & SetPasswordOtp Screens
+Milestone: v2.1 Email Auth — SHIPPED 2026-03-02
+Phase: 31 of 31 (Account Linking) — all phases complete
+Status: Milestone Complete
+Last activity: 2026-03-02 — Archived v2.1 milestone
 
 Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 62 (across v1.1-v2.0)
-- Total milestones shipped: 8
-- Timeline: 29 days (2026-01-29 to 2026-02-26)
+- Total plans completed: 66 (across v1.1-v2.1)
+- Total milestones shipped: 9
+- Timeline: 33 days (2026-01-29 to 2026-03-02)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 27 | 01 | 1min | 2 | 3 |
 | 27 | 02 | 1min | 1 | 1 |
+| 28 | 01 | 2min | 1 | 1 |
 | 28 | 02 | 1min | 1 | 2 |
-| Phase 28 P01 | 2min | 1 tasks | 1 files |
 | 29 | 01 | 3min | 2 | 5 |
 | 29 | 02 | 2min | 2 | 3 |
 | 30 | 01 | 3min | 2 | 6 |
@@ -54,31 +53,7 @@ Progress: [##########] 100%
 
 ### Decisions
 
-All decisions logged in PROJECT.md Key Decisions table (50 entries).
-- [Phase 27]: OTP templates use table-based layout with inline CSS for email client compatibility
-- [Phase 27]: Use raw_app_meta_data provider field for explicit provider detection in handle_new_user trigger
-- [Phase 28]: Auth i18n keys organized by screen: auth.login.*, auth.signup.*, auth.reset.*, auth.updatePassword.*
-- [Phase 28]: Italian translations use informal "tu" tone for auth screens
-- [Phase 28]: Error messages include corrective action guidance
-- [Phase 28]: Guard GoogleSignin.signOut() with hasPreviousSignIn() for email-only user safety
-- [Phase 28]: Persist recovery state to AsyncStorage to survive app restarts during password reset flow
-- [Phase 29]: Email-first progressive disclosure: email + Continue button reveals password field
-- [Phase 29]: Dual-auth layout with equal visual weight: Google button -> separator -> email form
-- [Phase 29]: Read-only email field with pencil icon as back affordance in password step
-- [Phase 29]: Single password field with eye toggle, no confirm password (display name from email prefix)
-- [Phase 29]: OTP wrong code triggers shake animation + clear digits for polished retry UX
-- [Phase 29]: OTP back button navigates to Login (not signup) since user already signed up
-- [Phase 29]: First OTP digit box allows maxLength=6 for paste support
-- [Phase 30]: verifyRecoveryOtp transitions to 'updating' state; updatePassword calls signOut({ scope: 'global' })
-- [Phase 30]: Recovery navigation guard keeps user in auth flow even when authenticated during password reset
-- [Phase 30]: Resend verification navigates to OtpVerification for immediate code entry
-- [Phase 30]: Single password field on UpdatePasswordScreen, no confirm password (per CONTEXT.md)
-- [Phase 30]: Two-phase screen pattern: OTP verification transitions to password entry within same component
-- [Phase 31]: Guard PASSWORD_RECOVERY with addPasswordModeRef to prevent recovery nav during add-password OTP flow
-- [Phase 31]: Identity rows inside existing account section (not separate) per CONTEXT.md
-- [Phase 31]: Supabase linkIdentity with queryParams for Google token exchange
-- [Phase 31]: Reused OTP digit input pattern from OtpVerificationScreen for add-password flow consistency
-- [Phase 31]: Session JSON size logged after identity change for SecureStore stability monitoring
+All decisions logged in PROJECT.md Key Decisions table (61 entries).
 
 ### Pending Todos
 
@@ -86,8 +61,7 @@ None.
 
 ### Blockers/Concerns
 
-- **Phase 31 gate:** SecureStore JWT size for dual-identity users must be measured during Phase 27. If over 1500 bytes, MMKV+SecureStore pattern needed before account linking.
-- **Phase 31 spike:** linkIdentity() native behavior is MEDIUM confidence -- browser PKCE flow vs native SDK needs testing. Fallback: Supabase automatic same-email merging.
+None — v2.1 milestone audit passed with 16/16 requirements satisfied.
 
 ### Quick Tasks Completed
 
@@ -101,9 +75,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 31-02-PLAN.md (Phase 31 complete)
+Stopped at: v2.1 milestone archived and shipped
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-02 (31-02 SetPassword & SetPasswordOtp Screens completed — Phase 31 complete)*
+*Last updated: 2026-03-02 (v2.1 Email Auth milestone shipped)*
