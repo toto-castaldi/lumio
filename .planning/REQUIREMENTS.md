@@ -14,7 +14,7 @@ Requirements for email/password authentication milestone. Each maps to roadmap p
 - [x] **AUTH-03**: User can verify email by entering 6-digit OTP code in-app
 - [x] **AUTH-04**: User can sign in with email and password
 - [x] **AUTH-05**: User can request password reset via email
-- [ ] **AUTH-06**: User can set a new password after receiving reset OTP code
+- [x] **AUTH-06**: User can set a new password after receiving reset OTP code
 
 ### Account Linking
 
@@ -70,7 +70,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-03 | Phase 29 | Complete |
 | AUTH-04 | Phase 30 | Complete |
 | AUTH-05 | Phase 30 | Complete |
-| AUTH-06 | Phase 30 | Pending |
+| AUTH-06 | Phase 30 | Complete |
 | LINK-01 | Phase 31 | Pending |
 | LINK-02 | Phase 31 | Pending |
 | LINK-03 | Phase 31 | Pending |
