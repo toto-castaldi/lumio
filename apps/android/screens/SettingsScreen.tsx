@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,17 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
+import type { UserIdentity } from '@supabase/supabase-js';
 import { getDisplayVersion } from '@lumio/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { useStudySettings } from '../hooks/useStudySettings';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import type { ThemePreference } from '../lib/theme';
 import type { AppLocale } from '../lib/i18n';
 import type { CardsPerSession } from '../lib/studySettings';
@@ -38,15 +42,60 @@ type OptionItem<T> = {
  * - App version footer
  */
 export function SettingsScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, linkGoogle, unlinkIdentity, linkGoogleLoading, unlinkLoading } = useAuth();
   const { colors, preference, setPreference } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const { cardsPerSession, setCardsPerSession } = useStudySettings();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const version = getDisplayVersion();
 
   // Google profile data from Supabase user metadata
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const displayName = user?.user_metadata?.full_name as string | undefined;
+
+  // Connected accounts computation
+  const identities: UserIdentity[] = user?.identities ?? [];
+  const googleIdentity = identities.find(i => i.provider === 'google');
+  const emailIdentity = identities.find(i => i.provider === 'email');
+  const hasMultipleIdentities = identities.length > 1;
+
+  const handleLinkGoogle = useCallback(async () => {
+    try {
+      await linkGoogle();
+      Toast.show({ type: 'success', text1: t('auth.linking.googleConnected') });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      if (message === 'google_already_linked') {
+        Toast.show({ type: 'error', text1: t('auth.linking.googleAlreadyLinked') });
+      } else {
+        Toast.show({ type: 'error', text1: t('auth.linking.linkFailed') });
+      }
+    }
+  }, [linkGoogle, t]);
+
+  const handleUnlinkGoogle = useCallback(async () => {
+    if (!googleIdentity) return;
+    try {
+      await unlinkIdentity(googleIdentity);
+      Toast.show({ type: 'success', text1: t('auth.linking.googleDisconnected') });
+    } catch {
+      Toast.show({ type: 'error', text1: t('auth.linking.unlinkFailed') });
+    }
+  }, [googleIdentity, unlinkIdentity, t]);
+
+  const handleUnlinkEmail = useCallback(async () => {
+    if (!emailIdentity) return;
+    try {
+      await unlinkIdentity(emailIdentity);
+      Toast.show({ type: 'success', text1: t('auth.linking.emailDisconnected') });
+    } catch {
+      Toast.show({ type: 'error', text1: t('auth.linking.unlinkFailed') });
+    }
+  }, [emailIdentity, unlinkIdentity, t]);
+
+  const handleAddPassword = useCallback(() => {
+    navigation.navigate('SetPassword', { email: user?.email ?? '' });
+  }, [navigation, user?.email]);
 
   // Option arrays inside component body so t() picks up current locale
   const themeOptions: OptionItem<ThemePreference>[] = [
@@ -111,6 +160,73 @@ export function SettingsScreen() {
               {user?.email ?? t('common.unknownUser')}
             </Text>
           </View>
+        </View>
+
+        {/* Connected accounts — inside same section, below account info */}
+        <View style={[styles.identitySeparator, { borderTopColor: colors.border }]} />
+
+        <Text style={[styles.identitySubLabel, { color: colors.textSecondary }]}>
+          {t('settings.connectedAccounts')}
+        </Text>
+
+        {/* Google row */}
+        <View style={[styles.identityRow, styles.optionBorder, { borderBottomColor: colors.border }]}>
+          <View style={styles.optionLeft}>
+            <Ionicons name="logo-google" size={20} color={colors.textSecondary} style={styles.optionIcon} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: colors.text }]}>{t('settings.google')}</Text>
+              {googleIdentity && (
+                <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>
+                  {googleIdentity.identity_data?.email as string}
+                </Text>
+              )}
+            </View>
+          </View>
+          {googleIdentity ? (
+            hasMultipleIdentities && (
+              <TouchableOpacity onPress={handleUnlinkGoogle} disabled={unlinkLoading} activeOpacity={0.6}>
+                <Text style={{ color: colors.danger, fontSize: 14, fontWeight: '500' }}>
+                  {t('settings.disconnect')}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <TouchableOpacity onPress={handleLinkGoogle} disabled={linkGoogleLoading} activeOpacity={0.6}>
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>
+                {linkGoogleLoading ? '...' : t('settings.add')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Email row */}
+        <View style={styles.identityRow}>
+          <View style={styles.optionLeft}>
+            <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.optionIcon} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: colors.text }]}>{t('settings.emailPassword')}</Text>
+              {emailIdentity && (
+                <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>
+                  {(emailIdentity.identity_data?.email as string) ?? user?.email}
+                </Text>
+              )}
+            </View>
+          </View>
+          {emailIdentity ? (
+            hasMultipleIdentities && (
+              <TouchableOpacity onPress={handleUnlinkEmail} disabled={unlinkLoading} activeOpacity={0.6}>
+                <Text style={{ color: colors.danger, fontSize: 14, fontWeight: '500' }}>
+                  {t('settings.disconnect')}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <TouchableOpacity onPress={handleAddPassword} activeOpacity={0.6}>
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>
+                {t('settings.add')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -314,6 +430,24 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     fontSize: 16,
+  },
+  identitySeparator: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  identitySubLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
   },
   spacer: {
     flex: 1,
