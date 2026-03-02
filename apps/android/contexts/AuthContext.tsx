@@ -4,10 +4,11 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from 'react';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, UserIdentity } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabaseClient } from '@lumio/core';
 import '../lib/supabase'; // Side-effect import to ensure @lumio/core initialization
@@ -83,6 +84,19 @@ export interface AuthContextType {
 
   // Recovery flow state
   recoveryState: RecoveryState;
+
+  // Identity linking methods
+  linkGoogle: () => Promise<void>;
+  unlinkIdentity: (identity: UserIdentity) => Promise<void>;
+  refreshUser: () => Promise<void>;
+  sendPasswordSetupOtp: (email: string) => Promise<void>;
+  verifyPasswordSetupOtp: (email: string, token: string) => Promise<void>;
+  setAccountPassword: (password: string) => Promise<void>;
+
+  // Identity linking loading states
+  linkGoogleLoading: boolean;
+  unlinkLoading: boolean;
+  addPasswordLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -110,6 +124,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [resendLoading, setResendLoading] = useState(false);
   const [verifyRecoveryLoading, setVerifyRecoveryLoading] = useState(false);
   const [recoveryState, setRecoveryStateLocal] = useState<RecoveryState>('idle');
+  const [linkGoogleLoading, setLinkGoogleLoading] = useState(false);
+  const [unlinkLoading, setUnlinkLoading] = useState(false);
+  const [addPasswordLoading, setAddPasswordLoading] = useState(false);
+  const addPasswordModeRef = useRef(false);
 
   const setRecoveryState = useCallback(async (newState: RecoveryState) => {
     setRecoveryStateLocal(newState);
@@ -149,7 +167,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(newSession?.user ?? null);
       setState(newSession ? 'ready' : 'logged_out');
 
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' && !addPasswordModeRef.current) {
         setRecoveryState('link_clicked');
       }
     });
@@ -310,6 +328,91 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [setRecoveryState]);
 
+  const refreshUser = useCallback(async (): Promise<void> => {
+    const { data, error } = await getSupabaseClient().auth.getUser();
+    if (error) throw error;
+    setUser(data.user);
+  }, []);
+
+  const linkGoogle = useCallback(async (): Promise<void> => {
+    setLinkGoogleLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (response.type !== 'success' || !response.data.idToken) {
+        return; // User cancelled
+      }
+      const tokens = await GoogleSignin.getTokens();
+      const { error } = await getSupabaseClient().auth.linkIdentity({
+        provider: 'google',
+        options: {
+          queryParams: {
+            id_token: response.data.idToken,
+            access_token: tokens.accessToken,
+          },
+        },
+      });
+      if (error) {
+        if (error.message?.includes('already linked')) {
+          throw new Error('google_already_linked');
+        }
+        throw error;
+      }
+      await refreshUser();
+    } finally {
+      setLinkGoogleLoading(false);
+    }
+  }, [refreshUser]);
+
+  const unlinkIdentity = useCallback(async (identity: UserIdentity): Promise<void> => {
+    setUnlinkLoading(true);
+    try {
+      const { error } = await getSupabaseClient().auth.unlinkIdentity(identity);
+      if (error) throw error;
+      await refreshUser();
+    } finally {
+      setUnlinkLoading(false);
+    }
+  }, [refreshUser]);
+
+  const sendPasswordSetupOtp = useCallback(async (email: string): Promise<void> => {
+    setAddPasswordLoading(true);
+    try {
+      addPasswordModeRef.current = true;
+      const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email);
+      if (error) {
+        addPasswordModeRef.current = false;
+        throw error;
+      }
+    } finally {
+      setAddPasswordLoading(false);
+    }
+  }, []);
+
+  const verifyPasswordSetupOtp = useCallback(async (email: string, token: string): Promise<void> => {
+    const { error } = await getSupabaseClient().auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery',
+    });
+    if (error) throw error;
+  }, []);
+
+  const setAccountPassword = useCallback(async (password: string): Promise<void> => {
+    try {
+      const { error } = await getSupabaseClient().auth.updateUser({ password });
+      if (error) {
+        addPasswordModeRef.current = false;
+        throw error;
+      }
+      addPasswordModeRef.current = false;
+      await refreshUser();
+    } catch (err) {
+      addPasswordModeRef.current = false;
+      throw err;
+    }
+  }, [refreshUser]);
+
   const value: AuthContextType = {
     user,
     session,
@@ -331,6 +434,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     verifyRecoveryOtp,
     verifyRecoveryLoading,
     recoveryState,
+    linkGoogle,
+    unlinkIdentity,
+    refreshUser,
+    sendPasswordSetupOtp,
+    verifyPasswordSetupOtp,
+    setAccountPassword,
+    linkGoogleLoading,
+    unlinkLoading,
+    addPasswordLoading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

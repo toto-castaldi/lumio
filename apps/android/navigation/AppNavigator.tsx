@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { Card, Repository } from '@lumio/core';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,9 +30,19 @@ export type RootStackParamList = {
   CardList: { repoId: string; repoName: string };
   CardDetail: { card: Card; repository: Repository };
   StudyHistory: undefined;
+  SetPassword: { email: string };
+  SetPasswordOtp: { email: string; password: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Placeholder — replaced by real imports in Plan 02
+function SetPasswordPlaceholder() {
+  return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Set Password</Text></View>;
+}
+function SetPasswordOtpPlaceholder() {
+  return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Verify Email</Text></View>;
+}
 
 /**
  * AppNavigator is the root navigator that switches between auth and main flows
@@ -98,6 +108,24 @@ export function AppNavigator() {
       <Stack.Screen
         name="StudyHistory"
         component={StudyHistoryScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: '#ffffff',
+        }}
+      />
+      <Stack.Screen
+        name="SetPassword"
+        component={SetPasswordPlaceholder}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: '#ffffff',
+        }}
+      />
+      <Stack.Screen
+        name="SetPasswordOtp"
+        component={SetPasswordOtpPlaceholder}
         options={{
           headerShown: true,
           headerStyle: { backgroundColor: colors.primary },
