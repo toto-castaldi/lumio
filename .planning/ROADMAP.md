@@ -210,7 +210,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 28. Auth Context & Infrastructure | 2/2 | Complete    | 2026-02-27 | - |
 | 29. Email Signup & Verification | 2/2 | Complete    | 2026-02-27 | - |
 | 30. Email Login & Password Reset | 2/2 | Complete    | 2026-03-02 | - |
-| 31. Account Linking | 2/2 | Complete   | 2026-03-02 | - |
+| 31. Account Linking | 2/2 | Complete    | 2026-03-02 | - |
 
 ---
 *Roadmap created: 2026-01-29*
