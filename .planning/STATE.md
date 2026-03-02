@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email Auth
 status: in-progress
-last_updated: "2026-03-02T13:04:01Z"
+last_updated: "2026-03-02T13:09:36Z"
 progress:
   total_phases: 19
   completed_phases: 19
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Milestone: v2.1 Email Auth
 Phase: 31 of 31 (Account Linking)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-03-02 -- Completed 31-01 Account Linking Infrastructure & Settings UI
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-03-02 -- Completed 31-02 SetPassword & SetPasswordOtp Screens
 
-Progress: [#########-] 95%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Progress: [#########-] 95%
 | 30 | 01 | 3min | 2 | 6 |
 | 30 | 02 | 3min | 2 | 3 |
 | 31 | 01 | 4min | 2 | 5 |
+| 31 | 02 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ All decisions logged in PROJECT.md Key Decisions table (50 entries).
 - [Phase 31]: Guard PASSWORD_RECOVERY with addPasswordModeRef to prevent recovery nav during add-password OTP flow
 - [Phase 31]: Identity rows inside existing account section (not separate) per CONTEXT.md
 - [Phase 31]: Supabase linkIdentity with queryParams for Google token exchange
+- [Phase 31]: Reused OTP digit input pattern from OtpVerificationScreen for add-password flow consistency
+- [Phase 31]: Session JSON size logged after identity change for SecureStore stability monitoring
 
 ### Pending Todos
 
@@ -98,9 +101,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 31-01-PLAN.md
+Stopped at: Completed 31-02-PLAN.md (Phase 31 complete)
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-02 (31-01 Account Linking Infrastructure completed)*
+*Last updated: 2026-03-02 (31-02 SetPassword & SetPasswordOtp Screens completed — Phase 31 complete)*

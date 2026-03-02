@@ -112,7 +112,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 - [x] **Phase 28: Auth Context & Infrastructure** - Extend AuthContext with email auth methods, fix signOut for email-only users, add i18n strings (completed 2026-02-27)
 - [x] **Phase 29: Email Signup & Verification** - SignUp screen, OTP verification screen, login screen layout with email form (completed 2026-02-27)
 - [x] **Phase 30: Email Login & Password Reset** - Email login flow, forgot password screen, reset password screen with OTP (completed 2026-03-02)
-- [ ] **Phase 31: Account Linking** - Connected accounts display, add Google to email account, add email to Google account, unlink method
+- [x] **Phase 31: Account Linking** - Connected accounts display, add Google to email account, add email to Google account, unlink method (completed 2026-03-02)
 
 ## Phase Details
 
@@ -210,7 +210,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 28. Auth Context & Infrastructure | 2/2 | Complete    | 2026-02-27 | - |
 | 29. Email Signup & Verification | 2/2 | Complete    | 2026-02-27 | - |
 | 30. Email Login & Password Reset | 2/2 | Complete    | 2026-03-02 | - |
-| 31. Account Linking | 1/2 | In Progress|  | - |
+| 31. Account Linking | 2/2 | Complete   | 2026-03-02 | - |
 
 ---
 *Roadmap created: 2026-01-29*
