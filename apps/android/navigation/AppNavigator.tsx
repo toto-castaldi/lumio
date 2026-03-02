@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { Card, Repository } from '@lumio/core';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,8 @@ import { StudySummaryScreen } from '../screens/StudySummaryScreen';
 import { CardListScreen } from '../screens/CardListScreen';
 import { CardDetailScreen } from '../screens/CardDetailScreen';
 import { StudyHistoryScreen } from '../screens/StudyHistoryScreen';
+import { SetPasswordScreen } from '../screens/SetPasswordScreen';
+import { SetPasswordOtpScreen } from '../screens/SetPasswordOtpScreen';
 
 /**
  * Root stack param list for modal screens (Study, StudySummary)
@@ -35,14 +37,6 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-// Placeholder — replaced by real imports in Plan 02
-function SetPasswordPlaceholder() {
-  return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Set Password</Text></View>;
-}
-function SetPasswordOtpPlaceholder() {
-  return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Verify Email</Text></View>;
-}
 
 /**
  * AppNavigator is the root navigator that switches between auth and main flows
@@ -116,7 +110,7 @@ export function AppNavigator() {
       />
       <Stack.Screen
         name="SetPassword"
-        component={SetPasswordPlaceholder}
+        component={SetPasswordScreen}
         options={{
           headerShown: true,
           headerStyle: { backgroundColor: colors.primary },
@@ -125,7 +119,7 @@ export function AppNavigator() {
       />
       <Stack.Screen
         name="SetPasswordOtp"
-        component={SetPasswordOtpPlaceholder}
+        component={SetPasswordOtpScreen}
         options={{
           headerShown: true,
           headerStyle: { backgroundColor: colors.primary },
