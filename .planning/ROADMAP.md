@@ -185,11 +185,11 @@ Plans:
   3. An email-only user can link their Google account from Settings
   4. User can unlink an authentication method as long as at least one method remains
   5. SecureStore handles dual-identity JWT size without session loss
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 31-01: TBD
-- [ ] 31-02: TBD
+- [ ] 31-01-PLAN.md — Connected accounts display, link Google, unlink identity, auth infrastructure
+- [ ] 31-02-PLAN.md — Set Password screen + OTP verification for adding email/password to Google account
 
 ## Progress
 
