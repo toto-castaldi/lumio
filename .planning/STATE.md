@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email Auth
-status: unknown
-last_updated: "2026-02-27T13:36:35.819Z"
+status: in-progress
+last_updated: "2026-03-02T09:38:47Z"
 progress:
   total_phases: 19
   completed_phases: 19
-  total_plans: 44
-  completed_plans: 44
+  total_plans: 45
+  completed_plans: 45
 ---
 
 # Project State
@@ -18,17 +18,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 Email Auth -- Phase 29 Email Signup & Verification
+**Current focus:** v2.1 Email Auth -- Phase 30 Email Login & Password Reset
 
 ## Current Position
 
 Milestone: v2.1 Email Auth
-Phase: 29 of 31 (Email Signup & Verification)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 29 complete
-Last activity: 2026-02-27 -- Completed 29-02 Signup & OTP Screens
+Phase: 30 of 31 (Email Login & Password Reset)
+Plan: 1 of 2 in current phase
+Status: Executing Phase 30
+Last activity: 2026-03-02 -- Completed 30-01 Auth Infrastructure for Password Reset
 
-Progress: [##########] 100%
+Progress: [#########-] 90%
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [##########] 100%
 | Phase 28 P01 | 2min | 1 tasks | 1 files |
 | 29 | 01 | 3min | 2 | 5 |
 | 29 | 02 | 2min | 2 | 3 |
+| 30 | 01 | 3min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ All decisions logged in PROJECT.md Key Decisions table (50 entries).
 - [Phase 29]: OTP wrong code triggers shake animation + clear digits for polished retry UX
 - [Phase 29]: OTP back button navigates to Login (not signup) since user already signed up
 - [Phase 29]: First OTP digit box allows maxLength=6 for paste support
+- [Phase 30]: verifyRecoveryOtp transitions to 'updating' state; updatePassword calls signOut({ scope: 'global' })
+- [Phase 30]: Recovery navigation guard keeps user in auth flow even when authenticated during password reset
+- [Phase 30]: Resend verification navigates to OtpVerification for immediate code entry
 
 ### Pending Todos
 
@@ -86,10 +90,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 29-02-PLAN.md
+Last session: 2026-03-02
+Stopped at: Completed 30-01-PLAN.md
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-02-27 (29-02 Signup & OTP Screens completed)*
+*Last updated: 2026-03-02 (30-01 Auth Infrastructure for Password Reset completed)*
