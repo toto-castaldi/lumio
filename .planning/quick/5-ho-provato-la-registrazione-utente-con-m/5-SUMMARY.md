@@ -87,3 +87,5 @@ Set SMTP_* variables in production environment to a real SMTP provider. Local de
 ---
 *Phase: quick-5*
 *Completed: 2026-03-03*
+
+## Self-Check: PASSED
