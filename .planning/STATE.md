@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Milestone: v2.1 Email Auth — SHIPPED 2026-03-02
 Phase: 31 of 31 (Account Linking) — all phases complete
 Status: Milestone Complete
-Last activity: 2026-03-02 — Archived v2.1 milestone
+Last activity: 2026-03-03 - Completed quick task 5: ho provato la registrazione utente con mail. come da screenshot che trovi nella cartella /home/toto/tmp/screenshot (ultimo file) la UI si comporta bene. Il problema è che NON ho ricevuto email
 
 Progress: [##########] 100%
 
@@ -71,7 +71,7 @@ None — v2.1 milestone audit passed with 16/16 requirements satisfied.
 | 2 | Fix APK download: add create-release CI job with softprops/action-gh-release, create v1.7 release with lumio.apk | 2026-02-23 | d4036ea | [2-fix-apk-download-github-release-apk-is-o](./quick/2-fix-apk-download-github-release-apk-is-o/) |
 | 3 | Fix APK version display: pass BUILD_NUMBER and GIT_SHA env vars to build-apk CI job | 2026-02-23 | 54b502f | [3-fix-apk-version-display-pass-build-numbe](./quick/3-fix-apk-version-display-pass-build-numbe/) |
 | 4 | Fix version.ts: hardcode build metadata as string literals (not process.env) | 2026-02-23 | 353f6fa | [4-fix-version-ts-hardcode-build-number-and](./quick/4-fix-version-ts-hardcode-build-number-and/) |
-| 5 | Configure Supabase SMTP mailer for signup OTP (Inbucket local defaults) | 2026-03-03 | a1bd90a | [5-ho-provato-la-registrazione-utente-con-m](./quick/5-ho-provato-la-registrazione-utente-con-m/) |
+| 5 | ho provato la registrazione utente con mail. come da screenshot che trovi nella cartella /home/toto/tmp/screenshot (ultimo file) la UI si comporta bene. Il problema è che NON ho ricevuto email | 2026-03-03 | a1bd90a | [5-ho-provato-la-registrazione-utente-con-m](./quick/5-ho-provato-la-registrazione-utente-con-m/) |
 
 ## Session Continuity
 
