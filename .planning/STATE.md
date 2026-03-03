@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Email Auth
 status: shipped
-last_updated: "2026-03-02T17:35:00Z"
+last_updated: "2026-03-03T08:40:49Z"
 progress:
   total_phases: 31
   completed_phases: 31
@@ -71,11 +71,12 @@ None — v2.1 milestone audit passed with 16/16 requirements satisfied.
 | 2 | Fix APK download: add create-release CI job with softprops/action-gh-release, create v1.7 release with lumio.apk | 2026-02-23 | d4036ea | [2-fix-apk-download-github-release-apk-is-o](./quick/2-fix-apk-download-github-release-apk-is-o/) |
 | 3 | Fix APK version display: pass BUILD_NUMBER and GIT_SHA env vars to build-apk CI job | 2026-02-23 | 54b502f | [3-fix-apk-version-display-pass-build-numbe](./quick/3-fix-apk-version-display-pass-build-numbe/) |
 | 4 | Fix version.ts: hardcode build metadata as string literals (not process.env) | 2026-02-23 | 353f6fa | [4-fix-version-ts-hardcode-build-number-and](./quick/4-fix-version-ts-hardcode-build-number-and/) |
+| 5 | Configure Supabase SMTP mailer for signup OTP (Inbucket local defaults) | 2026-03-03 | a1bd90a | [5-ho-provato-la-registrazione-utente-con-m](./quick/5-ho-provato-la-registrazione-utente-con-m/) |
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: v2.1 milestone archived and shipped
+Last session: 2026-03-03
+Stopped at: Quick task 5 complete
 Resume file: None
 
 ---
