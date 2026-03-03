@@ -167,7 +167,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
               <ActivityIndicator size="small" color="#ffffff" />
             ) : cooldown > 0 ? (
               <Text style={styles.actionButtonText}>
-                {t('auth.otp.resendIn').replace('%{seconds}', String(cooldown))}
+                {t('auth.otp.resendIn', { seconds: cooldown })}
               </Text>
             ) : (
               <Text style={styles.actionButtonText}>

@@ -317,7 +317,7 @@ export function UpdatePasswordScreen({ route, navigation }: Props) {
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : cooldown > 0 ? (
                   <Text style={[styles.resendTimer, { color: colors.textSecondary }]}>
-                    {t('auth.otp.resendIn').replace('%{seconds}', String(cooldown))}
+                    {t('auth.otp.resendIn', { seconds: cooldown })}
                   </Text>
                 ) : (
                   <TouchableOpacity onPress={handleResend}>
