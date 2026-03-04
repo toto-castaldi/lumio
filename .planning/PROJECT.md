@@ -88,7 +88,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(Next milestone not yet defined — run `/gsd-new-milestone`)
+## Current Milestone: v2.2 Session Limits
+
+**Goal:** Rispettare il limite carte-per-sessione scelto dall'utente, con dashboard coerente e label "Auto" per il selettore.
+
+**Target features:**
+- Cap rigido RPC: scadute first (più vecchie prima), poi nuove, totale mai oltre il limite scelto
+- Dashboard counter mostra carte della prossima sessione (non debito totale)
+- Selettore: rinomina "Tutte/∞" → "Auto" (stessa logica, label diversa)
 
 ### Out of Scope
 
@@ -205,4 +212,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Session JSON size logging after identity change | SecureStore monitoring for dual-identity JWT stability | ✓ Good — v2.1 |
 
 ---
-*Last updated: 2026-03-02 after v2.1 milestone*
+*Last updated: 2026-03-04 after v2.2 milestone start*

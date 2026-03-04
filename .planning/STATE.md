@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Email Auth
-status: shipped
-last_updated: "2026-03-04T15:48:13Z"
+milestone: v2.2
+milestone_name: Session Limits
+status: active
+last_updated: "2026-03-04T00:00:00Z"
 progress:
   total_phases: 31
   completed_phases: 31
@@ -15,19 +15,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-02)
+See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.1 shipped — planning next milestone
+**Current focus:** v2.2 Session Limits — defining requirements
 
 ## Current Position
 
-Milestone: v2.1 Email Auth — SHIPPED 2026-03-02
-Phase: 31 of 31 (Account Linking) — all phases complete
-Status: Milestone Complete
-Last activity: 2026-03-04 - Completed quick task 9: Use git tag version when higher than STATE.md
-
-Progress: [##########] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-04 — Milestone v2.2 started
 
 ## Performance Metrics
 
