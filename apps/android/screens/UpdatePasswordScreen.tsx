@@ -212,11 +212,15 @@ export function UpdatePasswordScreen({ route, navigation }: Props) {
     try {
       await updatePassword(newPassword);
       // updatePassword: updates password -> global signOut -> recoveryState='idle'
-      // AppNavigator will auto-show LoginScreen
       Toast.show({
         type: 'success',
         text1: t('auth.updatePassword.success'),
         text2: t('auth.updatePassword.successDescription'),
+      });
+      // Navigate back to Login so the user can sign in with their new password
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
       });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : '';
@@ -226,7 +230,7 @@ export function UpdatePasswordScreen({ route, navigation }: Props) {
         setPasswordError(message || t('auth.updatePassword.samePassword'));
       }
     }
-  }, [newPassword, updatePassword, t]);
+  }, [newPassword, updatePassword, navigation, t]);
 
   // --- Render ---
 
