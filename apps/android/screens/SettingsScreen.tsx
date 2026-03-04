@@ -424,6 +424,7 @@ const styles = StyleSheet.create({
   optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   optionIcon: {
     marginRight: 12,
