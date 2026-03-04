@@ -6,7 +6,7 @@ Standard per il versionamento nei progetti personali di Toto Castaldi, basato su
 
 ## Principi
 
-1. **Single Source of Truth** -- la versione vive in un solo posto: `.planning/STATE.md`
+1. **Single Source of Truth** -- la versione vive in `.planning/STATE.md`, con override da git tag se piu' recente
 2. **Build-time injection** -- i valori vengono baked-in negli artefatti durante il build, mai letti a runtime da env vars
 3. **Zero dipendenze esterne** -- niente release-please, niente conventional commits obbligatori, niente git tags automatici
 4. **Propagazione atomica** -- un push su main aggiorna tutte le superfici (app, sito, API, release) in lockstep
@@ -27,16 +27,20 @@ Solo `major.minor`, niente patch. La versione incrementa quando inizia un nuovo 
 ## Pipeline completo
 
 ```
-.planning/STATE.md                     <-- SOURCE OF TRUTH
+.planning/STATE.md                     <-- SOURCE OF TRUTH (default)
   Milestone: v1.7                          (editato manualmente ad ogni nuovo milestone)
         |
         v
 scripts/extract-version.cjs           <-- GENERATORE
   - Legge STATE.md (regex: /^Milestone:\s*v?([\d.]+)/m)
-  - Legge env vars: BUILD_NUMBER, GIT_SHA, BUILD_DATE
+  - Se GIT_TAG e' set e contiene versione > STATE.md, usa il tag
+  - Legge env vars: BUILD_NUMBER, GIT_SHA, BUILD_DATE, GIT_TAG
   - Genera packages/shared/src/version.ts (string literals)
   - Sincronizza package.json root
   - Stampa versione su stdout (per CI)
+        ^
+        |
+  GIT_TAG=${{ github.ref_name }}       <-- CI passa il nome del tag/branch
         |
         v
 packages/shared/src/version.ts        <-- ARTEFATTO GENERATO
@@ -87,6 +91,28 @@ const match = stateContent.match(/^Milestone:\s*v?([\d.]+)/m);
 ```
 
 **Come aggiornare la versione:** editare questo campo, committare, pushare su main. Il CI propaga automaticamente.
+
+---
+
+## Git Tag Override
+
+Quando un build CI viene triggerato da un git tag (es. `v2.2`), lo script `extract-version.cjs` confronta la versione del tag con quella in STATE.md:
+
+- Se la versione del tag e' **strettamente maggiore** di STATE.md, viene usata la versione del tag
+- Se la versione del tag e' uguale o inferiore, STATE.md rimane la source of truth
+- Il confronto e' **semantico** (segmento per segmento): `2.1 < 2.2`, `1.9 < 2.0`
+
+Questo consente di bumpare la versione con un semplice tag push:
+
+```bash
+git tag v2.2
+git push --tags
+# Il CI usa v2.2 come versione (se > STATE.md)
+```
+
+Il meccanismo funziona tramite la env var `GIT_TAG` passata dal CI workflow, che contiene `github.ref_name` (il nome del tag, es. `v2.2`). Per push su branch, `github.ref_name` e' il nome del branch (es. `main`), che non matcha il pattern versione e viene ignorato.
+
+STATE.md rimane la source of truth predefinita per i push su branch. I build locali (senza `GIT_TAG`) funzionano esattamente come prima.
 
 ---
 
@@ -290,7 +316,9 @@ Il CI legge STATE.md ad ogni push, quindi la versione si aggiorna automaticament
 
 ---
 
-## Come bumoare la versione
+## Come bumpare la versione
+
+### Metodo 1: Editare STATE.md (standard)
 
 ```bash
 # 1. Editare STATE.md
@@ -309,6 +337,21 @@ git push
 #    - Aggiorna landing page
 #    - Deploya Edge Functions con LUMIO_VERSION=1.8
 ```
+
+### Metodo 2: Git tag (lightweight)
+
+```bash
+# 1. Creare e pushare un tag con versione > STATE.md
+git tag v1.8
+git push --tags
+
+# 2. Il CI si attiva sul tag push:
+#    - extract-version.cjs confronta v1.8 con STATE.md (es. v1.7)
+#    - Se il tag e' maggiore, usa v1.8
+#    - Builda, deploya e rilascia con versione 1.8
+```
+
+**Nota:** Il tag deve puntare a un commit su main. STATE.md non viene modificato automaticamente -- va aggiornato manualmente se si vuole che i build futuri su branch usino la nuova versione.
 
 ---
 
