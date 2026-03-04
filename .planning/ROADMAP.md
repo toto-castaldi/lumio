@@ -136,10 +136,10 @@ Full details: `.planning/milestones/v2.1-ROADMAP.md`
   2. Overdue cards always appear before new cards within the capped session (oldest overdue first)
   3. User with "Auto" selected receives all available cards (overdue + new) with no cap applied
   4. When fewer cards exist than the chosen limit, all available cards are returned without error
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 32-01: TBD
+- [ ] 32-01-PLAN.md — Enforce session limit in RPC, rename CardsPerSession type, update hook
 
 ### Phase 33: Dashboard Counter & Auto Label
 **Goal**: Dashboard and session selector accurately reflect the session-limited experience
@@ -170,7 +170,7 @@ Phases execute in numeric order: 32 -> 33
 | 20-22. GSD Versioning | v1.7 | 6/6 | Complete | 2026-02-21 |
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
-| 32. RPC Session Limit Enforcement | v2.2 | 0/? | Not started | - |
+| 32. RPC Session Limit Enforcement | v2.2 | 0/1 | Not started | - |
 | 33. Dashboard Counter & Auto Label | v2.2 | 0/? | Not started | - |
 
 ---
