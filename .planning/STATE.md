@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Email Auth
 status: shipped
-last_updated: "2026-03-03T08:40:49Z"
+last_updated: "2026-03-04T15:11:32Z"
 progress:
   total_phases: 31
   completed_phases: 31
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Milestone: v2.1 Email Auth — SHIPPED 2026-03-02
 Phase: 31 of 31 (Account Linking) — all phases complete
 Status: Milestone Complete
-Last activity: 2026-03-03 - Completed quick task 6: Fix i18n countdown interpolation bug on OTP verification screens
+Last activity: 2026-03-04 - Completed quick task 8: Navigate to Login after successful password update
 
 Progress: [##########] 100%
 
@@ -73,11 +73,12 @@ None — v2.1 milestone audit passed with 16/16 requirements satisfied.
 | 4 | Fix version.ts: hardcode build metadata as string literals (not process.env) | 2026-02-23 | 353f6fa | [4-fix-version-ts-hardcode-build-number-and](./quick/4-fix-version-ts-hardcode-build-number-and/) |
 | 5 | ho provato la registrazione utente con mail. come da screenshot che trovi nella cartella /home/toto/tmp/screenshot (ultimo file) la UI si comporta bene. Il problema è che NON ho ricevuto email | 2026-03-03 | a1bd90a | [5-ho-provato-la-registrazione-utente-con-m](./quick/5-ho-provato-la-registrazione-utente-con-m/) |
 | 6 | Fix i18n countdown interpolation bug on OTP verification screens | 2026-03-03 | d771d4b | [6-fix-i18n-countdown-bug-on-email-verifica](./quick/6-fix-i18n-countdown-bug-on-email-verifica/) |
+| 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 
 ## Session Continuity
 
-Last session: 2026-03-03
-Stopped at: Quick task 6 complete
+Last session: 2026-03-04
+Stopped at: Quick task 8 complete
 Resume file: None
 
 ---
