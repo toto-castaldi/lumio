@@ -84,7 +84,7 @@ async function recordCardReviewWithRetry(
 // HOOK
 // =============================================================================
 
-export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseStudySessionReturn {
+export function useStudySession(cardsPerSession: CardsPerSession = 'auto'): UseStudySessionReturn {
   const [session, setSession] = useState<StudySessionState>({
     state: 'loading',
     cards: [],
@@ -120,7 +120,7 @@ export function useStudySession(cardsPerSession: CardsPerSession = 'all'): UseSt
 
   const loadInitialData = async () => {
     try {
-      const limit = cardsPerSession === 'all' ? 9999 : cardsPerSession;
+      const limit = cardsPerSession === 'auto' ? null : cardsPerSession;
 
       // Load repositories and SRS-ordered study cards in parallel
       const [repositories, srsCards] = await Promise.all([

@@ -5,13 +5,14 @@ const CARDS_PER_SESSION_KEY = '@lumio/cards-per-session';
 /**
  * Number of cards to study per session.
  * - 10, 20, 50: Fixed card counts
- * - 'all': Study all available cards (default)
+ * - 'auto': Study all available cards with no cap (default)
  */
-export type CardsPerSession = 10 | 20 | 50 | 'all';
+export type CardsPerSession = 10 | 20 | 50 | 'auto';
 
 /**
  * Load the user's cards-per-session preference from persistent storage.
- * Returns 'all' if no preference is stored or the stored value is invalid.
+ * Returns 'auto' if no preference is stored or the stored value is invalid.
+ * Backward-compatible: reads stored 'all' as 'auto' for seamless migration.
  */
 export async function loadCardsPerSession(): Promise<CardsPerSession> {
   try {
@@ -19,10 +20,10 @@ export async function loadCardsPerSession(): Promise<CardsPerSession> {
     if (stored === '10') return 10;
     if (stored === '20') return 20;
     if (stored === '50') return 50;
-    if (stored === 'all') return 'all';
-    return 'all';
+    if (stored === 'all' || stored === 'auto') return 'auto';
+    return 'auto';
   } catch {
-    return 'all';
+    return 'auto';
   }
 }
 

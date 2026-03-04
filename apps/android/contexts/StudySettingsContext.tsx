@@ -30,7 +30,7 @@ interface StudySettingsProviderProps {
  * - Provides current cardsPerSession value and setter to children
  */
 export function StudySettingsProvider({ children }: StudySettingsProviderProps) {
-  const [cardsPerSession, setCardsPerSessionState] = useState<CardsPerSession>('all');
+  const [cardsPerSession, setCardsPerSessionState] = useState<CardsPerSession>('auto');
 
   // Load persisted preference on mount
   useEffect(() => {
