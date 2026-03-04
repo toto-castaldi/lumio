@@ -504,10 +504,12 @@ export async function getDueCardCount(): Promise<number> {
  * Returns overdue cards first (most overdue first), then new cards.
  * Deletes stale schedule rows where content has changed (SRS-06).
  *
- * @param limit - Maximum cards to return (overdue cards bypass this cap)
+ * @param limit - When null, returns all cards (unlimited/auto mode).
+ *                When a number, caps total cards (overdue + new) to that value,
+ *                prioritizing overdue cards (oldest first).
  */
 export async function getStudyCardsForSession(
-  limit: number = 10
+  limit: number | null = null
 ): Promise<SRSStudyCard[]> {
   const token = await getAccessToken();
   if (!token) {
