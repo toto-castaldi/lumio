@@ -122,7 +122,7 @@ Full details: `.planning/milestones/v2.1-ROADMAP.md`
 
 **Milestone Goal:** Rispettare il limite carte-per-sessione scelto dall'utente, con dashboard coerente e label "Auto" per il selettore.
 
-- [ ] **Phase 32: RPC Session Limit Enforcement** - Backend RPC caps cards to chosen limit with overdue-first priority
+- [x] **Phase 32: RPC Session Limit Enforcement** - Backend RPC caps cards to chosen limit with overdue-first priority (completed 2026-03-04)
 - [ ] **Phase 33: Dashboard Counter & Auto Label** - Dashboard reflects session-limited count and selector shows "Auto"
 
 ## Phase Details
@@ -170,7 +170,7 @@ Phases execute in numeric order: 32 -> 33
 | 20-22. GSD Versioning | v1.7 | 6/6 | Complete | 2026-02-21 |
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
-| 32. RPC Session Limit Enforcement | v2.2 | 0/1 | Not started | - |
+| 32. RPC Session Limit Enforcement | 1/1 | Complete   | 2026-03-04 | - |
 | 33. Dashboard Counter & Auto Label | v2.2 | 0/? | Not started | - |
 
 ---

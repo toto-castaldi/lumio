@@ -9,8 +9,8 @@ Requirements for milestone v2.2 Session Limits.
 
 ### Session
 
-- [ ] **SESS-01**: La RPC rispetta il limite scelto: scadute first (più vecchie prima), poi nuove, totale mai oltre `p_limit`
-- [ ] **SESS-02**: Con limite "Auto", la RPC restituisce tutte le carte (comportamento attuale invariato)
+- [x] **SESS-01**: La RPC rispetta il limite scelto: scadute first (più vecchie prima), poi nuove, totale mai oltre `p_limit`
+- [x] **SESS-02**: Con limite "Auto", la RPC restituisce tutte le carte (comportamento attuale invariato)
 
 ### Dashboard
 
@@ -36,8 +36,8 @@ None.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | Phase 32 | Pending |
-| SESS-02 | Phase 32 | Pending |
+| SESS-01 | Phase 32 | Complete |
+| SESS-02 | Phase 32 | Complete |
 | DASH-01 | Phase 33 | Pending |
 | DASH-02 | Phase 33 | Pending |
 | UI-01 | Phase 33 | Pending |
