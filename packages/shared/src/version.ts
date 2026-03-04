@@ -6,7 +6,7 @@
  * The version is extracted from .planning/STATE.md Milestone field.
  * Build metadata is baked in as string literals (React Native has no process.env).
  */
-export const VERSION = "1.7";
+export const VERSION = "2.1";
 
 /**
  * Build info baked in at generation time.
@@ -22,7 +22,7 @@ export const BUILD_INFO: {
   version: VERSION,
   buildNumber: "dev",
   gitSha: "local",
-  buildDate: "2026-02-23T14:32:17.773Z",
+  buildDate: "2026-03-04T15:48:08.661Z",
 };
 
 export type BuildInfo = typeof BUILD_INFO;
