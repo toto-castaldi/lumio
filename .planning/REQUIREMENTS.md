@@ -1,0 +1,52 @@
+# Requirements: Lumio
+
+**Defined:** 2026-03-04
+**Core Value:** Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
+
+## v2.2 Requirements
+
+Requirements for milestone v2.2 Session Limits.
+
+### Session
+
+- [ ] **SESS-01**: La RPC rispetta il limite scelto: scadute first (più vecchie prima), poi nuove, totale mai oltre `p_limit`
+- [ ] **SESS-02**: Con limite "Auto", la RPC restituisce tutte le carte (comportamento attuale invariato)
+
+### Dashboard
+
+- [ ] **DASH-01**: Il counter carte mostra il numero di carte della prossima sessione (rispettando il limite), non il debito totale
+- [ ] **DASH-02**: Con "Auto", il counter mostra il numero reale completo di carte disponibili
+
+### UI
+
+- [ ] **UI-01**: Il selettore rinomina l'opzione "Tutte/∞" in "Auto" con icona appropriata
+
+## Future Requirements
+
+None.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Logica smart "Auto" (numero dinamico basato su tempo/performance) | Label predisposta per futuro, ma per ora comportamento = tutte |
+| Notifica "hai ancora X carte scadute" | Semplificare: l'utente torna alla dashboard e vede il prossimo batch |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SESS-01 | — | Pending |
+| SESS-02 | — | Pending |
+| DASH-01 | — | Pending |
+| DASH-02 | — | Pending |
+| UI-01 | — | Pending |
+
+**Coverage:**
+- v2.2 requirements: 5 total
+- Mapped to phases: 0
+- Unmapped: 5 ⚠️
+
+---
+*Requirements defined: 2026-03-04*
+*Last updated: 2026-03-04 after initial definition*
