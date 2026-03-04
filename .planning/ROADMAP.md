@@ -11,6 +11,7 @@
 - ✅ **v1.7 GSD Versioning** — Phases 20-22 (shipped 2026-02-21)
 - ✅ **v2.0 Spaced Repetition** — Phases 23-26 (shipped 2026-02-26)
 - ✅ **v2.1 Email Auth** — Phases 27-31 (shipped 2026-03-02)
+- 🚧 **v2.2 Session Limits** — Phases 32-33 (in progress)
 
 ## Phases
 
@@ -117,7 +118,46 @@ Full details: `.planning/milestones/v2.1-ROADMAP.md`
 
 </details>
 
+### v2.2 Session Limits (In Progress)
+
+**Milestone Goal:** Rispettare il limite carte-per-sessione scelto dall'utente, con dashboard coerente e label "Auto" per il selettore.
+
+- [ ] **Phase 32: RPC Session Limit Enforcement** - Backend RPC caps cards to chosen limit with overdue-first priority
+- [ ] **Phase 33: Dashboard Counter & Auto Label** - Dashboard reflects session-limited count and selector shows "Auto"
+
+## Phase Details
+
+### Phase 32: RPC Session Limit Enforcement
+**Goal**: Study sessions deliver exactly the number of cards the user chose, prioritizing overdue cards
+**Depends on**: Nothing (first phase of v2.2)
+**Requirements**: SESS-01, SESS-02
+**Success Criteria** (what must be TRUE):
+  1. User who selects "20 cards" receives at most 20 cards in a study session, even if 50 are available
+  2. Overdue cards always appear before new cards within the capped session (oldest overdue first)
+  3. User with "Auto" selected receives all available cards (overdue + new) with no cap applied
+  4. When fewer cards exist than the chosen limit, all available cards are returned without error
+**Plans**: TBD
+
+Plans:
+- [ ] 32-01: TBD
+
+### Phase 33: Dashboard Counter & Auto Label
+**Goal**: Dashboard and session selector accurately reflect the session-limited experience
+**Depends on**: Phase 32
+**Requirements**: DASH-01, DASH-02, UI-01
+**Success Criteria** (what must be TRUE):
+  1. Dashboard counter shows the number of cards the user will actually study in their next session (respecting chosen limit), not the total backlog
+  2. User with "Auto" selected sees the full count of all available cards on the dashboard
+  3. Session size selector displays "Auto" instead of "Tutte" or the infinity symbol for the unlimited option
+**Plans**: TBD
+
+Plans:
+- [ ] 33-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 32 -> 33
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -130,7 +170,9 @@ Full details: `.planning/milestones/v2.1-ROADMAP.md`
 | 20-22. GSD Versioning | v1.7 | 6/6 | Complete | 2026-02-21 |
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
+| 32. RPC Session Limit Enforcement | v2.2 | 0/? | Not started | - |
+| 33. Dashboard Counter & Auto Label | v2.2 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*v2.1 shipped: 2026-03-02*
+*v2.2 roadmap added: 2026-03-04*
