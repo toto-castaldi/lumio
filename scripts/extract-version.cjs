@@ -4,6 +4,7 @@
  * Usage: node scripts/extract-version.cjs
  *
  * - Reads the Milestone field from .planning/STATE.md
+ * - If GIT_TAG env var is set and contains a higher version, uses that instead
  * - Writes packages/shared/src/version.ts with the extracted version
  * - Prints the version to stdout (for CI to capture)
  *
@@ -44,7 +45,44 @@ if (!match) {
   process.exit(1);
 }
 
-const version = match[1];
+let version = match[1];
+
+// 2b. Compare with GIT_TAG if set (CI passes github.ref_name)
+/**
+ * Compare two version strings segment by segment.
+ * Handles 2-segment (1.7) and 3-segment (2.1.1) versions.
+ * Returns -1 if a < b, 0 if a == b, 1 if a > b.
+ */
+function compareVersions(a, b) {
+  const partsA = a.split(".").map(Number);
+  const partsB = b.split(".").map(Number);
+  const len = Math.max(partsA.length, partsB.length);
+  for (let i = 0; i < len; i++) {
+    const segA = partsA[i] || 0;
+    const segB = partsB[i] || 0;
+    if (segA < segB) return -1;
+    if (segA > segB) return 1;
+  }
+  return 0;
+}
+
+const gitTag = process.env.GIT_TAG;
+if (gitTag) {
+  const tagMatch = gitTag.match(/^v?(\d+\.\d+(?:\.\d+)?)$/);
+  if (tagMatch) {
+    const tagVersion = tagMatch[1];
+    if (compareVersions(tagVersion, version) > 0) {
+      process.stderr.write(
+        `VERSION: Using git tag v${tagVersion} (higher than STATE.md v${version})\n`
+      );
+      version = tagVersion;
+    } else {
+      process.stderr.write(
+        `VERSION: Using STATE.md v${version} (git tag v${tagVersion} is not higher)\n`
+      );
+    }
+  }
+}
 
 // 3. Read build metadata from env vars (set by CI) or use dev fallbacks
 const buildNumber = process.env.BUILD_NUMBER || "dev";
