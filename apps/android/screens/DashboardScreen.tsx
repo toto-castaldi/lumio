@@ -147,7 +147,7 @@ export function DashboardScreen() {
     navigation.navigate('Study');
   };
 
-  const isStudyDisabled = isLoading || cardCount === 0;
+  const isStudyDisabled = isLoading || cardCount === 0 || dueCount === 0;
 
   // Empty state: no repos found after loading completes
   if (!isLoading && repoCount === 0) {
@@ -254,6 +254,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 24,
   },
   emptyScrollContent: {
@@ -272,9 +273,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   studyButtonContainer: {
+    flex: 1,
     alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 16,
+    justifyContent: 'center',
   },
   studyButton: {
     width: 60,
