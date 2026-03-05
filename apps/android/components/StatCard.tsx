@@ -11,6 +11,7 @@ interface StatCardProps {
   value: string | number;
   subtitle?: string;
   isLoading?: boolean;
+  compact?: boolean;
 }
 
 /**
@@ -25,6 +26,7 @@ export function StatCard({
   value,
   subtitle,
   isLoading = false,
+  compact = false,
 }: StatCardProps) {
   const { colors } = useTheme();
 
@@ -38,10 +40,20 @@ export function StatCard({
       </Text>
       {isLoading ? (
         <View
-          style={[styles.skeleton, { backgroundColor: colors.border }]}
+          style={[
+            styles.skeleton,
+            { backgroundColor: colors.border },
+            compact && { height: 20, width: 60 },
+          ]}
         />
       ) : (
-        <Text style={[styles.value, { color: colors.text }]}>
+        <Text
+          style={[
+            styles.value,
+            { color: colors.text },
+            compact && { fontSize: 18 },
+          ]}
+        >
           {value}
         </Text>
       )}
