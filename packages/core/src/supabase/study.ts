@@ -465,8 +465,11 @@ function mapSRSStudyCard(dbCard: Record<string, unknown>): SRSStudyCard {
 /**
  * Get the count of cards due for review today.
  * Returns 0 for users with no review history.
+ *
+ * @param limit - When null (default), returns the full count of all due + new cards.
+ *                When a number, returns LEAST(total, limit) to reflect session-capped count.
  */
-export async function getDueCardCount(): Promise<number> {
+export async function getDueCardCount(limit: number | null = null): Promise<number> {
   const token = await getAccessToken();
   if (!token) {
     throw new Error('Not authenticated');
@@ -487,7 +490,7 @@ export async function getDueCardCount(): Promise<number> {
         Authorization: `Bearer ${token}`,
         apikey: getSupabaseAnonKey(),
       },
-      body: JSON.stringify({ p_user_id: userId, p_timezone: getDeviceTimezone() }),
+      body: JSON.stringify({ p_user_id: userId, p_limit: limit, p_timezone: getDeviceTimezone() }),
     }
   );
 
