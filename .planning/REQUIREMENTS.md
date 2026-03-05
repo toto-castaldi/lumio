@@ -15,7 +15,7 @@ Requirements for Dashboard Polish milestone. Each maps to roadmap phases.
 
 ### Study Button
 
-- [ ] **STUD-01**: Pulsante studio circolare centrato con sola icona play (nessun testo)
+- [x] **STUD-01**: Pulsante studio circolare centrato con sola icona play (nessun testo)
 
 ## Future Requirements
 
@@ -38,7 +38,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DASH-01 | Phase 34 | Complete |
 | DASH-02 | Phase 34 | Complete |
 | DASH-03 | Phase 34 | Complete |
-| STUD-01 | Phase 35 | Pending |
+| STUD-01 | Phase 35 | Complete |
 
 **Coverage:**
 - v2.3 requirements: 4 total
@@ -47,4 +47,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after roadmap creation*
+*Last updated: 2026-03-05 after 35-01 completion*
