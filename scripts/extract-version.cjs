@@ -35,12 +35,14 @@ if (!fs.existsSync(STATE_PATH)) {
 
 const stateContent = fs.readFileSync(STATE_PATH, "utf-8");
 
-// 2. Parse Milestone field
-const match = stateContent.match(/^Milestone:\s*v?([\d.]+)/m);
+// 2. Parse Milestone field (body format or YAML frontmatter)
+const match =
+  stateContent.match(/^Milestone:\s*v?([\d.]+)/m) ||
+  stateContent.match(/^milestone:\s*v?([\d.]+)/m);
 
 if (!match) {
   process.stderr.write(
-    'ERROR: No "Milestone: vX.Y" line found in STATE.md\n'
+    'ERROR: No "Milestone: vX.Y" or "milestone: vX.Y" line found in STATE.md\n'
   );
   process.exit(1);
 }
