@@ -160,10 +160,10 @@ Plans:
   1. Study button is a centered circle with only a play icon (no text label)
   2. Tapping the button starts a study session (same behavior as current button)
   3. Button is visually prominent and centered below the stat cards in both themes
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 35-01: TBD
+- [ ] 35-01-PLAN.md — Circular play button with i18n cleanup
 
 ## Progress
 
@@ -183,7 +183,7 @@ Phases execute in numeric order: 34 -> 35
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34. Dashboard Stat Cards | 1/1 | Complete    | 2026-03-05 | - |
-| 35. Study Button Redesign | v2.3 | 0/? | Not started | - |
+| 35. Study Button Redesign | v2.3 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
