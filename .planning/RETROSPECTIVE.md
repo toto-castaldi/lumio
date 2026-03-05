@@ -126,6 +126,44 @@
 
 ---
 
+## Milestone: v2.3 — Dashboard Polish
+
+**Shipped:** 2026-03-05
+**Phases:** 2 | **Plans:** 2 | **Sessions:** ~1
+
+### What Was Built
+- Dashboard 2x2 stat card grid with compact StatCard variant for half-width layout
+- Verbose localized relative time for Last Studied in both IT and EN (24 new i18n keys)
+- Last Studied card made non-tappable (removed study history navigation from dashboard)
+- Circular 60px play button replacing rectangular text CTA for study sessions
+- i18n cleanup: removed unused button text keys
+
+### What Worked
+- Minimal scope (2 phases, 4 requirements) — shipped same day as v2.2, zero deviations
+- Compact StatCard prop is reusable for future half-width card layouts
+- justNow threshold extension (5min) reduces jitter for "just studied" display
+- Phase 35 UAT caught vertical centering and disabled state issues — fixed in single commit
+
+### What Was Inefficient
+- Nothing notable — clean execution, same-day completion
+
+### Patterns Established
+- compact StatCard prop: fontSize 18 value, wider skeleton — use for half-width cards
+- Verbose relative time i18n: singular (oneMinuteAgo) vs plural (minutesAgo) key pattern
+- Circular CTA: wrap TouchableOpacity in centering View container with generous vertical spacing
+
+### Key Lessons
+1. Pure UI polish milestones are fast and low-risk — 2 phases in ~4 minutes total execution
+2. Keeping abbreviated time keys for backwards compat avoids breaking existing screens
+3. UAT on UI changes catches visual issues (centering, disabled state) that code review misses
+
+### Cost Observations
+- Model mix: 80% opus, 20% sonnet (quality profile)
+- Sessions: ~1 (same day as v2.2)
+- Notable: Fastest milestone — 2 phases, 2 plans, 4 tasks, ~4 minutes total execution time
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -135,6 +173,7 @@
 | v2.0 | ~4 | 4 | First milestone with audit-before-complete workflow; gap closure pattern |
 | v2.1 | ~5 | 5 | Largest since v1.1; post-ship quick fixes revealed UAT gaps |
 | v2.2 | ~2 | 2 | Cleanest milestone — zero deviations, zero issues |
+| v2.3 | ~1 | 2 | Fastest milestone — pure UI polish, same-day ship |
 
 ### Cumulative Quality
 
@@ -143,6 +182,7 @@
 | v2.0 | 10 (SM-2 unit) | SRS module only | supermemo@2.0.23, vitest@4.0.18 |
 | v2.1 | — | Auth flows (manual) | — |
 | v2.2 | — | Session limit (manual) | — |
+| v2.3 | — | UI polish (UAT) | — |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -151,3 +191,4 @@
 3. Small gap closure plans are more efficient than trying to get everything right in the first pass (v2.0)
 4. Small, focused milestones execute cleanly with near-zero overhead (v2.2)
 5. Reusing patterns across phases in the same milestone accelerates development (v2.2)
+6. Pure UI polish milestones are fast, low-risk, and benefit most from UAT (v2.3)

@@ -1,5 +1,31 @@
 # Milestones: Lumio
 
+## v2.3 Dashboard Polish (Shipped: 2026-03-05)
+
+**Delivered:** Compact, visually coherent dashboard with 2x2 stat card grid, verbose localized relative time, and circular icon-only study button.
+
+**Phases completed:** 34-35 (2 plans total)
+
+**Key accomplishments:**
+
+- Dashboard 2x2 stat card grid: Repository, Cards, Last Studied, Due Today side-by-side at half width
+- Verbose localized relative time for Last Studied in both IT and EN ("ieri", "2 giorni fa", "yesterday", "2 days ago")
+- Last Studied card made non-tappable (removed study history navigation from dashboard)
+- Circular 60px play button replacing rectangular text CTA for study sessions
+- i18n cleanup: 24 verbose time keys added, unused button text keys removed
+
+**Stats:**
+
+- 15 files changed (+911 / -110 lines)
+- 2 phases, 2 plans, 4 tasks
+- 1 day (2026-03-05)
+
+**Git range:** `26a12aa` → `f9db8c2` (9 commits: 3 feat + 1 fix + 2 test + 2 docs + 1 chore)
+
+**What's next:** TBD
+
+---
+
 ## v2.2 Session Limits (Shipped: 2026-03-05)
 
 **Delivered:** Session card limit enforcement end-to-end — RPC caps cards to user-chosen limit with overdue-first priority, dashboard counter reflects session-limited count, and "Auto" label replaces infinity symbol.

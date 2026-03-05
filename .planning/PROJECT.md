@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2 (carte scadute prima, nuove dopo), sessioni di studio configurabili, counter "carte da ripassare oggi" sulla dashboard, navigazione carte nei repository, storico sessioni con conteggio carte, gestione errori sync con aggiornamento token in-app, autenticazione dual-mode (Google OAuth + email/password con verifica OTP), account linking bidirezionale (Google ↔ email), password reset via OTP, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2 (carte scadute prima, nuove dopo), sessioni di studio configurabili con cap RPC, dashboard compatta con griglia 2x2 stat cards e tempo relativo, pulsante studio circolare icon-only, navigazione carte nei repository, storico sessioni con conteggio carte, gestione errori sync con aggiornamento token in-app, autenticazione dual-mode (Google OAuth + email/password con verifica OTP), account linking bidirezionale (Google ↔ email), password reset via OTP, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
 
 ## Core Value
 
@@ -89,18 +89,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Dashboard counter mostra carte della prossima sessione (LEAST capping), non debito totale — v2.2
 - ✓ Selettore "Auto" con icona sparkles al posto di "Tutte/∞" — v2.2
 - ✓ Backward-compatible AsyncStorage migration da 'all' a 'auto' — v2.2
+- ✓ Dashboard 2x2 stat card grid: "Ultimo studio" e "Da ripassare oggi" sulla stessa riga a metà larghezza — v2.3
+- ✓ Tempo relativo localizzato IT/EN su "Ultimo studio" ("ieri", "2 giorni fa", "yesterday", "2 days ago") — v2.3
+- ✓ "Ultimo studio" non navigabile (rimosso tap → storico sessioni) — v2.3
+- ✓ Pulsante studio circolare centrato con sola icona play (60px, nessun testo) — v2.3
 
 ### Active
 
-## Current Milestone: v2.3 Dashboard Polish
-
-**Goal:** Rendere la dashboard visivamente coerente e compatta con layout a griglia uniforme, tempo relativo, e pulsante studio minimale.
-
-**Target features:**
-- Layout 2-colonne per "Ultimo studio" e "Da ripassare oggi" (come Repository/Schede)
-- Tempo relativo su "Ultimo studio" ("ieri", "2 giorni fa", "un'ora fa")
-- Rimozione navigazione storico sessioni da "Ultimo studio"
-- Pulsante studio circolare centrale con sola icona play
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -131,16 +127,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v2.2):**
+**Stato attuale (post v2.3):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions, Docora webhook + study_sessions + card_review_schedule tables
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23, vitest@4.0.18
 - CI/CD: lint → build-apk → deploy-landing → deploy-migrations → deploy-functions (version from STATE.md)
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
 - Auth: dual-mode Google OAuth + email/password con OTP verification, password reset, account linking bidirezionale
-- App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app, dashboard session-aware
-- ~19,800 LOC (TS/TSX/SQL)
-- 10 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth), v2.2 (session limits)
+- App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, dashboard compatta 2x2 con tempo relativo e pulsante circolare, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app
+- ~20,600 LOC (TS/TSX/SQL)
+- 11 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth), v2.2 (session limits), v2.3 (dashboard polish)
 
 ## Constraints
 
@@ -220,6 +216,11 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | LEAST(total, p_limit) for count capping | Simpler than IF/ELSE with separate queries for scalar cap | ✓ Good — v2.2 |
 | Hardcoded 'Auto' label (universal across languages) | "Auto" is understood in both IT and EN, no translation needed | ✓ Good — v2.2 |
 | AsyncStorage backward-compat migration 'all' → 'auto' | Read old value, return new enum value silently | ✓ Good — v2.2 |
+| Verbose relative time keys alongside abbreviated | Backwards compat for StudyHistoryScreen, new verbose keys for dashboard | ✓ Good — v2.3 |
+| justNow threshold extended to <5min | Less jittery display for recent sessions | ✓ Good — v2.3 |
+| Always relative time (no absolute date fallback) | Simpler code, consistent UX — even "years ago" is relative | ✓ Good — v2.3 |
+| 60px circular play button (borderRadius 30) | Middle of 56-64 range, visually prominent centered CTA | ✓ Good — v2.3 |
+| Removed unused i18n keys after button text removal | Clean codebase, no orphaned translations | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-05 after v2.3 milestone start*
+*Last updated: 2026-03-05 after v2.3 milestone completion*
