@@ -4,7 +4,7 @@ milestone: v2.2
 milestone_name: Session Limits
 status: completed
 stopped_at: Completed 33-01 dashboard counter auto label
-last_updated: "2026-03-05T09:19:33.676Z"
+last_updated: "2026-03-05T11:21:15.974Z"
 last_activity: 2026-03-05 — Completed 33-01 dashboard counter auto label
 progress:
   total_phases: 2
@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-04)
+See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.2 Session Limits — Phase 33 plan 01 complete (milestone complete)
+**Current focus:** v2.2 shipped — planning next milestone
 
 ## Current Position
 
@@ -35,9 +35,9 @@ Progress: [██████████] 100%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 66 (across v1.1-v2.1)
-- Total milestones shipped: 9
-- Timeline: 33 days (2026-01-29 to 2026-03-02)
+- Total plans completed: 68 (across v1.1-v2.2)
+- Total milestones shipped: 10
+- Timeline: 35 days (2026-01-29 to 2026-03-05)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -58,9 +58,7 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-All decisions logged in PROJECT.md Key Decisions table (61 entries).
-- [Phase 32]: IF/ELSE in plpgsql for NULL vs non-NULL p_limit; p_limit DEFAULT NULL matches production unlimited behavior
-- [Phase 33]: LEAST(total, p_limit) for count capping in get_due_card_count; hardcoded 'Auto' label (universal across languages)
+All decisions logged in PROJECT.md Key Decisions table (66 entries).
 
 ### Pending Todos
 
@@ -68,7 +66,7 @@ None.
 
 ### Blockers/Concerns
 
-None — v2.1 milestone audit passed with 16/16 requirements satisfied.
+None — v2.2 milestone audit passed with 5/5 requirements satisfied.
 
 ### Quick Tasks Completed
 

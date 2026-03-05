@@ -85,17 +85,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ 71 chiavi i18n per auth in IT e EN con validazione DeepStringify a compile-time — v2.1
 - ✓ SignOut guard per utenti email-only (GoogleSignin.signOut condizionale) — v2.1
 - ✓ Recovery state machine con persistenza AsyncStorage per reset password — v2.1
+- ✓ RPC cap rigido sessione: scadute first (più vecchie prima), poi nuove, totale mai oltre p_limit — v2.2
+- ✓ Dashboard counter mostra carte della prossima sessione (LEAST capping), non debito totale — v2.2
+- ✓ Selettore "Auto" con icona sparkles al posto di "Tutte/∞" — v2.2
+- ✓ Backward-compatible AsyncStorage migration da 'all' a 'auto' — v2.2
 
 ### Active
 
-## Current Milestone: v2.2 Session Limits
-
-**Goal:** Rispettare il limite carte-per-sessione scelto dall'utente, con dashboard coerente e label "Auto" per il selettore.
-
-**Target features:**
-- Cap rigido RPC: scadute first (più vecchie prima), poi nuove, totale mai oltre il limite scelto
-- Dashboard counter mostra carte della prossima sessione (non debito totale)
-- Selettore: rinomina "Tutte/∞" → "Auto" (stessa logica, label diversa)
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -126,16 +123,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v2.1):**
+**Stato attuale (post v2.2):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions, Docora webhook + study_sessions + card_review_schedule tables
 - Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23, vitest@4.0.18
 - CI/CD: lint → build-apk → deploy-landing → deploy-migrations → deploy-functions (version from STATE.md)
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
 - Auth: dual-mode Google OAuth + email/password con OTP verification, password reset, account linking bidirezionale
-- App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app
-- ~26,000 LOC (TS/TSX/SQL) — +9,897 lines in v2.1
-- 9 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth)
+- App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app, dashboard session-aware
+- ~19,800 LOC (TS/TSX/SQL)
+- 10 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth), v2.2 (session limits)
 
 ## Constraints
 
@@ -210,6 +207,11 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | addPasswordModeRef to suppress PASSWORD_RECOVERY | Prevents recovery nav during add-password OTP flow | ✓ Good — v2.1 |
 | Supabase linkIdentity with queryParams | Google token exchange for account linking | ✓ Good — v2.1 |
 | Session JSON size logging after identity change | SecureStore monitoring for dual-identity JWT stability | ✓ Good — v2.1 |
+| IF/ELSE in plpgsql for NULL vs non-NULL p_limit | Cleaner than COALESCE with large sentinel for unlimited vs capped logic | ✓ Good — v2.2 |
+| p_limit DEFAULT NULL for RPC parameters | Matches production unlimited behavior as safe default | ✓ Good — v2.2 |
+| LEAST(total, p_limit) for count capping | Simpler than IF/ELSE with separate queries for scalar cap | ✓ Good — v2.2 |
+| Hardcoded 'Auto' label (universal across languages) | "Auto" is understood in both IT and EN, no translation needed | ✓ Good — v2.2 |
+| AsyncStorage backward-compat migration 'all' → 'auto' | Read old value, return new enum value silently | ✓ Good — v2.2 |
 
 ---
-*Last updated: 2026-03-04 after v2.2 milestone start*
+*Last updated: 2026-03-05 after v2.2 milestone*

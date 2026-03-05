@@ -1,5 +1,31 @@
 # Milestones: Lumio
 
+## v2.2 Session Limits (Shipped: 2026-03-05)
+
+**Delivered:** Session card limit enforcement end-to-end — RPC caps cards to user-chosen limit with overdue-first priority, dashboard counter reflects session-limited count, and "Auto" label replaces infinity symbol.
+
+**Phases completed:** 32-33 (2 plans total)
+
+**Key accomplishments:**
+
+- RPC `get_study_cards_for_session` enforces total card cap with overdue-first priority (IF/ELSE plpgsql branching for NULL vs capped p_limit)
+- RPC `get_due_card_count` returns session-aware count via LEAST(total, p_limit) for dashboard
+- Dashboard counter reflects session-limited card count, not total backlog (reactive via useStudySettings)
+- CardsPerSession type renamed from 'all' to 'auto' with backward-compatible AsyncStorage migration
+- Settings selector shows "Auto" with sparkles icon replacing "All cards" / infinity symbol
+
+**Stats:**
+
+- 10 files changed (+318 / -20 lines)
+- 2 phases, 2 plans, 4 tasks
+- 2 days (2026-03-04 to 2026-03-05)
+
+**Git range:** `153e1d9` → `eccc6a1` (4 feat commits)
+
+**What's next:** TBD
+
+---
+
 ## v1.1 Lumio Native (Shipped: 2026-02-08)
 
 **Delivered:** Complete migration from dual PWA apps to a single native Android application with landing page and CI/CD pipeline.
