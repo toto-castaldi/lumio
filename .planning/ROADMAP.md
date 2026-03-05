@@ -12,6 +12,7 @@
 - ✅ **v2.0 Spaced Repetition** — Phases 23-26 (shipped 2026-02-26)
 - ✅ **v2.1 Email Auth** — Phases 27-31 (shipped 2026-03-02)
 - ✅ **v2.2 Session Limits** — Phases 32-33 (shipped 2026-03-05)
+- 🚧 **v2.3 Dashboard Polish** — Phases 34-35 (in progress)
 
 ## Phases
 
@@ -128,7 +129,46 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 </details>
 
+### 🚧 v2.3 Dashboard Polish (In Progress)
+
+**Milestone Goal:** Rendere la dashboard visivamente coerente e compatta con layout a griglia uniforme, tempo relativo, e pulsante studio minimale.
+
+- [ ] **Phase 34: Dashboard Stat Cards** - Two-column layout with relative time and non-navigable last-studied card
+- [ ] **Phase 35: Study Button Redesign** - Circular centered play button replacing text button
+
+## Phase Details
+
+### Phase 34: Dashboard Stat Cards
+**Goal**: Users see a compact, uniform dashboard with stat cards on a single row and human-friendly timestamps
+**Depends on**: Nothing (first phase of v2.3)
+**Requirements**: DASH-01, DASH-02, DASH-03
+**Success Criteria** (what must be TRUE):
+  1. "Ultimo studio" and "Da ripassare oggi" cards sit side-by-side on the same row, each at half width, matching the existing Repository/Schede row layout
+  2. "Ultimo studio" card shows localized relative time (IT: "ieri", "2 giorni fa"; EN: "yesterday", "2 days ago") instead of absolute date
+  3. Tapping "Ultimo studio" card does nothing -- no navigation to study history
+  4. Both cards render correctly in light and dark mode at various text lengths
+**Plans**: TBD
+
+Plans:
+- [ ] 34-01: TBD
+
+### Phase 35: Study Button Redesign
+**Goal**: Users start study sessions from a clean, icon-only circular button
+**Depends on**: Nothing (independent of Phase 34)
+**Requirements**: STUD-01
+**Success Criteria** (what must be TRUE):
+  1. Study button is a centered circle with only a play icon (no text label)
+  2. Tapping the button starts a study session (same behavior as current button)
+  3. Button is visually prominent and centered below the stat cards in both themes
+**Plans**: TBD
+
+Plans:
+- [ ] 35-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 34 → 35
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -142,7 +182,9 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
+| 34. Dashboard Stat Cards | v2.3 | 0/? | Not started | - |
+| 35. Study Button Redesign | v2.3 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*v2.2 shipped: 2026-03-05*
+*v2.3 roadmap added: 2026-03-05*

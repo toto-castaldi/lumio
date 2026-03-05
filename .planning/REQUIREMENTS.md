@@ -35,16 +35,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| STUD-01 | — | Pending |
+| DASH-01 | Phase 34 | Pending |
+| DASH-02 | Phase 34 | Pending |
+| DASH-03 | Phase 34 | Pending |
+| STUD-01 | Phase 35 | Pending |
 
 **Coverage:**
 - v2.3 requirements: 4 total
-- Mapped to phases: 0
-- Unmapped: 4 ⚠️
+- Mapped to phases: 4
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
