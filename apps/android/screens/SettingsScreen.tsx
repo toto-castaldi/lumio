@@ -108,7 +108,7 @@ export function SettingsScreen() {
     { value: 10, label: t('settings.tenCards'), icon: 'flash-outline' },
     { value: 20, label: t('settings.twentyCards'), icon: 'layers-outline' },
     { value: 50, label: t('settings.fiftyCards'), icon: 'library-outline' },
-    { value: 'auto', label: t('settings.allCards'), icon: 'infinite-outline' },
+    { value: 'auto', label: 'Auto', icon: 'sparkles-outline' },
   ];
 
   // Language names use autonyms (the language's own name for itself) -- NOT translated

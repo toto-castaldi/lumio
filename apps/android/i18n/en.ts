@@ -99,7 +99,7 @@ const en = {
     tenCards: '10 cards',
     twentyCards: '20 cards',
     fiftyCards: '50 cards',
-    allCards: 'All cards',
+    allCards: 'Auto',
     language: 'Language',
     logOut: 'Log out',
     versionCopied: 'Version copied',

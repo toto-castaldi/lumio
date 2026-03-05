@@ -102,7 +102,7 @@ const it: Translations = {
     tenCards: '10 schede',
     twentyCards: '20 schede',
     fiftyCards: '50 schede',
-    allCards: 'Tutte le schede',
+    allCards: 'Auto',
     language: 'Lingua',
     logOut: 'Esci',
     versionCopied: 'Versione copiata',

@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserStats, getDueCardCount } from '@lumio/core';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
+import { useStudySettings } from '../hooks/useStudySettings';
 import { MainTabParamList } from '../navigation/MainNavigator';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { StatCard } from '../components/StatCard';
@@ -55,6 +56,8 @@ function formatLastStudied(
 export function DashboardScreen() {
   const { colors, isDark } = useTheme();
   const { t } = useI18n();
+  const { cardsPerSession } = useStudySettings();
+  const limit = cardsPerSession === 'auto' ? null : cardsPerSession;
   const navigation = useNavigation<
     CompositeNavigationProp<
       BottomTabNavigationProp<MainTabParamList>,
@@ -79,7 +82,7 @@ export function DashboardScreen() {
         try {
           const [stats, due] = await Promise.all([
             getUserStats(),
-            getDueCardCount(),
+            getDueCardCount(limit),
           ]);
           if (!cancelled) {
             setRepoCount(stats.repositoryCount);
@@ -99,7 +102,7 @@ export function DashboardScreen() {
       });
 
       return () => { cancelled = true; };
-    }, [])
+    }, [cardsPerSession])
   );
 
   const handleRefresh = useCallback(async () => {
@@ -107,7 +110,7 @@ export function DashboardScreen() {
     try {
       const [stats, due] = await Promise.all([
         getUserStats(),
-        getDueCardCount(),
+        getDueCardCount(limit),
       ]);
       setRepoCount(stats.repositoryCount);
       setCardCount(stats.cardCount);
@@ -119,7 +122,7 @@ export function DashboardScreen() {
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [limit]);
 
   const handleStudyPress = () => {
     navigation.navigate('Study');
