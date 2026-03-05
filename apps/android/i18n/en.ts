@@ -36,14 +36,12 @@ const en = {
     monthsAgo: '%{count} months ago',
     oneYearAgo: 'A year ago',
     yearsAgo: '%{count} years ago',
-    startStudySession: 'Start Study Session',
     emptyTitle: 'No Repositories Yet',
     emptySubtitle:
       'Add a repository to start studying. Your flashcards will appear here once a repo is synced.',
     goToRepos: 'Go to Repositories',
     dueToday: 'Due Today',
     allCaughtUp: 'All done',
-    studyNDueCards: 'Study %{count} due cards',
   },
   repos: {
     failedToLoad: 'Failed to load repositories',

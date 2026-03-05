@@ -38,14 +38,12 @@ const it: Translations = {
     monthsAgo: '%{count} mesi fa',
     oneYearAgo: 'Un anno fa',
     yearsAgo: '%{count} anni fa',
-    startStudySession: 'Inizia sessione di studio',
     emptyTitle: 'Nessun repository',
     emptySubtitle:
       'Aggiungi un repository per iniziare a studiare. Le tue flashcard appariranno qui dopo la sincronizzazione.',
     goToRepos: 'Vai ai repository',
     dueToday: 'Da ripassare oggi',
     allCaughtUp: 'In pari',
-    studyNDueCards: 'Studia %{count} schede in scadenza',
   },
   repos: {
     failedToLoad: 'Impossibile caricare i repository',
