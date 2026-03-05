@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Dashboard Polish
-status: planning
-stopped_at: Phase 34 context gathered
-last_updated: "2026-03-05T15:32:33.037Z"
-last_activity: 2026-03-05 — Roadmap created for v2.3 Dashboard Polish
+status: executing
+stopped_at: Completed 34-01-PLAN.md
+last_updated: "2026-03-05T16:49:48.450Z"
+last_activity: 2026-03-05 — Completed 34-01 Dashboard Stat Cards plan
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.3 Dashboard Polish — Phase 34 ready to plan
+**Current focus:** v2.3 Dashboard Polish — Phase 34 Plan 01 complete
 
 ## Current Position
 
 Phase: 34 of 35 (Dashboard Stat Cards)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-05 — Roadmap created for v2.3 Dashboard Polish
+Plan: 01 of 1 (complete)
+Status: Plan 01 complete
+Last activity: 2026-03-05 — Completed 34-01 Dashboard Stat Cards plan
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 68 (across v1.1-v2.2)
+- Total plans completed: 69 (across v1.1-v2.3)
 - Total milestones shipped: 10
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -43,12 +43,17 @@ Progress: [░░░░░░░░░░] 0%
 |-------|------|----------|-------|-------|
 | 32 | 01 | 3min | 2 | 6 |
 | 33 | 01 | 3min | 2 | 6 |
+| 34 | 01 | 2min | 2 | 4 |
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (66 entries).
+
+- [34-01] Kept abbreviated time keys for backwards compat, added verbose keys alongside
+- [34-01] Extended justNow threshold from <1min to <5min for less jittery display
+- [34-01] Always show relative time (no absolute date fallback)
 
 ### Pending Todos
 
@@ -73,9 +78,9 @@ None — v2.2 milestone audit passed with 5/5 requirements satisfied.
 
 ## Session Continuity
 
-Last session: 2026-03-05T15:32:33.021Z
-Stopped at: Phase 34 context gathered
-Resume file: .planning/phases/34-dashboard-stat-cards/34-CONTEXT.md
+Last session: 2026-03-05T16:49:05Z
+Stopped at: Completed 34-01-PLAN.md
+Resume file: .planning/phases/34-dashboard-stat-cards/34-01-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*

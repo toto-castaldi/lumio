@@ -133,7 +133,7 @@ Full details: `.planning/milestones/v2.2-ROADMAP.md`
 
 **Milestone Goal:** Rendere la dashboard visivamente coerente e compatta con layout a griglia uniforme, tempo relativo, e pulsante studio minimale.
 
-- [ ] **Phase 34: Dashboard Stat Cards** - Two-column layout with relative time and non-navigable last-studied card
+- [x] **Phase 34: Dashboard Stat Cards** - Two-column layout with relative time and non-navigable last-studied card (completed 2026-03-05)
 - [ ] **Phase 35: Study Button Redesign** - Circular centered play button replacing text button
 
 ## Phase Details
@@ -182,7 +182,7 @@ Phases execute in numeric order: 34 -> 35
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
-| 34. Dashboard Stat Cards | v2.3 | 0/1 | Not started | - |
+| 34. Dashboard Stat Cards | 1/1 | Complete   | 2026-03-05 | - |
 | 35. Study Button Redesign | v2.3 | 0/? | Not started | - |
 
 ---

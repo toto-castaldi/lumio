@@ -9,9 +9,9 @@ Requirements for Dashboard Polish milestone. Each maps to roadmap phases.
 
 ### Dashboard Layout
 
-- [ ] **DASH-01**: "Ultimo studio" e "Da ripassare oggi" sulla stessa riga a metà larghezza (come Repository/Schede)
-- [ ] **DASH-02**: "Ultimo studio" mostra tempo relativo localizzato IT/EN ("ieri", "2 giorni fa", "un'ora fa")
-- [ ] **DASH-03**: "Ultimo studio" non navigabile (rimosso tap → storico sessioni)
+- [x] **DASH-01**: "Ultimo studio" e "Da ripassare oggi" sulla stessa riga a metà larghezza (come Repository/Schede)
+- [x] **DASH-02**: "Ultimo studio" mostra tempo relativo localizzato IT/EN ("ieri", "2 giorni fa", "un'ora fa")
+- [x] **DASH-03**: "Ultimo studio" non navigabile (rimosso tap → storico sessioni)
 
 ### Study Button
 
@@ -35,9 +35,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DASH-01 | Phase 34 | Pending |
-| DASH-02 | Phase 34 | Pending |
-| DASH-03 | Phase 34 | Pending |
+| DASH-01 | Phase 34 | Complete |
+| DASH-02 | Phase 34 | Complete |
+| DASH-03 | Phase 34 | Complete |
 | STUD-01 | Phase 35 | Pending |
 
 **Coverage:**
