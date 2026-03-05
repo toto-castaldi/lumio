@@ -39,13 +39,33 @@ function formatLastStudied(
   const diffMinutes = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
 
-  if (diffMinutes < 1) return t('dashboard.justNow');
-  if (diffMinutes < 60) return t('dashboard.mAgo', { count: diffMinutes });
-  if (diffHours < 24) return t('dashboard.hAgo', { count: diffHours });
-  if (diffDays < 7) return t('dashboard.dAgo', { count: diffDays });
-
-  return date.toLocaleDateString();
+  if (diffMinutes < 5) return t('dashboard.justNow');
+  if (diffMinutes < 60) {
+    if (diffMinutes === 1) return t('dashboard.oneMinuteAgo');
+    return t('dashboard.minutesAgo', { count: diffMinutes });
+  }
+  if (diffHours < 24) {
+    if (diffHours === 1) return t('dashboard.oneHourAgo');
+    return t('dashboard.hoursAgo', { count: diffHours });
+  }
+  if (diffDays < 7) {
+    if (diffDays === 1) return t('dashboard.yesterday');
+    return t('dashboard.daysAgo', { count: diffDays });
+  }
+  if (diffDays < 30) {
+    if (diffWeeks === 1) return t('dashboard.oneWeekAgo');
+    return t('dashboard.weeksAgo', { count: diffWeeks });
+  }
+  if (diffDays < 365) {
+    if (diffMonths === 1) return t('dashboard.oneMonthAgo');
+    return t('dashboard.monthsAgo', { count: diffMonths });
+  }
+  if (diffYears === 1) return t('dashboard.oneYearAgo');
+  return t('dashboard.yearsAgo', { count: diffYears });
 }
 
 /**
@@ -179,25 +199,17 @@ export function DashboardScreen() {
         />
       </View>
 
-      {/* Last studied card - tappable to navigate to Study History */}
-      <View style={styles.lastStudiedRow}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('StudyHistory')}
-          activeOpacity={0.7}
-        >
-          <StatCard
-            icon="time-outline"
-            iconColor="#F59E0B"
-            iconBgColor={isDark ? '#78350f' : '#FEF3C7'}
-            label={t('dashboard.lastStudied')}
-            value={formatLastStudied(lastStudied, t)}
-            isLoading={isLoading}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Due today counter */}
-      <View style={styles.dueCountRow}>
+      {/* Row 2: Last studied + Due today */}
+      <View style={styles.secondStatRow}>
+        <StatCard
+          icon="time-outline"
+          iconColor="#F59E0B"
+          iconBgColor={isDark ? '#78350f' : '#FEF3C7'}
+          label={t('dashboard.lastStudied')}
+          value={formatLastStudied(lastStudied, t)}
+          isLoading={isLoading}
+          compact
+        />
         <StatCard
           icon={dueCount === 0 ? 'checkmark-circle-outline' : 'alarm-outline'}
           iconColor={dueCount === 0 ? '#10b981' : '#F59E0B'}
@@ -209,6 +221,7 @@ export function DashboardScreen() {
           label={t('dashboard.dueToday')}
           value={dueCount === 0 ? t('dashboard.allCaughtUp') : (dueCount ?? '\u2014')}
           isLoading={dueCount === null && isLoading}
+          compact
         />
       </View>
 
@@ -256,11 +269,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 16,
   },
-  lastStudiedRow: {
-    paddingHorizontal: 16,
-    marginTop: 12,
-  },
-  dueCountRow: {
+  secondStatRow: {
+    flexDirection: 'row',
+    gap: 12,
     paddingHorizontal: 16,
     marginTop: 12,
   },
