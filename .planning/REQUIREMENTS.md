@@ -14,12 +14,12 @@ Requirements for milestone v2.2 Session Limits.
 
 ### Dashboard
 
-- [ ] **DASH-01**: Il counter carte mostra il numero di carte della prossima sessione (rispettando il limite), non il debito totale
-- [ ] **DASH-02**: Con "Auto", il counter mostra il numero reale completo di carte disponibili
+- [x] **DASH-01**: Il counter carte mostra il numero di carte della prossima sessione (rispettando il limite), non il debito totale
+- [x] **DASH-02**: Con "Auto", il counter mostra il numero reale completo di carte disponibili
 
 ### UI
 
-- [ ] **UI-01**: Il selettore rinomina l'opzione "Tutte/∞" in "Auto" con icona appropriata
+- [x] **UI-01**: Il selettore rinomina l'opzione "Tutte/∞" in "Auto" con icona appropriata
 
 ## Future Requirements
 
@@ -38,9 +38,9 @@ None.
 |-------------|-------|--------|
 | SESS-01 | Phase 32 | Complete |
 | SESS-02 | Phase 32 | Complete |
-| DASH-01 | Phase 33 | Pending |
-| DASH-02 | Phase 33 | Pending |
-| UI-01 | Phase 33 | Pending |
+| DASH-01 | Phase 33 | Complete |
+| DASH-02 | Phase 33 | Complete |
+| UI-01 | Phase 33 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 5 total

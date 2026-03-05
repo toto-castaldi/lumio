@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Session Limits
 status: completed
-stopped_at: Phase 33 context gathered
-last_updated: "2026-03-04T22:28:58.512Z"
-last_activity: 2026-03-04 — Completed 32-01 RPC session limit enforcement
+stopped_at: Completed 33-01 dashboard counter auto label
+last_updated: "2026-03-05T09:13:13Z"
+last_activity: 2026-03-05 — Completed 33-01 dashboard counter auto label
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.2 Session Limits — Phase 32 plan 01 complete
+**Current focus:** v2.2 Session Limits — Phase 33 plan 01 complete (milestone complete)
 
 ## Current Position
 
-Phase: 32 of 33 (RPC Session Limit Enforcement)
+Phase: 33 of 33 (Dashboard Counter Auto Label)
 Plan: 1 of 1 in current phase
-Status: Phase 32 complete
-Last activity: 2026-03-04 — Completed 32-01 RPC session limit enforcement
+Status: Phase 33 complete
+Last activity: 2026-03-05 — Completed 33-01 dashboard counter auto label
 
 Progress: [██████████] 100%
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 | 31 | 01 | 4min | 2 | 5 |
 | 31 | 02 | 3min | 2 | 3 |
 | Phase 32 P01 | 3min | 2 tasks | 6 files |
+| Phase 33 P01 | 3min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -59,6 +60,7 @@ Progress: [██████████] 100%
 
 All decisions logged in PROJECT.md Key Decisions table (61 entries).
 - [Phase 32]: IF/ELSE in plpgsql for NULL vs non-NULL p_limit; p_limit DEFAULT NULL matches production unlimited behavior
+- [Phase 33]: LEAST(total, p_limit) for count capping in get_due_card_count; hardcoded 'Auto' label (universal across languages)
 
 ### Pending Todos
 
@@ -83,10 +85,10 @@ None — v2.1 milestone audit passed with 16/16 requirements satisfied.
 
 ## Session Continuity
 
-Last session: 2026-03-04T22:28:58.506Z
-Stopped at: Phase 33 context gathered
-Resume file: .planning/phases/33-dashboard-counter-auto-label/33-CONTEXT.md
+Last session: 2026-03-05T09:13:13Z
+Stopped at: Completed 33-01 dashboard counter auto label
+Resume file: .planning/phases/33-dashboard-counter-auto-label/33-01-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-04 (v2.2 roadmap created)*
+*Last updated: 2026-03-05 (v2.2 milestone complete)*
