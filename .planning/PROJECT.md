@@ -92,7 +92,15 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v2.3 Dashboard Polish
+
+**Goal:** Rendere la dashboard visivamente coerente e compatta con layout a griglia uniforme, tempo relativo, e pulsante studio minimale.
+
+**Target features:**
+- Layout 2-colonne per "Ultimo studio" e "Da ripassare oggi" (come Repository/Schede)
+- Tempo relativo su "Ultimo studio" ("ieri", "2 giorni fa", "un'ora fa")
+- Rimozione navigazione storico sessioni da "Ultimo studio"
+- Pulsante studio circolare centrale con sola icona play
 
 ### Out of Scope
 
@@ -214,4 +222,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | AsyncStorage backward-compat migration 'all' → 'auto' | Read old value, return new enum value silently | ✓ Good — v2.2 |
 
 ---
-*Last updated: 2026-03-05 after v2.2 milestone*
+*Last updated: 2026-03-05 after v2.3 milestone start*

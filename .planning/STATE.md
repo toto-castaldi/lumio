@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Session Limits
-status: completed
-stopped_at: Completed 33-01 dashboard counter auto label
-last_updated: "2026-03-05T11:21:15.974Z"
-last_activity: 2026-03-05 — Completed 33-01 dashboard counter auto label
+milestone: v2.3
+milestone_name: Dashboard Polish
+status: active
+stopped_at: ""
+last_updated: "2026-03-05T14:00:00.000Z"
+last_activity: 2026-03-05 — Milestone v2.3 started
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v2.2 shipped — planning next milestone
+**Current focus:** v2.3 Dashboard Polish
 
 ## Current Position
 
-Phase: 33 of 33 (Dashboard Counter Auto Label)
-Plan: 1 of 1 in current phase
-Status: Phase 33 complete
-Last activity: 2026-03-05 — Completed 33-01 dashboard counter auto label
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-05 — Milestone v2.3 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -89,4 +89,4 @@ Resume file: .planning/phases/33-dashboard-counter-auto-label/33-01-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-05 (v2.2 milestone complete)*
+*Last updated: 2026-03-05 (v2.3 milestone started)*
