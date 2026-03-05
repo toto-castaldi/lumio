@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -226,29 +225,26 @@ export function DashboardScreen() {
       </View>
 
       {/* Study CTA button */}
-      <TouchableOpacity
-        style={[
-          styles.studyButton,
-          {
-            backgroundColor: isStudyDisabled ? colors.border : colors.primary,
-            opacity: isStudyDisabled ? 0.5 : 1,
-          },
-        ]}
-        onPress={handleStudyPress}
-        activeOpacity={0.8}
-        disabled={isStudyDisabled}
-      >
-        {isLoading ? (
-          <ActivityIndicator size="small" color="#ffffff" />
-        ) : (
-          <Ionicons name="play" size={24} color="#ffffff" />
-        )}
-        <Text style={styles.studyButtonText}>
-          {dueCount != null && dueCount > 0
-            ? t('dashboard.studyNDueCards', { count: dueCount })
-            : t('dashboard.startStudySession')}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.studyButtonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.studyButton,
+            {
+              backgroundColor: isStudyDisabled ? colors.border : colors.primary,
+              opacity: isStudyDisabled ? 0.5 : 1,
+            },
+          ]}
+          onPress={handleStudyPress}
+          activeOpacity={0.8}
+          disabled={isStudyDisabled}
+        >
+          {isLoading ? (
+            <ActivityIndicator size={28} color="#ffffff" />
+          ) : (
+            <Ionicons name="play" size={28} color="#ffffff" />
+          )}
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -275,24 +271,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 12,
   },
+  studyButtonContainer: {
+    alignItems: 'center',
+    marginTop: 32,
+    marginBottom: 16,
+  },
   studyButton: {
-    flexDirection: 'row',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 16,
-    marginTop: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 10,
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
-  },
-  studyButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
   },
 });
