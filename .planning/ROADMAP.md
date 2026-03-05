@@ -149,10 +149,10 @@ Plans:
   1. Dashboard counter shows the number of cards the user will actually study in their next session (respecting chosen limit), not the total backlog
   2. User with "Auto" selected sees the full count of all available cards on the dashboard
   3. Session size selector displays "Auto" instead of "Tutte" or the infinity symbol for the unlimited option
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 33-01: TBD
+- [ ] 33-01-PLAN.md — Session-aware dashboard counter, Auto label with sparkles icon
 
 ## Progress
 
@@ -171,7 +171,7 @@ Phases execute in numeric order: 32 -> 33
 | 23-26. Spaced Repetition | v2.0 | 8/8 | Complete | 2026-02-26 |
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32. RPC Session Limit Enforcement | 1/1 | Complete    | 2026-03-04 | - |
-| 33. Dashboard Counter & Auto Label | v2.2 | 0/? | Not started | - |
+| 33. Dashboard Counter & Auto Label | v2.2 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
