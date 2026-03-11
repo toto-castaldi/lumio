@@ -80,35 +80,35 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| DECK-01 | — | Pending |
-| DECK-02 | — | Pending |
-| DECK-03 | — | Pending |
-| DECK-04 | — | Pending |
-| CARD-01 | — | Pending |
-| CARD-02 | — | Pending |
-| CARD-03 | — | Pending |
-| CARD-04 | — | Pending |
-| CARD-05 | — | Pending |
-| CARD-06 | — | Pending |
-| EDIT-01 | — | Pending |
-| EDIT-02 | — | Pending |
-| EDIT-03 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| DEPL-01 | — | Pending |
-| DEPL-02 | — | Pending |
+| AUTH-01 | Phase 36 | Pending |
+| AUTH-02 | Phase 36 | Pending |
+| AUTH-03 | Phase 36 | Pending |
+| AUTH-04 | Phase 36 | Pending |
+| AUTH-05 | Phase 36 | Pending |
+| DECK-01 | Phase 38 | Pending |
+| DECK-02 | Phase 38 | Pending |
+| DECK-03 | Phase 38 | Pending |
+| DECK-04 | Phase 38 | Pending |
+| CARD-01 | Phase 39 | Pending |
+| CARD-02 | Phase 39 | Pending |
+| CARD-03 | Phase 39 | Pending |
+| CARD-04 | Phase 39 | Pending |
+| CARD-05 | Phase 39 | Pending |
+| CARD-06 | Phase 39 | Pending |
+| EDIT-01 | Phase 39 | Pending |
+| EDIT-02 | Phase 39 | Pending |
+| EDIT-03 | Phase 39 | Pending |
+| PIPE-01 | Phase 37 | Pending |
+| PIPE-02 | Phase 37 | Pending |
+| PIPE-03 | Phase 37 | Pending |
+| DEPL-01 | Phase 40 | Pending |
+| DEPL-02 | Phase 40 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation (traceability updated)*

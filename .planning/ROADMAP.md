@@ -139,7 +139,93 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 
 </details>
 
+### v3.0 Deck Builder Web (In Progress)
+
+**Milestone Goal:** Web app React SPA where authenticated users create decks and flashcards in markdown, committed via edge function to a shared Git repo, synced by Docora for AI question generation.
+
+- [ ] **Phase 36: Scaffold & Auth** - Vite/React/Tailwind project with Supabase auth, responsive layout shell, i18n, and dark mode
+- [ ] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration
+- [ ] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation
+- [ ] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback
+- [ ] **Phase 40: Deploy & CI/CD** - Production deploy to deck.lumio.toto-castaldi.com with automated build pipeline
+
+## Phase Details
+
+### Phase 36: Scaffold & Auth
+**Goal**: Users can log into the deck builder web app and see a responsive, themed, bilingual application shell
+**Depends on**: Nothing (first phase of v3.0)
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05
+**Success Criteria** (what must be TRUE):
+  1. User can log in with Google OAuth and see the authenticated app shell
+  2. User can log in with email/password and see the authenticated app shell
+  3. App layout is responsive with a sidebar area and main content area that adapts to screen size
+  4. User can switch between Italian and English, and the UI updates immediately
+  5. User can toggle dark mode (system/light/dark) and the theme applies across all UI elements
+**Plans**: TBD
+
+Plans:
+- [ ] 36-01: TBD
+- [ ] 36-02: TBD
+
+### Phase 37: Backend Pipeline
+**Goal**: Edge function can commit markdown files to the shared Lumio GitHub repo with user isolation, and Docora syncs the repo to generate AI questions
+**Depends on**: Phase 36
+**Requirements**: PIPE-01, PIPE-02, PIPE-03
+**Success Criteria** (what must be TRUE):
+  1. Edge function accepts a card file (path + content) and creates/updates it in the shared GitHub repo via GitHub API
+  2. Edge function rejects any request that attempts to write outside the user's own `/{user_id}/` directory
+  3. Docora syncs the shared repo and generates AI questions for committed cards (verified end-to-end: commit -> sync -> questions appear in mobile app)
+**Plans**: TBD
+
+Plans:
+- [ ] 37-01: TBD
+
+### Phase 38: Deck Management
+**Goal**: Users can create, view, rename, and delete their own decks in the web app
+**Depends on**: Phase 37
+**Requirements**: DECK-01, DECK-02, DECK-03, DECK-04
+**Success Criteria** (what must be TRUE):
+  1. User can create a new deck and see it appear in the sidebar deck list
+  2. User can rename an existing deck
+  3. User can delete a deck after confirming in a dialog
+  4. User sees only their own decks (not other users' content from the shared repo)
+**Plans**: TBD
+
+Plans:
+- [ ] 38-01: TBD
+
+### Phase 39: Card Authoring
+**Goal**: Users can create, edit, and delete flashcards with a markdown editor, live preview, formatting toolbar, and structured metadata
+**Depends on**: Phase 38
+**Requirements**: CARD-01, CARD-02, CARD-03, CARD-04, CARD-05, CARD-06, EDIT-01, EDIT-02, EDIT-03
+**Success Criteria** (what must be TRUE):
+  1. User can create a new card in a deck and see it pre-filled with the frontmatter template
+  2. User can edit a card's markdown content with live preview (split-pane or toggle) and save it to GitHub
+  3. User can set card metadata (title, tags, difficulty, language) via a structured form that produces valid frontmatter
+  4. User can delete a card after confirming in a dialog
+  5. User receives toast feedback confirming successful save or showing error details
+**Plans**: TBD
+
+Plans:
+- [ ] 39-01: TBD
+- [ ] 39-02: TBD
+
+### Phase 40: Deploy & CI/CD
+**Goal**: The deck builder web app is deployed to production and automatically built/deployed on push
+**Depends on**: Phase 39
+**Requirements**: DEPL-01, DEPL-02
+**Success Criteria** (what must be TRUE):
+  1. deck.lumio.toto-castaldi.com serves the deck builder web app with SSL
+  2. Pushing to main triggers an automated build and deploy of the web app
+**Plans**: TBD
+
+Plans:
+- [ ] 40-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -154,7 +240,12 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
+| 36. Scaffold & Auth | v3.0 | 0/? | Not started | - |
+| 37. Backend Pipeline | v3.0 | 0/? | Not started | - |
+| 38. Deck Management | v3.0 | 0/? | Not started | - |
+| 39. Card Authoring | v3.0 | 0/? | Not started | - |
+| 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-05 after v2.3 milestone completion*
+*Last updated: 2026-03-11 after v3.0 roadmap creation*

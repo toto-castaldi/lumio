@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
-status: defining_requirements
+status: ready_to_plan
 stopped_at: null
 last_updated: "2026-03-11"
-last_activity: 2026-03-11 — Milestone v3.0 started
+last_activity: 2026-03-11 — Roadmap created for v3.0
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Defining requirements for v3.0 Deck Builder Web
+**Current focus:** Phase 36 - Scaffold & Auth (v3.0 Deck Builder Web)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 36 of 40 (Scaffold & Auth) — first of 5 phases in v3.0
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-11 — Milestone v3.0 started
+Status: Ready to plan
+Last activity: 2026-03-11 — Roadmap created for v3.0
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -51,7 +51,9 @@ None.
 
 ### Blockers/Concerns
 
-None.
+- Phase 37: Shared repo + Docora registration is a new pattern (one repo for all users). Verify Docora can handle `/{user_id}/` subdirectory structure.
+- Phase 37: Card frontmatter format must exactly match what `docora-webhook` parseFrontmatter() expects.
+- Phase 36: Google Cloud Console must be updated with `deck.lumio.toto-castaldi.com` as authorized JavaScript origin for OAuth.
 
 ### Quick Tasks Completed
 
@@ -69,8 +71,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Defining requirements for v3.0
+Stopped at: Roadmap created for v3.0 Deck Builder Web
+Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-11 (v3.0 milestone started)*
+*Last updated: 2026-03-11 (v3.0 roadmap created)*
