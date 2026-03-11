@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: Dashboard Polish
-status: completed
-stopped_at: Completed 35-01-PLAN.md
-last_updated: "2026-03-05T18:09:23.987Z"
-last_activity: 2026-03-05 — Completed 35-01 Study Button Redesign plan
+milestone: v3.0
+milestone_name: Deck Builder Web
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-11"
+last_activity: 2026-03-11 — Milestone v3.0 started
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v3.0 Deck Builder Web
 
 ## Current Position
 
-Phase: 35 of 35 (Study Button Redesign)
-Plan: 01 of 1 (complete)
-Status: Milestone v2.3 complete
-Last activity: 2026-03-05 — Completed 35-01 Study Button Redesign plan
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-11 — Milestone v3.0 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -39,24 +39,11 @@ Progress: [██████████] 100%
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 32 | 01 | 3min | 2 | 6 |
-| 33 | 01 | 3min | 2 | 6 |
-| 34 | 01 | 2min | 2 | 4 |
-| 35 | 01 | 2min | 2 | 3 |
-
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (66 entries).
-
-- [34-01] Kept abbreviated time keys for backwards compat, added verbose keys alongside
-- [34-01] Extended justNow threshold from <1min to <5min for less jittery display
-- [34-01] Always show relative time (no absolute date fallback)
-- [35-01] 60px circle button (borderRadius 30) with 28px play icon for study CTA
-- [35-01] Removed Text import and unused i18n keys after button text removal
 
 ### Pending Todos
 
@@ -64,7 +51,7 @@ None.
 
 ### Blockers/Concerns
 
-None — v2.3 milestone audit passed with 4/4 requirements satisfied.
+None.
 
 ### Quick Tasks Completed
 
@@ -81,9 +68,9 @@ None — v2.3 milestone audit passed with 4/4 requirements satisfied.
 
 ## Session Continuity
 
-Last session: 2026-03-05T17:33:01Z
-Stopped at: Completed 35-01-PLAN.md
+Last session: 2026-03-11
+Stopped at: Defining requirements for v3.0
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-05 (v2.3 milestone complete)*
+*Last updated: 2026-03-11 (v3.0 milestone started)*

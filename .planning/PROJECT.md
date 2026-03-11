@@ -96,7 +96,23 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(None — planning next milestone)
+(Defining requirements for v3.0)
+
+## Current Milestone: v3.0 Deck Builder Web
+
+**Goal:** Web app React SPA su deck.lumio.toto-castaldi.com dove utenti autenticati creano deck e carte in markdown, committate via edge function su un repo Git Lumio condiviso, sincronizzate da Docora per generazione AI.
+
+**Target features:**
+- React SPA con auth Supabase condivisa (Google OAuth + email/password)
+- CRUD deck e carte con editor markdown nel browser
+- Salvataggio via edge function → GitHub API commit su repo condiviso Lumio
+- Struttura repo: `/{user_id}/{deck_name}/` — ogni utente gestisce solo i suoi contenuti
+- Docora sincronizza e genera domande AI come per i repo normali
+- Deploy su deck.lumio.toto-castaldi.com
+
+**Future milestones:**
+- v3.1: Deck Discovery — ricerca fulltext repo/deck pubblici nell'app mobile
+- v3.2: TBD
 
 ### Out of Scope
 
@@ -137,6 +153,13 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, dashboard compatta 2x2 con tempo relativo e pulsante circolare, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app
 - ~20,600 LOC (TS/TSX/SQL)
 - 11 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth), v2.2 (session limits), v2.3 (dashboard polish)
+
+**v3.0 planning context:**
+- Nuova app web React SPA in `apps/deck-builder` nel monorepo
+- Stesso progetto Supabase (auth condivisa, stesse tabelle)
+- Edge function per commit su repo GitHub condiviso tramite GitHub API
+- Docora gestisce sync/generazione AI anche per il repo condiviso
+- Deploy separato su deck.lumio.toto-castaldi.com
 
 ## Constraints
 
@@ -223,4 +246,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Removed unused i18n keys after button text removal | Clean codebase, no orphaned translations | ✓ Good — v2.3 |
 
 ---
-*Last updated: 2026-03-05 after v2.3 milestone completion*
+*Last updated: 2026-03-11 after v3.0 milestone start*
