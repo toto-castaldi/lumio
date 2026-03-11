@@ -1,436 +1,307 @@
-# Technology Stack: v2.1 Email Auth
+# Technology Stack
 
-**Project:** Lumio
-**Researched:** 2026-02-27
-**Focus:** Email/password authentication with email verification, password reset, and Google OAuth account linking
-**Confidence:** HIGH
+**Project:** Lumio Deck Builder Web App (v3.0)
+**Researched:** 2026-03-11
 
----
+## Recommended Stack
 
-## Executive Summary
+### Core Framework
 
-No new npm dependencies are needed. The existing stack (`@supabase/supabase-js@2.89.0`, `expo-linking@8.0.11`, `expo-secure-store@15.0.8`) provides all required APIs for email/password auth, OTP-based email verification, password reset, and account linking. The work is purely integration: wiring Supabase Auth methods already present in the installed SDK, updating `config.toml` for email confirmations and manual identity linking, creating OTP-based email templates, and building new UI screens.
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Vite | ^7.3.1 | Build tool & dev server | Industry standard for React SPAs in 2026. Instant HMR, native ESM, zero-config TypeScript. CRA is dead, Webpack is legacy -- no alternative worth considering for a new project. |
+| React | 19.1.0 | UI framework | Must match existing monorepo `pnpm.overrides.react` pin. Shared with `@lumio/core` and `@lumio/shared`. |
+| React DOM | 19.1.0 | Browser rendering | Matches React version. Required for web (Android app uses react-native instead). |
+| @vitejs/plugin-react | ^4.5.0 | React fast-refresh for Vite | Standard Vite plugin for React. Handles JSX transform and HMR. |
+| react-router | ^7.13.1 | Client-side routing | v7 unifies react-router and react-router-dom into single `react-router` import. Use Library Mode with `createBrowserRouter` -- no need for Framework Mode since this is a simple SPA with no SSR. |
+| TypeScript | ~5.9.2 | Type safety | Match version from `apps/android` for monorepo consistency. |
 
----
+### Supabase (Web Client)
 
-## Recommended Stack Additions
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| @supabase/supabase-js | ^2.45.0 | Auth + DB client for browser | Already a dependency in `@lumio/core`. Web app creates its own Supabase client instance -- not through `@lumio/core`'s singleton. Same Supabase project = shared auth, shared tables, shared RLS policies. |
 
-### No New npm Packages Required
+**Why a separate Supabase client (not via @lumio/core):**
+The `createSupabaseClient()` in `@lumio/core` is configured for mobile: `detectSessionInUrl: false`, `flowType: 'pkce'`. The web app needs `detectSessionInUrl: true` to handle OAuth redirects in the browser. Creating the client directly with `@supabase/supabase-js` is 6 lines of code and avoids coupling to mobile-specific configuration. The web client uses browser `localStorage` by default -- no custom `StorageAdapter` needed.
 
-All required auth functionality exists in the already-installed `@supabase/supabase-js@2.89.0`. The following Supabase Auth JS methods are needed but already available:
+```typescript
+// apps/deck-builder/src/lib/supabase.ts
+import { createClient } from '@supabase/supabase-js';
 
-| Method | Purpose | Exists in 2.89.0 |
-|--------|---------|:-:|
-| `auth.signUp()` | Register with email + password | Yes |
-| `auth.signInWithPassword()` | Login with email + password | Yes |
-| `auth.verifyOtp()` | Verify email (OTP code) and verify recovery OTP | Yes |
-| `auth.resetPasswordForEmail()` | Send password reset email | Yes |
-| `auth.updateUser()` | Set new password after reset, add password to OAuth account | Yes |
-| `auth.linkIdentity()` | Link Google OAuth to email account | Yes |
-| `auth.getUserIdentities()` | List linked auth providers | Yes |
-| `auth.unlinkIdentity()` | Remove linked identity | Yes |
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,  // Required for OAuth redirect handling
+      flowType: 'pkce',
+    },
+  }
+);
+```
 
-**Confidence:** HIGH -- all methods verified in [Supabase JS API Reference](https://supabase.com/docs/reference/javascript/auth-signup).
+### Markdown Editor
 
----
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| @uiw/react-md-editor | ^4.0.11 | Markdown editing with live preview | ~4.6 kB gzipped -- smallest full-featured option. Split-pane edit/preview mode. GitHub Flavored Markdown built-in. TypeScript definitions. Active maintenance (last release Dec 2025). Uses native textarea, no CodeMirror/Monaco dependency. Perfect for flashcard content where users need to see and control the raw markdown. |
 
-## What Already Exists (DO NOT add)
+**Alternatives considered:**
 
-| Technology | Version | Already Used For |
-|------------|---------|------------------|
-| @supabase/supabase-js | 2.89.0 | Google OAuth via `signInWithIdToken`, session mgmt, DB queries |
-| expo-linking | 8.0.11 | Installed in package.json (not yet used in code), provides `Linking.addEventListener`, `Linking.createURL` |
-| expo-secure-store | 15.0.8 | SecureStore adapter for Supabase auth token persistence |
-| @react-native-google-signin/google-signin | 16.1.1 | Native Google Sign-In with ID token exchange |
-| react-native-toast-message | 2.3.3 | User notifications (success/error/info) |
-| @expo/vector-icons (Ionicons) | 15.0.3 | Icons throughout the app |
-| i18n-js | 4.5.2 | EN/IT translations |
+| Option | Bundle Size | Why Not |
+|--------|-------------|---------|
+| MDXEditor | ~851 kB gzip | 185x larger for WYSIWYG features not needed. Flashcard content is raw markdown. |
+| Monaco Editor | ~2 MB | Overkill code editor. Wrong tool for content authoring. |
+| CodeMirror (@uiw/react-codemirror) | ~150 kB | Good but heavier for the same task. Only choose if custom language modes are needed. |
+| Plain textarea + react-markdown | ~5 kB | Too bare. No toolbar, no split preview. Would need to build editor UI from scratch. |
 
----
+### GitHub API (Edge Function)
 
-## Configuration Changes Required
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| GitHub REST API (direct fetch) | v2022-11-28 | Commit files to shared repo | Use `PUT /repos/{owner}/{repo}/contents/{path}` directly via `fetch()` in the Deno edge function. One endpoint takes path + base64 content + commit message and creates/updates a file in one call. Avoids the multi-step git tree/blob/commit dance. Existing edge functions (git-sync, docora-webhook) already use raw `fetch()` for external APIs -- this is a consistent pattern. |
 
-### 1. Supabase config.toml (Local Development)
+**Why NOT Octokit:**
+- The edge function needs one endpoint: create/update file contents
+- Octokit adds ~200KB+ dependency surface for a single `fetch()` call
+- Existing edge functions already use raw `fetch()` for Docora API calls
+- `npm:octokit` in Deno edge functions adds cold start latency
+- A wrapper function around `fetch()` with proper headers is ~20 lines
 
-**Confidence: HIGH** -- verified via [Supabase CLI config docs](https://supabase.com/docs/guides/local-development/cli/config) and [GitHub Discussion #22214](https://github.com/orgs/supabase/discussions/22214).
+**API endpoint:**
+```
+PUT /repos/{owner}/{repo}/contents/{path}
+Headers: Authorization: Bearer {GITHUB_PAT}, Accept: application/vnd.github+json
+Body: { message, content (base64), sha (for updates -- omit for create) }
+```
 
-Current state and required changes:
+The edge function stores a GitHub PAT (fine-grained, scoped to the shared Lumio deck repo only) as a Supabase secret. Users never see or handle the token.
+
+**For deleting files (deck/card deletion):**
+```
+DELETE /repos/{owner}/{repo}/contents/{path}
+Headers: Authorization: Bearer {GITHUB_PAT}, Accept: application/vnd.github+json
+Body: { message, sha (required -- get from GET endpoint first) }
+```
+
+### Styling
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Tailwind CSS | ^4.2.1 | Utility-first CSS | v4 eliminates `tailwind.config.js` -- works with just `@import "tailwindcss"` in CSS. Automatic content detection + tree-shaking = tiny production CSS. Fast solo-developer velocity: compose directly in JSX instead of naming CSS classes. |
+| @tailwindcss/vite | ^4.2.1 | Vite integration plugin | Required for Tailwind v4 + Vite. Replaces the old PostCSS approach. Zero config. |
+
+**Monorepo note:** Tailwind v4's automatic content detection scans the app directory tree. Since the deck builder only imports types/constants from `@lumio/shared` (no UI components), all Tailwind classes are in `apps/deck-builder/src/` -- no `@source` directive needed. If shared UI components are ever introduced, add `@source "../../packages/ui/src";` to the CSS file.
+
+**Why not CSS Modules:** Tailwind is faster for solo development. CSS Modules require naming every class. The deck builder is a small focused SPA, not a shared design system.
+
+### Deploy
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Vite build (static) | -- | Production build | `vite build` outputs `dist/` with static HTML/JS/CSS. SPA with client-side routing. |
+| DigitalOcean + nginx | existing | Hosting | Same VPS already hosts `lumio.toto-castaldi.com` (landing page). Add nginx server block for `deck.lumio.toto-castaldi.com`. Same infra = no new vendor, no new DNS provider. |
+| SCP + SSH (GitHub Actions) | existing | CI/CD deployment | Same `appleboy/scp-action` + `appleboy/ssh-action` pattern from landing page deploy. Copy `dist/` to `/var/www/deck-builder`, reload nginx. |
+
+**SPA routing on nginx:** Add `try_files $uri $uri/ /index.html;` to the server block. This serves `index.html` for all paths, letting react-router handle routing client-side.
+
+**Why not Vercel/Netlify/GitHub Pages:** The project already has a DigitalOcean VPS with nginx. Adding another hosting provider increases complexity (DNS split, different deploy processes, another vendor). A static SPA deploy via SCP is 5 lines of CI config -- consistent with the existing landing page deploy pattern.
+
+### Supporting Libraries
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| @lumio/shared | workspace:* | Types, constants, version | Always -- shared between all apps. Already exports VERSION, types, constants. |
+| react-hot-toast | ^2.5.2 | Toast notifications | Success/error feedback on save/delete operations. Lightweight (~5kB), Tailwind-friendly. Analogous to `react-native-toast-message` in the Android app. |
+| i18n-js | ^4.5.2 | Internationalization | Same library as Android app. Share translation keys for consistent IT/EN support. |
+
+## What NOT to Add (Already Available via Workspace)
+
+| Package | Available Via | Notes |
+|---------|--------------|-------|
+| @supabase/supabase-js | Directly (already in dependency tree via @lumio/core) | Web app installs its own copy but shares the same semver range |
+| Types (Repository, Card, etc.) | @lumio/shared | Reuse all shared TypeScript types |
+| VERSION, BUILD_INFO | @lumio/shared | Same version system |
+| Constants | @lumio/shared | All shared constants |
+
+**Do NOT import from `@lumio/core` in the web app.** The core package has React Native-specific transitive dependencies (rehype-highlight, rehype-katex, remark-gfm, remark-math, supermemo, `ignore`). These are unnecessary for the deck builder and may cause bundler issues. Import only from `@lumio/shared` for types/constants. Use `@supabase/supabase-js` directly for the web Supabase client.
+
+## Monorepo Integration
+
+### New Package Structure
+
+```
+apps/deck-builder/
+  package.json        # @lumio/deck-builder
+  vite.config.ts
+  tsconfig.json
+  index.html          # SPA entry point
+  public/
+  src/
+    main.tsx           # React root
+    App.tsx            # Router setup with createBrowserRouter
+    index.css          # @import "tailwindcss"
+    lib/
+      supabase.ts      # Web-specific Supabase client
+    pages/             # Route components (Login, DeckList, DeckEdit, CardEdit)
+    components/        # Reusable UI components
+    hooks/             # Custom React hooks
+```
+
+### package.json
+
+```json
+{
+  "name": "@lumio/deck-builder",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lumio/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.45.0",
+    "@uiw/react-md-editor": "^4.0.11",
+    "i18n-js": "^4.5.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router": "^7.13.1",
+    "react-hot-toast": "^2.5.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/react": "~19.1.0",
+    "@types/react-dom": "~19.1.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.2",
+    "vite": "^7.3.1",
+    "@vitejs/plugin-react": "^4.5.0"
+  }
+}
+```
+
+### vite.config.ts
+
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 5173,
+  },
+});
+```
+
+## Installation
+
+```bash
+# From monorepo root -- create the app directory and initialize
+mkdir -p apps/deck-builder
+
+# From apps/deck-builder
+cd apps/deck-builder
+
+# Core dependencies
+pnpm add react@19.1.0 react-dom@19.1.0 react-router@^7.13.1 \
+  @supabase/supabase-js@^2.45.0 @uiw/react-md-editor@^4.0.11 \
+  react-hot-toast@^2.5.2 i18n-js@^4.5.2
+
+# Workspace dependency
+pnpm add @lumio/shared@workspace:*
+
+# Dev dependencies
+pnpm add -D vite@^7.3.1 @vitejs/plugin-react@^4.5.0 \
+  tailwindcss@^4.2.1 @tailwindcss/vite@^4.2.1 \
+  typescript@~5.9.2 @types/react@~19.1.0 @types/react-dom@~19.1.0
+```
+
+## Edge Function Dependencies (Deno)
+
+The new `deck-commit` edge function needs no npm dependencies beyond the Supabase client:
+
+```typescript
+// supabase/functions/deck-commit/index.ts
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+// GitHub API calls use native Deno fetch() -- no Octokit needed
+```
+
+No additional packages. Follows the `npm:` specifier pattern recommended by Supabase docs (not the old `esm.sh` CDN imports used in existing functions like git-sync).
+
+## CI/CD Changes
+
+Add to the existing `ci-deploy.yml` workflow:
+
+1. **Build step:** `pnpm --filter @lumio/deck-builder build` after `build:packages`
+2. **Deploy step:** SCP `apps/deck-builder/dist/` to `/var/www/deck-builder` on the DO server
+3. **Nginx config:** New server block for `deck.lumio.toto-castaldi.com` with SSL (Let's Encrypt)
+4. **Environment:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub secrets (same values as existing `SUPABASE_URL` and `SUPABASE_ANON_KEY`)
+
+The typecheck job already runs `pnpm typecheck` which will pick up the new `@lumio/deck-builder` package via pnpm workspace.
+
+## Supabase Configuration Changes
+
+### config.toml (Local Development)
+
+Add the deck builder URL to allowed redirects:
 
 ```toml
 [auth]
-enabled = true
-site_url = "http://localhost:5173"
 additional_redirect_urls = [
-  "http://localhost:5173/auth/callback",
+  "http://localhost:5173/auth/callback",    # deck-builder local dev
   "http://localhost:5174/auth/callback",
   "https://m-lumio.toto-castaldi.com/auth/callback",
-  "lumio://auth/callback"                              # Already present
+  "https://deck.lumio.toto-castaldi.com/auth/callback",  # NEW: production
+  "lumio://auth/callback"
 ]
-jwt_expiry = 3600
-enable_refresh_token_rotation = true
-refresh_token_reuse_interval = 10
-enable_manual_linking = true   # ADD: Required for linkIdentity() API
-
-[auth.email]
-enable_signup = true            # Already true
-double_confirm_changes = true   # Already true
-enable_confirmations = true     # CHANGE from false -> true
-
-# ADD: Custom email templates for OTP-based verification
-[auth.email.template.confirmation]
-content_path = "./templates/confirmation.html"
-
-[auth.email.template.recovery]
-content_path = "./templates/recovery.html"
 ```
 
-**Why `enable_confirmations = true`:** Currently `false`, meaning any email signup gets an immediate session. For production email auth, users must verify their email first. This prevents fake signups and is standard practice.
-
-**Why `enable_manual_linking = true`:** Required for `supabase.auth.linkIdentity()`. Without this, only automatic linking (same-email identities auto-merge) is available. Manual linking enables the Settings "Link Google account" feature.
-
-### 2. Email Templates (OTP-based)
-
-**Confidence: HIGH** -- verified via [Supabase Email Templates docs](https://supabase.com/docs/guides/auth/auth-email-templates).
-
-Create `supabase/templates/` directory with OTP-based templates:
-
-| Template | File | Key Variable |
-|----------|------|-------------|
-| Confirm signup | `supabase/templates/confirmation.html` | `{{ .Token }}` (6-digit OTP) |
-| Password recovery | `supabase/templates/recovery.html` | `{{ .Token }}` (6-digit OTP) |
-
-**Critical Decision: OTP vs Deep Link for email verification**
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| **OTP (6-digit code)** | No deep link complexity, works in every email client, user stays in app, no fragment parsing issues | User must type/paste 6 digits |
-| **Deep link** | One-tap experience | URL fragment parsing issues in React Native ([GitHub #10754](https://github.com/orgs/supabase/discussions/10754)), email client compatibility varies, complex Linking setup |
-
-**Use OTP.** The user receives a 6-digit code via email and enters it in-app. This avoids the well-documented deep link fragment parsing issues in React Native and works reliably across all email clients. The trade-off (typing 6 digits) is negligible for a one-time verification and occasional password reset.
-
-Template example (`confirmation.html`):
-```html
-<h2>Confirm your Lumio account</h2>
-<p>Your verification code is:</p>
-<h1 style="letter-spacing: 8px; font-size: 32px;">{{ .Token }}</h1>
-<p>Enter this code in the Lumio app to verify your email.</p>
-<p>This code expires in 1 hour.</p>
-```
-
-### 3. Supabase Dashboard (Production)
-
-| Setting | Location | Value |
-|---------|----------|-------|
-| Enable email confirmations | Auth > Providers > Email | ON |
-| Enable Manual Linking | Auth > General | ON |
-| Redirect URL | Auth > URL Configuration | `lumio://auth/callback` (verify present) |
-| Email templates | Auth > Email Templates | Update Confirmation and Recovery templates to show OTP code |
-
-### 4. app.json (No Changes Needed)
-
-The `"scheme": "lumio"` is already configured. The redirect URL `lumio://auth/callback` is already in `config.toml`. No changes needed here since we are using OTP approach, not deep links.
-
----
-
-## Supabase Auth API Integration Guide
-
-### Sign Up (email + password)
-
-```typescript
-const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-});
-// With enable_confirmations=true:
-//   data.user exists but data.session is NULL
-//   User receives 6-digit OTP email
-//   Must verify before they can sign in
-```
-
-### Verify Email (OTP after signup)
-
-```typescript
-const { data, error } = await supabase.auth.verifyOtp({
-  email,
-  token: otpCode,  // 6-digit code from email
-  type: 'email',
-});
-// On success: data.session is returned, user is now logged in
-```
-
-### Sign In (email + password)
-
-```typescript
-const { data, error } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
-// Fails if email not yet confirmed
-```
-
-### Request Password Reset
-
-```typescript
-const { data, error } = await supabase.auth.resetPasswordForEmail(email);
-// Sends OTP to email via recovery template
-```
-
-### Verify Recovery OTP + Set New Password
-
-```typescript
-// Step 1: Verify the OTP
-const { data, error } = await supabase.auth.verifyOtp({
-  email,
-  token: otpCode,
-  type: 'recovery',
-});
-// On success: authenticated session with PASSWORD_RECOVERY event
-
-// Step 2: Set new password (user is now authenticated)
-const { data: updateData, error: updateError } = await supabase.auth.updateUser({
-  password: newPassword,
-});
-```
-
-### Add Password to Google-Only Account (Settings)
-
-```typescript
-// User logged in via Google, wants to add email/password
-const { data, error } = await supabase.auth.updateUser({
-  password: newPassword,
-});
-// Adds email identity to the existing Google OAuth account
-// The email is already set (from Google profile)
-```
-
-### Link Google to Email-Only Account (Settings)
-
-```typescript
-// User logged in with email/password, wants to link Google
-const googleResponse = await GoogleSignin.signIn();
-if (googleResponse.type === 'success' && googleResponse.data.idToken) {
-  // Option A: linkIdentity (if it supports native ID token)
-  const { data, error } = await supabase.auth.linkIdentity({
-    provider: 'google',
-  });
-  // Note: linkIdentity uses redirect-based PKCE flow
-  // For native Android, may need alternative approach (see Open Questions)
-}
-```
-
-**WARNING:** `linkIdentity()` is designed for browser-based redirect flows. For native Android with `@react-native-google-signin`, the ID token approach may not work directly with `linkIdentity()`. The fallback is to use Supabase's automatic linking behavior (same email = auto-merge) by having the user sign in with Google, which will auto-link if the emails match and `enable_confirmations` is enabled.
-
-### Get Linked Identities (Settings display)
-
-```typescript
-const { data, error } = await supabase.auth.getUserIdentities();
-// data.identities: Array<{ provider: 'google' | 'email', ... }>
-// Show which auth methods are linked
-```
-
-### Unlink Identity (Settings)
-
-```typescript
-const { data, error } = await supabase.auth.unlinkIdentity(identity);
-// Requires at least 2 identities linked
-// Prevents user from removing their only login method
-```
-
----
-
-## Integration Points with Existing Code
-
-### @lumio/core/src/supabase/auth.ts -- New Exports
-
-Add alongside existing `signInWithGoogle`, `signOut`, `getSession`, `getCurrentUser`:
-
-```typescript
-export async function signUpWithEmail(email: string, password: string): Promise<...>
-export async function signInWithEmail(email: string, password: string): Promise<...>
-export async function verifyEmailOtp(email: string, token: string, type: 'email' | 'recovery'): Promise<...>
-export async function requestPasswordReset(email: string): Promise<...>
-export async function updatePassword(newPassword: string): Promise<...>
-export async function getUserIdentities(): Promise<...>
-export async function addPasswordToAccount(password: string): Promise<...>
-```
-
-### AuthContext.tsx -- Extended Interface
-
-```typescript
-export interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  state: AuthState;
-  signInWithGoogle: () => Promise<void>;          // Existing
-  signInWithEmail: (email: string, password: string) => Promise<void>;     // NEW
-  signUpWithEmail: (email: string, password: string) => Promise<SignUpResult>; // NEW
-  verifyOtp: (email: string, token: string, type: string) => Promise<void>;   // NEW
-  resetPassword: (email: string) => Promise<void>;                             // NEW
-  updatePassword: (password: string) => Promise<void>;                         // NEW
-  signOut: () => Promise<void>;                   // Existing
-}
-```
-
-### AuthNavigator.tsx -- New Screens
-
-```typescript
-export type AuthStackParamList = {
-  Login: undefined;                                // Existing
-  SignUp: undefined;                               // NEW
-  VerifyEmail: { email: string };                  // NEW
-  ForgotPassword: undefined;                       // NEW
-  ResetPassword: { email: string };                // NEW
-};
-```
-
-### LoginScreen.tsx -- Layout Change
-
-Current: Google Sign-In button only.
-New layout:
-1. Google Sign-In button (prominent, at top -- existing)
-2. "oppure" / "or" divider (horizontal line with text)
-3. Email input field
-4. Password input field
-5. "Login" button
-6. "Forgot password?" link -> ForgotPassword screen
-7. "Don't have an account? Sign up" link -> SignUp screen
-
-### SettingsScreen.tsx -- New Section
-
-Add "Linked Accounts" section between Account and Appearance:
-- Show list of linked identities (Google icon, Email icon)
-- "Link Google account" button (if only email identity)
-- "Add password" button (if only Google identity)
-- "Unlink" option (if 2+ identities)
-
----
-
-## What NOT to Add
-
-| Library | Why NOT | Use Instead |
-|---------|---------|-------------|
-| expo-auth-session | Not needed. Google Sign-In uses native SDK. Email auth uses direct API calls. | @supabase/supabase-js direct methods |
-| expo-web-browser | Not needed. No browser-based OAuth flows. Google Sign-In is native. | @react-native-google-signin |
-| react-native-keychain | Already using expo-secure-store for tokens. | expo-secure-store |
-| formik / react-hook-form | Auth forms are simple (2-3 fields). useState is sufficient. Same pattern as all existing screens. | useState + inline validation |
-| yup / zod | Email regex + password min length check. 2 validations do not need a schema library. | Inline validation functions |
-| react-native-otp-input | TextInput with `keyboardType="number-pad"` and `maxLength={6}` is sufficient. One less dep. | Standard TextInput |
-| @gorhom/bottom-sheet | No bottom sheets needed for auth flows. Standard screen navigation. | react-navigation stack screens |
-| Additional Supabase packages | @supabase/supabase-js 2.89.0 contains everything needed. No @supabase/auth-helpers or similar. | Already installed SDK |
-
----
-
-## Password Validation
-
-No library needed. Supabase GoTrue enforces minimum password length server-side (default 6, configurable in dashboard). Client-side validation mirrors this:
-
-```typescript
-const PASSWORD_MIN_LENGTH = 6;
-const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isValidPassword = (password: string) => password.length >= PASSWORD_MIN_LENGTH;
-```
-
----
-
-## i18n Additions Required
-
-New translation keys needed (EN + IT) for:
-
-| Screen | Estimated Keys |
-|--------|---------------|
-| Login (email form, divider, links) | ~8 |
-| Sign Up (fields, validation, submit) | ~10 |
-| Verify Email (instructions, OTP input, resend, timer) | ~8 |
-| Forgot Password (instructions, email input, submit) | ~6 |
-| Reset Password (OTP input, new password, confirm, submit) | ~8 |
-| Settings (linked accounts, link/unlink buttons) | ~6 |
-| Error messages (invalid email, weak password, email taken, wrong OTP, expired OTP, etc.) | ~10 |
-| **Total** | **~56 keys** |
-
----
-
-## Database Changes
-
-No new tables needed for email auth. Supabase Auth manages identities in `auth.users` and `auth.identities` (internal schema). The existing `users` table in public schema remains unchanged.
-
-The only DB-related work is:
-- Supabase dashboard/config: Enable email confirmations + manual linking
-- No new migrations needed for email auth itself
-
----
-
-## Local Development Testing
-
-Supabase local includes Inbucket (email capture) at `http://127.0.0.1:54324`. All verification and password reset emails sent locally are captured here. OTP codes can be read from Inbucket UI during development.
-
-| Step | How to Test |
-|------|-------------|
-| Sign up | Submit form -> check Inbucket -> copy 6-digit code -> enter in app |
-| Verify email | Enter OTP -> session created -> navigate to dashboard |
-| Password reset | Request reset -> check Inbucket -> copy code -> enter new password |
-| Google linking | Tap "Link Google" in Settings -> native Google Sign-In flow |
-
----
-
-## Alternatives Considered
-
-| Recommended | Alternative | Why Not |
-|-------------|-------------|---------|
-| OTP (6-digit code) for email verification | Deep link from email | Fragment parsing issues in RN, email client compatibility, extra Linking setup. OTP is simpler and more reliable on mobile. |
-| OTP for password reset | Deep link + PASSWORD_RECOVERY event | Same deep link issues. OTP + verifyOtp + updateUser is a clean 2-step flow. |
-| Manual inline validation | formik + yup | 2-3 fields per form. Library overhead unjustified. Consistent with existing codebase pattern (no form libraries used anywhere). |
-| Standard TextInput for OTP | react-native-otp-input | Extra dependency for a single 6-character input. Not worth the maintenance cost. |
-| `updateUser({password})` for adding password to OAuth account | Custom edge function | Supabase natively supports this. No custom backend needed. |
-| Automatic linking (same email auto-merge) as fallback for Google linking | Only manual `linkIdentity()` | Automatic linking handles the common case (user signs up with email, later signs in with Google using same email). Manual linking via `linkIdentity()` is the explicit Settings action. Both work together. |
-
----
+### Production Supabase Dashboard
+
+- Add `https://deck.lumio.toto-castaldi.com` to Site URL or Additional Redirect URLs
+- Add `https://deck.lumio.toto-castaldi.com/auth/callback` to Redirect URL allow list
+- Google OAuth: Add `deck.lumio.toto-castaldi.com` to authorized JavaScript origins in Google Cloud Console
 
 ## Confidence Assessment
 
-| Area | Confidence | Reason |
-|------|------------|--------|
-| signUp / signInWithPassword | HIGH | Official JS API docs, well-documented, standard usage |
-| verifyOtp (type: email) | HIGH | Official docs, multiple Supabase examples |
-| verifyOtp (type: recovery) | HIGH | Official docs, recovery flow documented |
-| updateUser for password | HIGH | Official docs, standard pattern |
-| enable_manual_linking config | HIGH | Verified via GitHub discussion + CLI config docs |
-| OTP approach for mobile | HIGH | Official email template docs, widely used RN pattern |
-| Email template content_path | HIGH | CLI config docs, content_path parameter documented |
-| linkIdentity for native Google | MEDIUM | Web redirect flow documented. Native mobile ID token approach unclear for linkIdentity specifically. May need fallback to auto-linking. |
-| No new npm dependencies | HIGH | All required methods verified in @supabase/supabase-js@2.89.0 |
-| getUserIdentities / unlinkIdentity | HIGH | Official JS API docs |
-
----
-
-## Open Questions (Flag for Phase-Specific Research)
-
-1. **`linkIdentity()` with native Google Sign-In:** The `linkIdentity()` API is designed for browser redirect (PKCE). For native Android using `@react-native-google-signin`, this may need: (a) a redirect-based flow via WebBrowser, or (b) relying on Supabase's automatic email-based linking instead of manual `linkIdentity()`. Test both approaches during the account linking phase.
-
-2. **Automatic linking interaction with manual linking:** When `enable_manual_linking = true`, verify that automatic linking (same-email auto-merge on signup) still functions for new users. The docs suggest both modes coexist, but confirm locally.
-
-3. **OTP expiration and resend:** Default OTP expiration is 1 hour, resend cooldown is 60 seconds. Verify these defaults work for the UX or if they need adjustment in dashboard settings.
-
-4. **Email deliverability in production:** Supabase uses its built-in email service for auth emails. For production, consider whether custom SMTP is needed for better deliverability and branding. This is a post-launch consideration, not a blocker.
-
----
+| Technology | Confidence | Reason |
+|------------|------------|--------|
+| Vite 7 | HIGH | npm verified v7.3.1, industry standard, production proven |
+| React 19.1.0 | HIGH | Already pinned in monorepo, no change needed |
+| react-router 7 | HIGH | npm verified v7.13.1, Library Mode well documented |
+| @uiw/react-md-editor 4 | MEDIUM | npm verified v4.0.11, active maintenance, less widely adopted than CodeMirror. Fallback: swap to @uiw/react-codemirror if editor limitations surface |
+| GitHub REST API (direct fetch) | HIGH | Official GitHub docs, stable endpoint, well-documented PUT contents API |
+| Tailwind CSS 4 | HIGH | npm verified v4.2.1, Vite plugin documented, v4 widely adopted |
+| @supabase/supabase-js 2 | HIGH | Already in project, web browser support confirmed, v2.99.0 latest |
+| DigitalOcean + nginx deploy | HIGH | Existing infrastructure, proven pattern with landing page |
+| react-hot-toast | HIGH | Widely used, small footprint, straightforward API |
+| i18n-js | HIGH | Already used in Android app, same library for consistency |
 
 ## Sources
 
-- [Supabase Auth Identity Linking Guide](https://supabase.com/docs/guides/auth/auth-identity-linking) -- HIGH confidence
-- [Supabase JS auth.signUp() Reference](https://supabase.com/docs/reference/javascript/auth-signup) -- HIGH confidence
-- [Supabase JS auth.signInWithPassword() Reference](https://supabase.com/docs/reference/javascript/auth-signinwithpassword) -- HIGH confidence
-- [Supabase JS auth.verifyOtp() Reference](https://supabase.com/docs/reference/javascript/auth-verifyotp) -- HIGH confidence
-- [Supabase JS auth.resetPasswordForEmail() Reference](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail) -- HIGH confidence
-- [Supabase JS auth.updateUser() Reference](https://supabase.com/docs/reference/javascript/auth-updateuser) -- HIGH confidence
-- [Supabase JS auth.linkIdentity() Reference](https://supabase.com/docs/reference/javascript/auth-linkidentity) -- MEDIUM confidence
-- [Supabase Native Mobile Deep Linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- HIGH confidence
-- [Supabase CLI Config Reference](https://supabase.com/docs/guides/local-development/cli/config) -- HIGH confidence
-- [Supabase Email Templates](https://supabase.com/docs/guides/auth/auth-email-templates) -- HIGH confidence
-- [GitHub Discussion: Manual Linking Locally #22214](https://github.com/orgs/supabase/discussions/22214) -- HIGH confidence
-- [GitHub Discussion: Deep Linking with Expo #10754](https://github.com/orgs/supabase/discussions/10754) -- HIGH confidence (informed OTP recommendation)
-- Codebase analysis: `apps/android/contexts/AuthContext.tsx`, `packages/core/src/supabase/auth.ts`, `packages/core/src/supabase/client.ts`, `supabase/config.toml`, `apps/android/app.json`, `apps/android/package.json` -- verified existing setup
-
----
-
-*Stack research for: Lumio v2.1 Email Auth -- email/password authentication, OTP verification, password reset, account linking*
-*Researched: 2026-02-27*
+- [Vite npm](https://www.npmjs.com/package/vite) - v7.3.1 verified
+- [React Router docs - Picking a Mode](https://reactrouter.com/start/modes) - Library Mode vs Framework Mode
+- [React Router docs - SPA](https://reactrouter.com/how-to/spa) - SPA configuration
+- [react-router npm](https://www.npmjs.com/package/react-router) - v7.13.1 verified
+- [@uiw/react-md-editor npm](https://www.npmjs.com/package/@uiw/react-md-editor) - v4.0.11 verified
+- [@uiw/react-md-editor GitHub](https://github.com/uiwjs/react-md-editor) - features and API docs
+- [GitHub REST API - Repository Contents](https://docs.github.com/en/rest/repos/contents) - PUT endpoint for file create/update
+- [@supabase/supabase-js npm](https://www.npmjs.com/package/@supabase/supabase-js) - v2.99.0 latest
+- [Supabase Auth Architecture](https://supabase.com/docs/guides/auth/architecture) - shared auth across apps
+- [Supabase Sessions - Subdomain Discussion](https://github.com/orgs/supabase/discussions/5742) - cross-domain auth considerations
+- [Tailwind CSS npm](https://www.npmjs.com/package/tailwindcss) - v4.2.1 verified
+- [Tailwind CSS v4 + Vite setup](https://tailwindcss.com/docs) - Official installation guide
+- [Tailwind v4 monorepo issue #13136](https://github.com/tailwindlabs/tailwindcss/issues/13136) - @source directive for workspace content detection
+- [Nx blog - Tailwind 4 npm workspace](https://nx.dev/blog/setup-tailwind-4-npm-workspace) - Monorepo configuration guide
+- [Supabase Edge Functions - Dependencies](https://supabase.com/docs/guides/functions/dependencies) - npm: specifier preferred over esm.sh
+- [Vite Static Deploy Guide](https://vite.dev/guide/static-deploy) - Deployment options
+- [Octokit GitHub](https://github.com/octokit/octokit.js/) - Evaluated and rejected for simplicity

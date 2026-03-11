@@ -1,429 +1,457 @@
-# Domain Pitfalls
+# Pitfalls Research
 
-**Domain:** Adding email/password auth, email verification, password reset, and account linking to existing Supabase + React Native app with Google OAuth
-**Researched:** 2026-02-27
+**Domain:** Adding a React SPA deck builder web app with GitHub API commits, shared repo with Docora integration, cross-origin auth, and per-user data isolation to existing Lumio flashcard platform
+**Researched:** 2026-03-11
 **Confidence:** HIGH
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: handle_new_user Trigger Assumes OAuth Metadata -- Email/Password Signup Has None
+### Pitfall 1: GitHub Contents API 409 Conflict When Two Users Edit Simultaneously
 
 **What goes wrong:**
-The existing `handle_new_user()` trigger (migration `20241230000003_auth_trigger.sql`) extracts `display_name` from `raw_user_meta_data->>'full_name'` and `avatar_url` from `raw_user_meta_data->>'avatar_url'`. These fields are populated by Google OAuth but are completely absent in email/password signups. The `COALESCE` in the trigger still evaluates to NULL for both fields. While `display_name` and `avatar_url` are nullable in `public.users`, several UI components assume they exist:
-- `SettingsScreen.tsx` line 48-49: reads `user?.user_metadata?.avatar_url` and `user?.user_metadata?.full_name` directly for the account section
-- `packages/core/src/supabase/auth.ts` line 57-60: constructs `AuthUser` from `user_metadata?.full_name`
+The GitHub Contents API (`PUT /repos/{owner}/{repo}/contents/{path}`) requires providing the current file's SHA blob hash when updating an existing file. If User A and User B both read a file at SHA `abc123`, then User A commits and the file SHA changes to `def456`, User B's commit fails with a `409 Conflict` because their SHA is stale. In a shared repo architecture where all users write to `/{user_id}/{deck_name}/`, this does not directly cause cross-user conflicts (different file paths). HOWEVER, the `409` still occurs when:
 
-The result: email-signup users see a blank account section (no name, no avatar), and the AuthUser's `displayName` is undefined everywhere it is consumed.
+1. The same user makes two rapid saves (e.g., double-click "Save" or auto-save + manual save) -- the second request has a stale SHA from before the first commit completed.
+2. The edge function creates multiple files in a single deck operation (README.md + card1.md + card2.md) using sequential commits -- each commit changes the tree SHA, and if any parallel request reads the old SHA, it fails.
+3. Docora processes the webhook for commit N and triggers question generation while commit N+1 is being created by the edge function -- not a direct API conflict, but can cause Docora to process partially-committed deck state.
+
+Real-world evidence: [GitHub Community Discussion #62198](https://github.com/orgs/community/discussions/62198) documents `409 Conflict` errors appearing after 5-10 sequential commits via the Contents API, caused by GitHub's eventual consistency in SHA propagation.
 
 **Why it happens:**
-Google OAuth populates `raw_user_meta_data` with profile info automatically. Email/password signup does not -- `raw_user_meta_data` contains only `{"email_verified": false}` (or nothing). The existing trigger was built when Google OAuth was the only auth method.
+The Contents API uses optimistic concurrency control. Each file has a SHA that must match the server state. Unlike the lower-level Git Database API (which allows creating blobs, trees, and commits atomically), the Contents API performs one file per commit. Developers assume sequential API calls are safe, but GitHub's backend has propagation delays where the new SHA is not immediately visible after a successful PUT response.
 
-**Consequences:**
-- Blank avatar and name in Settings (cosmetic but jarring)
-- Potential null-reference errors in any code that does not guard against missing display_name
-- `public.users.display_name` is NULL for email-signup users, breaking any queries that filter or sort by display_name
+**How to avoid:**
+- Use the Git Database API (blobs + trees + commits) instead of the Contents API for multi-file operations. This creates a single atomic commit for all files in a deck, avoiding the sequential-SHA problem entirely.
+- For single-file updates (editing one card), always fetch the current SHA immediately before the PUT, never cache it.
+- Add retry logic with exponential backoff specifically for `409` responses: re-fetch SHA, then retry the commit.
+- Implement client-side debouncing on the "Save" button (disable for 2 seconds after click) to prevent double-submit.
+- In the edge function, use a mutex pattern (database advisory lock keyed on user_id) to serialize commits per user.
 
-**Prevention:**
-- Update `handle_new_user()` to fall back to the email local part (before @) when no `full_name` is available: `COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1))`
-- Add the `avatar_url` fallback to use the Ionicons person-icon fallback already present in SettingsScreen (no code change needed there -- the fallback already exists)
-- Allow users to pass `display_name` via signUp options.data to pre-populate: `signUp({ email, password, options: { data: { full_name: 'User Name' } } })`
-- Audit all code paths that consume `displayName` or `avatar_url` and ensure they handle NULL gracefully
-
-**Detection:**
-- Create an email-signup test user and check `public.users` row -- `display_name` should be non-null
-- Verify Settings screen renders correctly for email-only users
+**Warning signs:**
+- Intermittent save failures that succeed on retry
+- Users reporting "save failed" after rapid edits
+- Console logs showing `409 Conflict` responses from GitHub API
 
 **Phase to address:**
-Database migration phase (update trigger) + signup form phase (collect display name during registration).
+Edge function implementation phase (GitHub API commit logic). The choice between Contents API and Git Database API is an architectural decision that must be made before any commit code is written.
 
 ---
 
-### Pitfall 2: Supabase signUp with Existing Google Email Returns Obfuscated Response, Not an Error
+### Pitfall 2: GitHub API Rate Limits Silently Block Commits Under Load
 
 **What goes wrong:**
-When a user who already signed up via Google OAuth tries to create a new account with `signUp({ email, password })` using the same email, Supabase does NOT return an error. Instead, it returns a "fake" user object that looks like a successful signup. No verification email is sent. The app cannot distinguish between "new account created" and "email already exists" on the client side. This is an intentional Supabase security measure to prevent email enumeration attacks.
+GitHub enforces two types of rate limits that affect the deck builder:
 
-The implication: a user signs up with email/password, sees a "check your email for verification" screen, waits forever for an email that never arrives, and assumes the app is broken.
+1. **Primary rate limit:** 5,000 requests/hour for authenticated requests (PAT or GitHub App). Each file commit via Contents API costs at minimum 2 requests (GET current SHA + PUT new content). A user creating a 20-card deck burns 40+ requests. With 10 active users creating decks simultaneously, the shared PAT hits the limit in under 2 hours.
+
+2. **Secondary rate limit:** No more than 80 content-creating requests per minute and 500 per hour. Content-creating means POST/PUT/PATCH. Creating a 20-card deck means 20+ content-creating requests in quick succession, which can trigger the per-minute secondary limit even when the primary limit is fine.
+
+3. **Concurrent request limit:** No more than 100 concurrent requests. If the edge function uses `Promise.all()` to create multiple files in parallel, this is easily hit.
+
+The failure mode is silent: GitHub returns `403 Forbidden` with a `Retry-After` header, but if the edge function does not handle this specific response, it surfaces as a generic "save failed" error to the user. The `X-RateLimit-Remaining` header drops to 0 but the edge function never checks it.
+
+Source: [GitHub Rate Limits Documentation](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) -- 80 content-generating requests/minute confirmed.
 
 **Why it happens:**
-Supabase removed the "User already registered" error message for security. When `enable_confirmations` is true (required for email verification), the obfuscated response is returned for duplicate emails. This is documented in [Supabase Discussion #7632](https://github.com/orgs/supabase/discussions/7632) and [auth-js Issue #513](https://github.com/supabase/auth-js/issues/513).
+Developers build and test with a single user making occasional commits. Rate limits are invisible at low volume. The shared PAT token means ALL users share the same rate limit budget. A burst of activity from one user can lock out everyone.
 
-**Consequences:**
-- User is stuck on "check your email" screen indefinitely
-- No way to inform the user that they should use Google sign-in instead
-- Support burden from confused users
+**How to avoid:**
+- Use a GitHub App instead of a PAT. GitHub Apps get rate limits per installation (5,000-15,000/hour depending on plan), and each installation token is scoped to the specific repo. This also avoids the PAT expiration problem.
+- Use the Git Database API to batch all files in a deck into a single commit (1 create-tree + 1 create-commit + 1 update-ref = 3-5 API calls instead of 2N for N files).
+- Implement rate limit tracking in the edge function: read `X-RateLimit-Remaining` from every response, and if below a threshold (e.g., 100), queue the operation instead of executing immediately.
+- Add a `Retry-After` handler: when GitHub returns 403 with `Retry-After`, delay and retry automatically.
+- Never use `Promise.all()` for GitHub API calls. Process files sequentially with at least 100ms delay between requests.
+- Log rate limit headers in the edge function for monitoring.
 
-**Prevention:**
-- After signUp, check if the returned user object has `identities` array that is empty. An empty `identities` array indicates the email is already taken: `if (data.user && data.user.identities && data.user.identities.length === 0)` means duplicate email.
-- When detecting a duplicate email, show a specific message: "An account with this email already exists. Try signing in with Google instead." or "Sign in with your existing account."
-- Document this detection pattern prominently in the signup handler code with a comment explaining the Supabase behavior.
-
-**Detection:**
-- Test: sign up with Google first, then try email/password signup with same email -- the `identities` array should be empty
-- Check that the "email already exists" message appears in the UI
+**Warning signs:**
+- Edge function logs showing `403` responses from GitHub
+- Users reporting intermittent "save failed" errors during peak usage
+- `X-RateLimit-Remaining` header dropping rapidly in logs
 
 **Phase to address:**
-Signup implementation phase. The empty-identities check must be in the signUp handler from day one.
+Edge function implementation phase. Rate limit handling must be built into the GitHub API client from the start, not retrofitted.
 
 ---
 
-### Pitfall 3: Email Verification Deep Link Does Not Work on Android Without Proper Configuration
+### Pitfall 3: Docora Webhook Storm When Edge Function Creates Multi-File Commits
 
 **What goes wrong:**
-After email-signup, Supabase sends a verification email with a link. The link format is `https://[project-ref].supabase.co/auth/v1/verify?token_hash=...&type=signup&redirect_to=...`. The `redirect_to` parameter should open the app via deep link (e.g., `lumio://auth/callback`). But on Android, several things can break:
-1. The `lumio://` custom scheme is registered in `app.json` (`"scheme": "lumio"`) but NOT registered in Supabase's `additional_redirect_urls` for production (only local config.toml has it)
-2. The deep link must extract `access_token` and `refresh_token` from the URL parameters and call `supabase.auth.setSession()` -- there is zero deep link handling code in the app today
-3. Android does not automatically open custom-scheme links from email clients -- the user may end up in the browser instead of the app
-4. The Supabase verification link uses the project's site_url as default redirect, which is `http://localhost:5173` in config.toml -- wrong for production
+When the edge function commits a deck with 20 cards (20 .md files + 1 README.md), Docora detects 21 file changes and fires 21 webhook calls to the `docora-webhook` edge function. Each webhook call processes one file: parses frontmatter, inserts into `cards` table, triggers question generation. This creates:
+
+1. **Burst load:** 21 near-simultaneous webhook invocations on the Supabase edge function infrastructure. Supabase edge functions have concurrency limits (varies by plan, typically 25-100 concurrent invocations).
+2. **Race condition with .lumioignore:** If the commit includes a `.lumioignore` file, it might be processed AFTER some cards are already inserted. The existing `cleanupIgnoredCardQuestions` logic handles this, but the window between card insertion and .lumioignore processing means temporary inconsistency.
+3. **Duplicate question generation:** If Docora retries (network timeout, slow response from edge function), the same card may be processed twice, creating duplicate questions in `card_questions`.
+4. **Wasted AI generation:** All 20 cards trigger AI question generation. But if the user immediately edits and recommits, Docora fires 20 more webhooks and generates 20 more question sets. The first set was wasted.
+
+The existing docora-webhook handler (reviewed in `supabase/functions/docora-webhook/index.ts`) handles idempotency for card inserts via the `UNIQUE(repository_id, file_path)` constraint and `23505` duplicate-key detection. But question generation is NOT idempotent -- duplicate webhook calls create duplicate questions.
 
 **Why it happens:**
-Google OAuth in the current app uses `signInWithIdToken` (native SDK) which never involves browser redirects or deep links. The entire redirect/deep-link infrastructure was never needed or built. Email verification is fundamentally different -- it requires the user to click a link in another app (email client) and return to the app.
+Docora is designed for per-file webhook delivery from existing Git repositories where commits happen occasionally (manual pushes). The deck builder creates programmatic commits with many files at once, which is a usage pattern Docora was not designed to optimize for.
 
-**Consequences:**
-- User clicks verification link, ends up in browser showing error or blank page
-- Verification succeeds on the server side but the app does not know about it
-- User must manually go back to app and try to log in (confusing UX)
-- If redirect URL is not in the allowed list, Supabase rejects the redirect entirely
+**How to avoid:**
+- Commit all files atomically in a single Git commit (the Git Database API enables this). Docora will still fire per-file webhooks, but the commit_sha will be the same for all files, enabling server-side deduplication.
+- Add a processing delay/debounce in the docora-webhook handler: when receiving a file from a commit_sha, store it in a queue table and process the batch after a 5-second window of no new files from the same commit.
+- Alternatively, accept the webhook storm but make question generation idempotent: check if questions already exist for a card before generating new ones.
+- Consider whether Docora should even process the shared repo at all, or whether the edge function should directly insert cards into the database (bypassing the webhook round-trip).
 
-**Prevention:**
-- **Use OTP (6-digit code) instead of link-based verification.** This avoids deep linking entirely. Supabase supports OTP verification via `verifyOtp({ email, token, type: 'signup' })`. The user stays in the app, enters the code from their email, done. This is the recommended approach for mobile apps.
-- If using links: configure `additional_redirect_urls` in Supabase Dashboard (production) to include `lumio://auth/callback`. Add deep link handling in the app using `expo-linking`. Create a `createSessionFromUrl` handler.
-- For password reset: same choice -- OTP (enter code + new password in-app) vs deep link (redirect back to app). OTP is strongly recommended for mobile.
-- Update Supabase email templates to show the OTP token (not just a link) for mobile-friendly UX.
-
-**Detection:**
-- Test email verification flow on a real Android device (not emulator -- email client behavior differs)
-- Verify the redirect URL is in the allowed list in Supabase Dashboard
+**Warning signs:**
+- Edge function timeout errors during multi-file commits
+- Duplicate entries in `card_questions` table
+- Supabase edge function concurrency limit warnings in logs
+- AI API costs higher than expected (duplicate generation)
 
 **Phase to address:**
-This is the most critical architectural decision for the milestone. Must be decided BEFORE any implementation. OTP-based flow should be the default choice for this mobile-only app.
+Architecture/design phase. The Docora integration strategy must be decided before implementing the commit edge function. The key decision is: should the edge function commit to GitHub and let Docora sync back, or should it write to both GitHub AND the database directly?
 
 ---
 
-### Pitfall 4: Password Reset Flow Requires Deep Link or OTP -- Neither Exists Today
+### Pitfall 4: Cross-Origin Auth Between deck.lumio Subdomain and Supabase Fails
 
 **What goes wrong:**
-`resetPasswordForEmail(email)` sends a password reset email. The email contains a link with a token that establishes a session in "recovery" mode. The `onAuthStateChange` listener fires a `PASSWORD_RECOVERY` event. The app must then show a "set new password" form and call `updateUser({ password })`. But:
-1. The `PASSWORD_RECOVERY` event fires AFTER a `SIGNED_IN` event, which the current `AuthContext` interprets as "user is logged in" and navigates to the main app -- the password reset form never appears
-2. Without deep link handling (see Pitfall 3), the user cannot get back to the app from the reset email link
-3. The current `onAuthStateChange` handler in `AuthContext.tsx` does not distinguish between `SIGNED_IN`, `PASSWORD_RECOVERY`, `TOKEN_REFRESHED`, or any other events -- it treats all of them as "set session, navigate to main"
+The deck builder SPA at `deck.lumio.toto-castaldi.com` uses the same Supabase project as the Android app. The Supabase JS client (`@supabase/supabase-js`) stores auth tokens in `localStorage` by default in browser SPAs. This creates several problems:
+
+1. **Session not shared with mobile app:** The Android app uses SecureStore, the web app uses localStorage. These are completely separate storage mechanisms on separate domains. A user logged in on mobile must log in again on the web app. This is expected but must be communicated clearly in the UX.
+
+2. **OAuth redirect URL mismatch:** The Supabase project's `site_url` is currently `http://localhost:5173` (local dev) and presumably the landing page URL in production. Google OAuth redirects go to the configured redirect URLs. If `deck.lumio.toto-castaldi.com/auth/callback` is not in the allowed redirect URLs list (both in Supabase Dashboard AND in Google Cloud Console's OAuth 2.0 Client), the OAuth flow fails silently or redirects to the wrong domain.
+
+3. **PKCE code verifier lost on redirect:** The current Supabase client uses `flowType: 'pkce'`. PKCE stores a code verifier in the browser's sessionStorage during the OAuth redirect. If the user starts OAuth on `deck.lumio.toto-castaldi.com` but the callback redirects to a different origin (e.g., `lumio.toto-castaldi.com`), the code verifier is not present, and the session exchange fails with "both auth code and code verifier should be non-empty." This is documented in [supabase/auth-js#1026](https://github.com/supabase/auth-js/issues/1026).
+
+4. **CORS on Supabase edge functions:** The existing edge functions set `Access-Control-Allow-Origin: *` (wildcard CORS). This works but is overly permissive. For a production web app, this should be restricted to the specific origins. More critically: if the CORS header is changed to specific origins but `deck.lumio.toto-castaldi.com` is forgotten, the web app cannot call any edge functions.
 
 **Why it happens:**
-The `onAuthStateChange` handler was designed for a single auth method (Google OAuth) where the only relevant events are `SIGNED_IN` and `SIGNED_OUT`. Password recovery introduces a new event type that requires different handling.
+The Supabase project was configured for a mobile app. Web-specific auth concerns (cookie domain, redirect URLs, PKCE in browser, CORS) were not relevant until now. Adding a web client to an existing mobile-only project requires auth configuration changes that are easy to overlook.
 
-**Consequences:**
-- User clicks reset link, gets signed in to main app but never sees password reset form
-- Password remains unchanged
-- User is confused and locked out of their account
+**How to avoid:**
+- Add `https://deck.lumio.toto-castaldi.com/auth/callback` to Supabase's `additional_redirect_urls` in both config.toml (local) and Supabase Dashboard (production).
+- Add `https://deck.lumio.toto-castaldi.com` as an authorized redirect URI in Google Cloud Console's OAuth 2.0 Client configuration.
+- For the web app's Supabase client, use `flowType: 'pkce'` and ensure `detectSessionInUrl: true` (the opposite of the mobile config where it is `false`). The web app needs a separate client initialization from the mobile app.
+- Do NOT reuse the `@lumio/core` `createSupabaseClient()` singleton directly -- the web app needs different `auth` options (e.g., `detectSessionInUrl: true`, no custom storage adapter, potentially `localStorage` or `cookieStorage`).
+- Test the full OAuth flow on the deployed subdomain, not just localhost.
 
-**Prevention:**
-- **OTP approach (recommended):** Use `resetPasswordForEmail(email)` with a custom email template showing the OTP token. User enters the OTP in-app via `verifyOtp({ email, token, type: 'recovery' })`. On success, show password reset form and call `updateUser({ password })`. No deep link needed.
-- **Link approach (if needed):** Update `onAuthStateChange` to check the `_event` parameter. When `_event === 'PASSWORD_RECOVERY'`, set a state flag (e.g., `needsPasswordReset: true`) and navigate to a password reset screen instead of the main app. Handle the event ordering: `SIGNED_IN` fires first, then `PASSWORD_RECOVERY` -- the handler must wait for or prioritize the recovery event.
-
-**Detection:**
-- Test full password reset flow end-to-end: request reset, receive email, complete reset, verify new password works
-- Check that `onAuthStateChange` correctly routes `PASSWORD_RECOVERY` events
+**Warning signs:**
+- "Redirect URI mismatch" error during Google OAuth on the web app
+- "both auth code and code verifier should be non-empty" error in console
+- Users can log in on localhost but not on the deployed subdomain
+- Edge function calls fail with CORS errors from the web app
 
 **Phase to address:**
-AuthContext refactoring phase. The `onAuthStateChange` handler must be updated to handle multiple event types before password reset is implemented.
+Foundation phase. Auth configuration must be the first thing set up and tested for the web app. Building any UI before auth works is wasted effort.
 
 ---
 
-### Pitfall 5: Account Linking (Email + Google on Same Account) Has Multiple Failure Modes
+### Pitfall 5: RLS Policies Do Not Cover Web App Deck Builder Write Operations
 
 **What goes wrong:**
-The milestone requires linking Google OAuth and email/password identities on the same account. Supabase supports this via `linkIdentity()` and automatic linking. But several scenarios cause problems:
+The current RLS policies are designed for a read-only client (the Android app reads cards from shared repositories). The deck builder introduces write operations from the browser client:
 
-**Scenario A -- Existing Google user adds email/password:**
-User is logged in via Google. They want to add a password. The correct approach is `updateUser({ password: 'newpassword' })` which adds an email identity. But the user must also verify their email identity. If the user's Google email is already confirmed, does adding a password auto-confirm the email identity? Supabase behavior: yes, since the email matches the confirmed Google identity, the email identity is auto-confirmed.
+1. **Cards table has no INSERT/UPDATE RLS for regular users:** Current policies allow INSERT/UPDATE only for `service_role` or via the old repository-owner check (which was dropped in the shared repo migration). The web app's authenticated user cannot directly insert cards via the Supabase JS client.
 
-**Scenario B -- Existing Google user tries signUp with same email:**
-This hits Pitfall 2 (obfuscated response). The user should NOT be using `signUp` -- they should be using `updateUser` from an authenticated session. But if the UI lets them reach the signup form, they will try.
+2. **Repository ownership model changes:** The deck builder creates a "Lumio shared repo" where all users store their decks. The repo is registered in Docora once, and all users commit to `/{user_id}/{deck_name}/` paths. But the `repositories` table currently has a single row per repo URL. All users' cards are in the same repository. The `user_repositories` join table links users to the repo, but there is no column indicating which user "owns" which cards within the repo. The `cards.file_path` encodes the user_id (e.g., `{user_id}/my-deck/card1.md`), but there is NO RLS policy that enforces "user can only modify cards where file_path starts with their user_id."
 
-**Scenario C -- New email user later links Google:**
-User signs up with email/password. Later they want to add Google sign-in. They call `linkIdentity({ provider: 'google' })`. This opens a browser-based OAuth flow (NOT the native Google Sign-In SDK). The `@react-native-google-signin/google-signin` library used in the app is bypassed entirely. The user may see a different Google sign-in UI (browser vs native) which is confusing.
-
-**Scenario D -- Unlinking the last identity:**
-User has both Google and email/password. They try to unlink Google. `unlinkIdentity()` requires at least 2 identities to remain. But what if the user's email identity is unconfirmed? They could end up with only an unconfirmed email identity and be unable to log in.
+3. **Service role bypass:** The existing docora-webhook uses service role to insert cards (bypasses RLS). If the web app also bypasses RLS by routing writes through an edge function with service role, the data isolation depends entirely on application logic in the edge function, not on database-level enforcement. This is a security design choice with different tradeoff profiles.
 
 **Why it happens:**
-Account linking is one of the most complex auth features. Supabase's automatic linking simplifies the happy path but the edge cases are numerous.
+The current system was designed for content flowing one way: GitHub repo -> Docora webhook -> database. Users never write to the database directly. The deck builder reverses this flow: user writes content -> edge function commits to GitHub -> Docora syncs back to database. The RLS policies were never designed for user-initiated writes to the cards table.
 
-**Consequences:**
-- Confused UI states (link button appears when it should not)
-- User gets locked out after unlinking their only confirmed identity
-- Different Google sign-in experiences (native vs browser) in the same app
+**How to avoid:**
+- **Option A (Recommended): Edge function mediates all writes.** The web app never writes directly to `cards` or `repositories`. All mutations go through edge functions that validate user ownership before committing to GitHub. The edge function uses service role for DB writes. This keeps the existing RLS model intact.
+- **Option B: Add write RLS policies.** Create policies like `CREATE POLICY "Users can manage own deck cards" ON cards FOR ALL USING (file_path LIKE auth.uid()::text || '/%')`. This is elegant but couples the RLS policy to the file path naming convention, which is fragile.
+- Regardless of choice: add a `deck_owner_id` column to a new `decks` table (separate from `repositories`) that explicitly tracks deck ownership. Do not rely on parsing user_id from file paths.
+- Create a new `decks` table: `id, repository_id, owner_id, name, description, created_at` with RLS policies: `USING (owner_id = auth.uid())`. Cards in decks link via repository_id + file_path prefix.
 
-**Prevention:**
-- For Scenario A (Google user adds password): use `updateUser({ password })` only when the user is authenticated. Do not expose a "link email" flow -- just a "set password" form in Settings.
-- For Scenario B: handle in signup form (see Pitfall 2 prevention).
-- For Scenario C (email user adds Google): use `linkIdentity()` but test the browser-based flow thoroughly. Consider whether to show "Link Google Account" only for email-only users.
-- For Scenario D: before allowing `unlinkIdentity()`, check `user.identities.length > 1` AND that the remaining identity is confirmed. Simpler approach: do not allow unlinking in v2.1 -- only allow adding identities.
-- **Simplest viable approach:** Do NOT implement full bidirectional linking in v2.1. Instead: (1) Google users can add a password via Settings, (2) email users can link Google via Settings, (3) no unlinking. Defer unlinking to a future milestone.
-
-**Detection:**
-- Test every combination: Google-first + add password, email-first + link Google, both + try unlink
-- Check `user.identities` after each operation to verify the expected identities exist
+**Warning signs:**
+- Users able to see or modify other users' deck cards
+- RLS violation errors when the web app tries to write data
+- Edge function service role bypassing all isolation checks
 
 **Phase to address:**
-Settings/account linking phase. Must be the LAST phase in the milestone after login/signup/verification/reset are solid.
+Database schema and architecture phase. Must be designed before any CRUD operations are implemented. This affects the entire data model.
 
 ---
 
-### Pitfall 6: SecureStore 2048-Byte Limit May Truncate Tokens for Email+Google Users
+### Pitfall 6: Shared GitHub Repo Single Point of Failure -- PAT Expiration Locks Out All Users
 
 **What goes wrong:**
-The current app uses `expo-secure-store` (via `SecureStoreAdapter` in `lib/supabase.ts`) to persist Supabase auth tokens. SecureStore has a hard 2048-byte limit per key on Android. When a user has multiple linked identities (Google + email), the session JWT grows because it contains claims from both providers. Google OAuth alone can produce JWTs close to 2000 bytes (profile data, scopes). Adding email identity metadata pushes it over the limit. SecureStore silently fails or throws, causing the session to not persist -- the user gets logged out on every app restart.
+The deck builder architecture uses a single shared GitHub repository for all user decks. This repo is accessed via a GitHub Personal Access Token (PAT) or GitHub App installation token stored as an environment variable in the edge function. If this token:
+
+1. **Expires:** GitHub fine-grained PATs have mandatory expiration (max 1 year for organization repos, customizable for personal repos). Classic PATs can be set to never expire but are being deprecated. When the token expires, ALL users lose the ability to save decks.
+
+2. **Gets revoked:** If the token owner's GitHub account is compromised and they rotate credentials, or if GitHub detects abuse (rate limit violations), the token is revoked.
+
+3. **Lacks permissions:** The token needs `contents: write` scope on the specific repo. If the repo is transferred to a different owner or the token's fine-grained permissions are modified, writes fail.
+
+4. **Docora also needs the token:** Docora monitors the shared repo using its own access (registered via the `docoraAddRepository` call with `github_token`). If the edge function's token and Docora's token are different, they can become out of sync.
 
 **Why it happens:**
-Supabase's JWT includes `user_metadata` from all linked identities. Google provides `full_name`, `avatar_url`, `email_verified`, `iss`, `sub`, and more. Email/password adds its own metadata. The combined size exceeds SecureStore's Android Keystore limit.
+Per-user repos have per-user tokens (the existing model). A shared repo concentrates all access through a single credential, creating a single point of failure that did not exist before.
 
-**Consequences:**
-- Session not persisted -- user logs out every time app restarts
-- Error is silent or appears as a generic "SecureStore write failed" log
-- Only affects users with multiple linked identities (the account linking feature itself triggers the bug)
+**How to avoid:**
+- Use a GitHub App instead of a PAT. GitHub Apps have installation tokens that are auto-renewed (valid for 1 hour, refreshed via API). They do not expire or require manual rotation.
+- If using a PAT: set a calendar reminder for rotation, implement a health check that validates the token weekly (call `GET /user` and check the response).
+- Store the token in Supabase secrets (edge function env vars) and build a rotation procedure: update the secret, re-deploy edge functions.
+- Implement a "canary" check: before committing, verify the token works by calling `GET /repos/{owner}/{repo}` and checking the response. If it fails, surface a "maintenance" message to users instead of a cryptic error.
+- Monitor Docora sync_failed webhooks -- auth failures from Docora indicate the shared token may be compromised.
 
-**Prevention:**
-- Test with a real Google+email dual-identity user and measure the JWT size before shipping
-- If JWT exceeds 2048 bytes: switch to `expo-secure-store` + MMKV pattern. Generate an encryption key with `expo-crypto`, store it in SecureStore (small, fits in 2048 bytes), use MMKV for the actual session data encrypted with that key
-- Alternative: use `aes-256-gcm` encryption with a SecureStore-stored key and AsyncStorage for the encrypted payload
-- The existing Supabase setup in `lib/supabase.ts` passes `storage: SecureStoreAdapter` to createSupabaseClient. This adapter must be updated if the limit is hit.
-- **Immediate mitigation:** test the current JWT size for a Google-only user. If it is already close to 2048 bytes, this must be fixed in the foundation phase of this milestone, not deferred.
-
-**Detection:**
-- `console.log(JSON.stringify(session).length)` after login -- if over ~1800 bytes, you are at risk
-- Test: link Google + email identity, restart app, check if session persists
+**Warning signs:**
+- All users simultaneously unable to save decks
+- `401 Unauthorized` responses from GitHub API in edge function logs
+- Docora sending `sync_failed` webhooks with auth error type for the shared repo
 
 **Phase to address:**
-Foundation phase (before any auth changes). Measure current JWT size. If over 1500 bytes, implement MMKV+SecureStore pattern first.
+Infrastructure/foundation phase. Token management strategy must be decided before the edge function is built.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 7: Supabase config.toml enable_confirmations Is False -- Production Must Enable It
+### Pitfall 7: Edge Function Timeout on Large Deck Commits
 
 **What goes wrong:**
-The current `config.toml` has `enable_confirmations = false` (line 47). This means email verification is disabled for local development. But production Supabase projects have email verification enabled by default. If the app is developed and tested with confirmations disabled, the signup flow will behave differently in production:
-- Local: signUp immediately creates a confirmed user, session is returned
-- Production: signUp creates an unconfirmed user, no session is returned, user must verify email first
+Supabase edge functions have a default timeout of 150 seconds (2.5 minutes). Creating a deck with 20+ cards via the GitHub API requires:
+- 1 GET for current tree SHA
+- 20+ blob creation requests (sequential, ~200ms each = 4 seconds)
+- 1 tree creation request
+- 1 commit creation request
+- 1 ref update request
 
-The app works perfectly in local development but breaks in production.
+Total: ~25+ API calls taking 5-10 seconds optimistically. But if GitHub's API is slow (500ms per request) or if the edge function needs to generate README.md content and frontmatter for each card, the total can exceed 30 seconds. Add network latency between Supabase's edge function infrastructure and GitHub's API, and timeouts become realistic for large decks.
 
-**Why it happens:**
-The config.toml was set up when Google OAuth was the only auth method. OAuth users are pre-confirmed by the provider. Email verification was irrelevant. Now that email/password is being added, the local config must match production behavior.
+**How to avoid:**
+- Limit deck size at the UI level (max 50 cards per deck).
+- Use the Git Database API for atomic multi-file commits (fewer total requests).
+- If the operation may be slow, use an async pattern: edge function starts the commit, returns a "processing" status immediately, and the client polls for completion.
+- Consider batching: save individual card edits to a staging table, then commit the entire deck on explicit "Publish" action.
 
-**Prevention:**
-- Set `enable_confirmations = true` in `config.toml` for local development
-- Use the local Inbucket email service (already running on port 54324) to receive verification emails during development
-- Test the full signup-verify-login flow locally before deploying
-- Remember: Supabase's built-in SMTP has a rate limit of 2 emails/hour in production. For production, configure a custom SMTP provider (Resend, Postmark, SendGrid, etc.) via Supabase Dashboard.
-
-**Detection:**
-- Compare config.toml setting with production Dashboard auth settings
-- Test signup flow with `enable_confirmations = true` locally
+**Warning signs:**
+- Edge function timeout errors for large decks
+- Users reporting "save failed" only for decks with many cards
+- Edge function logs showing long execution times
 
 **Phase to address:**
-Foundation/configuration phase. Change config.toml before any email auth development starts.
+Edge function implementation phase.
 
 ---
 
-### Pitfall 8: signOut Must Clear Google Sign-In State Even for Email-Only Users
+### Pitfall 8: Card Content Hash Changes Break SRS Schedule on Docora Re-sync
 
 **What goes wrong:**
-The current `signOut` handler in `AuthContext.tsx` (line 126-131) calls `GoogleSignin.signOut()` before `supabase.auth.signOut()`. If the user signed in with email/password (not Google), `GoogleSignin.signOut()` throws an error because there is no Google session to sign out of. This crashes the signOut flow, and the user remains logged in.
+The existing SM-2 spaced repetition system resets a card's review schedule when `content_hash` changes (migration `20260226000001_card_review_schedule.sql`). When the deck builder commits a card edit, Docora detects the file change and fires an UPDATE webhook. The docora-webhook handler computes a new `content_hash` and updates the card. This triggers the SRS reset logic: the card's ease factor, interval, and next review date are all wiped.
 
-**Why it happens:**
-The signOut handler was written assuming Google OAuth is the only auth method. It unconditionally calls the Google SDK's signOut.
+The problem: even trivial edits (fixing a typo, adding a tag) reset the SRS schedule. A user who has studied a card 50 times and has a 30-day interval loses all progress because they fixed a comma.
 
-**Consequences:**
-- Email-only users cannot log out
-- Crash or unhandled promise rejection
+**How to avoid:**
+- Separate content hash from SRS-relevant content hash. Compute a "study content hash" that only includes the card body (not frontmatter metadata like tags, title). SRS reset triggers only on study content changes.
+- Alternatively: make SRS reset opt-in. When content_hash changes, set a `content_changed` flag but do not reset the schedule. Let the user decide to reset via a UI action.
+- At minimum: document this behavior prominently in the deck builder UI ("Editing card content will reset study progress for this card").
 
-**Prevention:**
-- Wrap `GoogleSignin.signOut()` in a try-catch that silently ignores "not signed in" errors
-- Or: check if the user has a Google identity before calling Google signOut: `const hasGoogle = user?.app_metadata?.providers?.includes('google')`
-- Better: check `GoogleSignin.getCurrentUser()` -- if null, skip Google signOut
-
-**Detection:**
-- Test: sign in with email/password, then tap logout -- should not crash
+**Warning signs:**
+- Users complaining that study progress is lost after minor edits
+- SRS schedule table showing mass resets after a deck update
 
 **Phase to address:**
-AuthContext refactoring phase. Must be updated when adding email/password signIn method.
+Architecture phase (SRS interaction design). Must be decided before the deck builder writes to GitHub.
 
 ---
 
-### Pitfall 9: AuthContext Interface Must Expose New Methods Without Breaking Existing Consumers
+### Pitfall 9: Web App Supabase Client Initialization Differs From Mobile
 
 **What goes wrong:**
-The current `AuthContextType` interface exposes `signInWithGoogle` and `signOut`. Adding email auth requires `signInWithEmail`, `signUpWithEmail`, `resetPassword`, and potentially `verifyOtp`. If these are added naively, every consumer of `useAuth()` (LoginScreen, SettingsScreen, AppNavigator) needs updating. Worse: if the interface is changed mid-development, TypeScript errors cascade across the codebase.
+The existing `@lumio/core` package creates the Supabase client with mobile-specific options:
+- `detectSessionInUrl: false` -- mobile app handles URL manually
+- `flowType: 'pkce'` -- required for mobile
+- Custom `StorageAdapter` for SecureStore
 
-**Why it happens:**
-The AuthContext was designed as a thin wrapper around Google OAuth. Adding multiple auth methods requires a richer interface.
+The web app needs different options:
+- `detectSessionInUrl: true` -- browser must detect OAuth callback tokens in the URL
+- `flowType: 'pkce'` -- also correct for web (Supabase recommends PKCE for SPAs)
+- Default `localStorage` storage (no custom adapter)
 
-**Prevention:**
-- Add new methods incrementally: `signInWithEmail(email, password)`, `signUpWithEmail(email, password, displayName?)`, `resetPassword(email)`, `verifyOtp(email, token, type)`
-- Keep the existing `signInWithGoogle` method unchanged -- no breaking changes for existing consumers
-- Type the new methods as optional initially if needed: `signInWithEmail?: (email: string, password: string) => Promise<void>` -- but this forces null-checks at call sites. Better: add them as required from the start since they will be needed immediately.
-- The `AuthState` type ('loading' | 'logged_out' | 'ready') needs a new state: `'pending_verification'` for users who signed up but have not verified their email. Without this, unverified users either see the login screen (confusing) or the main app (skipping verification).
+If the web app naively imports `createSupabaseClient` from `@lumio/core` and passes different options, the singleton pattern rejects them (first caller wins). If the web app is the first caller in a shared module context, it could set options that break the mobile app.
 
-**Detection:**
-- Run TypeScript check (`pnpm typecheck`) after each AuthContext change
-- Verify all screens that use `useAuth()` still compile
+**How to avoid:**
+- The web app should NOT import from `@lumio/core` for client initialization. Create a separate `createWebSupabaseClient()` function in the `apps/deck-builder` app that configures the Supabase client with web-specific options.
+- The web app CAN import from `@lumio/shared` for types and constants (it has zero dependencies).
+- If shared business logic is needed (e.g., frontmatter parsing, markdown processing), extract it into `@lumio/shared` or create a new `@lumio/common` package that does not depend on the Supabase client.
+
+**Warning signs:**
+- Auth flow not working on web despite same credentials working on mobile
+- OAuth callback URL not being detected after redirect
+- Session not persisting between page refreshes on web
 
 **Phase to address:**
-AuthContext refactoring phase. Must be the first implementation phase.
+Foundation/scaffold phase. The web app's Supabase client setup must be independent of the mobile app's from the start.
 
 ---
 
-### Pitfall 10: Email Template Customization Required for OTP-Based Flow
+### Pitfall 10: Markdown Editor Loses Unsaved Content on Navigation or Session Expiry
 
 **What goes wrong:**
-The default Supabase email templates send a clickable link for verification and password reset. For an OTP-based mobile flow, the email must display a 6-digit code prominently. If the developer uses `verifyOtp()` on the client but does not customize the email template, the user receives an email with a link (not a code) and does not know what to enter in the OTP input field.
+The user is editing a card's markdown content in the browser. They:
+1. Accidentally navigate away (click browser back, close tab, click a link)
+2. Their Supabase session expires (JWT has 1-hour expiry per config.toml `jwt_expiry = 3600`)
+3. Their browser tab is killed by the OS (mobile browser background tab cleanup)
 
-**Why it happens:**
-Supabase's default email templates are designed for web apps that use link-based verification. Mobile apps using OTP need customized templates that show `{{ .Token }}` instead of (or in addition to) `{{ .ConfirmationURL }}`.
+In all cases, unsaved content is lost. There is no auto-save, no "unsaved changes" warning, and no local persistence.
 
-**Prevention:**
-- Customize the following email templates in Supabase Dashboard (production) and in `supabase/templates/` (local):
-  - **Confirm signup:** Show OTP code `{{ .Token }}` with text "Enter this code in the app: {{ .Token }}"
-  - **Reset password:** Show OTP code `{{ .Token }}` with text "Enter this code to reset your password: {{ .Token }}"
-  - **Email change:** Show OTP code `{{ .Token }}` for both old and new email
-- For local development, create template files in `supabase/templates/` directory (Supabase CLI supports custom templates via config.toml `[auth.email]` section)
-- Keep the clickable link as a fallback for users who open the email on desktop
+**How to avoid:**
+- Implement `beforeunload` event handler to warn users about unsaved changes.
+- Auto-save drafts to `localStorage` every 10-30 seconds. On page load, check for a draft and offer to restore it.
+- For session expiry: intercept the 401 error from the edge function, show a re-login modal (not a full redirect), and retry the save after re-authentication.
+- Consider a "save" vs "publish" model: edits are auto-saved locally, commits to GitHub happen only on explicit "Publish".
 
-**Detection:**
-- Send a test verification email (via Inbucket locally) and verify the OTP code is visible
-- Verify the OTP code from the email matches what `verifyOtp()` accepts
+**Warning signs:**
+- Users reporting lost work
+- No `beforeunload` handler in the codebase
+- No localStorage draft persistence
 
 **Phase to address:**
-Configuration phase, immediately after enabling email confirmations.
+Editor implementation phase. Auto-save should be built alongside the editor, not added later.
 
 ---
 
-## Minor Pitfalls
-
-### Pitfall 11: Login Screen Layout Needs Restructuring for Dual Auth Methods
+### Pitfall 11: Deck Builder Web App CORS Issues With Existing Edge Functions
 
 **What goes wrong:**
-The current `LoginScreen.tsx` centers a single Google Sign-In button. Adding email/password form fields (email input, password input, submit button, "forgot password" link, "sign up" link, separator "or") to this screen creates a crowded layout. The vertical centering that works for a single button breaks with a form.
+The existing edge functions (`git-sync`, `docora-webhook`, etc.) set `Access-Control-Allow-Origin: *`. The new deck builder web app at `deck.lumio.toto-castaldi.com` needs to call new edge functions (e.g., `deck-commit`). If the new edge functions copy the wildcard CORS pattern, it works but is insecure. If they are configured with specific origins but miss the deck builder's domain, the browser blocks the requests.
 
-**Prevention:**
-- Use Google button prominently at top (existing user expectation), then a separator ("or"/"oppure"), then email form below
-- Use `KeyboardAvoidingView` to handle keyboard overlap on the login form
-- Consider a tab or toggle between "Sign In" and "Sign Up" rather than cramming both on one screen
-- The `AuthNavigator` currently has only `Login` screen. Add `SignUp`, `ForgotPassword`, and `VerifyEmail` screens to the auth stack.
+More subtly: the web app sends `Authorization: Bearer <token>` headers, which makes the request "non-simple" and triggers a CORS preflight (`OPTIONS` request). The existing edge functions handle `OPTIONS` with `corsHeaders`, but if a new edge function forgets the `OPTIONS` handler, the browser blocks the actual request without any API call being made, and the error message is a confusing CORS error, not a meaningful API error.
 
-**Phase to address:**
-UI implementation phase.
+**How to avoid:**
+- Create a shared CORS helper module (`supabase/functions/_shared/cors.ts`) that all edge functions import. Do not copy-paste CORS headers into each function.
+- Include `deck.lumio.toto-castaldi.com` in the allowed origins list.
+- Always handle `OPTIONS` preflight in every edge function.
+- Test from the actual deployed domain, not just `localhost`.
 
----
-
-### Pitfall 12: Password Strength Validation Not Enforced by Supabase by Default
-
-**What goes wrong:**
-Supabase's `signUp` accepts any password with minimum 6 characters. There is no built-in strength validation. Users can set passwords like "123456" or "password". This is both a security risk and a UX problem (weak passwords lead to account compromise or forgotten passwords).
-
-**Prevention:**
-- Add client-side password validation: minimum 8 characters, at least one uppercase, one lowercase, one number
-- Show real-time strength indicator during signup
-- Supabase does not enforce password complexity server-side -- client validation is the only defense
-- Do NOT over-engineer: avoid requiring symbols or very long passwords. Balance security with usability for a flashcard app.
+**Warning signs:**
+- "Access to fetch at ... has been blocked by CORS policy" errors in browser console
+- Edge function works from Postman/curl but not from the browser
+- `OPTIONS` requests returning 4xx status codes
 
 **Phase to address:**
-Signup form implementation phase.
+Edge function implementation phase. CORS handling should be standardized before creating new functions.
 
 ---
 
-### Pitfall 13: SMTP Rate Limits in Production
+## Technical Debt Patterns
 
-**What goes wrong:**
-Supabase's built-in SMTP service is rate-limited to approximately 2-4 emails per hour in production. During testing or if multiple users sign up simultaneously, verification emails are silently dropped. The user never receives the email and cannot verify their account.
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Using Contents API instead of Git Database API | Simpler code, fewer API calls for single files | Cannot do atomic multi-file commits, 409 conflicts on rapid saves | Never for multi-file deck operations; acceptable for single card edits |
+| Wildcard CORS `*` on edge functions | Works immediately, no origin management | Security risk, no credential-bearing request support with `credentials: include` | MVP only; must be restricted before production |
+| Storing deck metadata in file path convention (`/{user_id}/...`) | No DB schema changes needed | Fragile; renaming user_id format breaks everything; no index support | Never -- use a proper `decks` table |
+| Bypassing Docora for deck builder (write directly to DB) | Eliminates webhook storm, faster saves, simpler architecture | Two code paths for card ingestion (Docora for external repos, direct for deck builder); divergence risk | Acceptable if the two paths are explicitly maintained and tested |
+| Single shared PAT for GitHub API | Simple credential management | Single point of failure, manual rotation, shared rate limits | MVP only; switch to GitHub App before scaling |
+| localStorage for web app auth tokens | Zero setup, default Supabase behavior | XSS vulnerable, not shared with mobile, lost on clear browser data | Acceptable for SPA -- this is Supabase's recommended approach for browser clients |
 
-**Prevention:**
-- Configure a custom SMTP provider (Resend, Postmark, SendGrid) in Supabase Dashboard before launching email auth
-- For a small user base (single developer's app), the built-in SMTP may suffice initially, but monitor delivery
-- Add a "Resend verification email" button with rate limiting (60-second cooldown) in the UI
+## Integration Gotchas
 
-**Phase to address:**
-Production configuration phase (can be deferred to deployment, but must be done before public release).
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| GitHub Contents API | Using stale SHA for file updates, causing 409 Conflict | Always fetch current SHA immediately before PUT; or use Git Database API for multi-file |
+| GitHub Contents API | Using `Promise.all()` for parallel file creation | Sequential requests with 100ms delay; or single atomic commit via Git Database API |
+| GitHub Rate Limits | Not reading `X-RateLimit-Remaining` header | Check remaining budget before operations; implement `Retry-After` handler for 403 responses |
+| Docora webhook | Assuming webhooks arrive in commit order | Webhooks fire per-file in arbitrary order; .lumioignore may arrive after cards |
+| Docora webhook | Not handling duplicate webhook deliveries | Idempotent handlers; `UNIQUE` constraints on card inserts; dedup on question generation |
+| Supabase OAuth (web) | Forgetting to add subdomain redirect URL to Dashboard AND Google Console | Must be in BOTH Supabase `additional_redirect_urls` AND Google OAuth authorized redirect URIs |
+| Supabase PKCE (web) | Setting `detectSessionInUrl: false` (copied from mobile config) | Web SPA must use `detectSessionInUrl: true` to capture OAuth callback tokens |
+| Supabase edge functions | Forgetting `OPTIONS` preflight handler in new edge functions | Always include `OPTIONS` handler; extract into shared module |
 
----
+## Performance Traps
 
-## Phase-Specific Warnings
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| One commit per card save | Slow deck creation; 20-card deck takes 40+ API calls | Batch saves into single Git commit; "Save Draft" + "Publish" pattern | More than 10 cards per save operation |
+| Loading all cards for markdown preview | Slow editor; large decks stall the browser | Lazy-load card list; only fetch full content for the card being edited | Decks with 50+ cards |
+| Re-generating AI questions on every content_hash change | Wasted AI API calls; slow Docora processing | Content-significant hash (body only, not metadata); debounce question generation | Any deck with frequent edits |
+| Wildcard Supabase realtime subscriptions | Excessive bandwidth; all card changes for all users broadcast | Filter subscriptions by repository_id or user_id | More than 10 concurrent users editing decks |
+| Single shared GitHub repo grows very large | Git clone/tree operations slow down; GitHub API pagination kicks in for directories with 1000+ files | Per-user directory structure is fine initially; monitor repo size; consider sharding at extreme scale | Thousands of users (unlikely for MVP) |
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Config/foundation | config.toml has `enable_confirmations = false` | Set to `true`, test with Inbucket |
-| Config/foundation | SecureStore 2048-byte limit | Measure JWT size before adding email identity |
-| Config/foundation | Production site_url and redirect_urls not set | Configure in Supabase Dashboard |
-| Database migration | handle_new_user trigger assumes OAuth metadata | Update trigger to handle NULL metadata gracefully |
-| AuthContext refactor | signOut crashes for email-only users | Wrap GoogleSignin.signOut in try-catch |
-| AuthContext refactor | onAuthStateChange does not handle PASSWORD_RECOVERY | Check event type, add recovery flow routing |
-| Signup implementation | Duplicate email returns obfuscated response | Check empty identities array to detect duplicates |
-| Signup implementation | No password strength validation | Add client-side validation |
-| Email verification | Deep links do not work on Android without setup | Use OTP-based verification instead of links |
-| Password reset | PASSWORD_RECOVERY event masked by SIGNED_IN event | Use OTP-based reset flow instead of deep links |
-| Account linking | Multiple failure modes for link/unlink | Defer unlinking, start with add-only |
-| Account linking | linkIdentity uses browser OAuth, not native SDK | Test and document the different UX |
-| Email templates | Default templates show links, not OTP codes | Customize templates for mobile OTP flow |
-| Settings UI | Google-only avatar/name not available for email users | Show fallback icon, email-derived name |
+## Security Mistakes
 
----
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Storing GitHub PAT in client-side code or localStorage | Token exposed to XSS; anyone can commit to the shared repo | PAT lives only in edge function env vars; client never sees it |
+| Not validating user_id in file path before committing | User A could commit to User B's directory by crafting a malicious deck name | Edge function extracts user_id from auth token and constructs file path server-side; never trust client-provided paths |
+| Not filtering cards by ownership in deck list queries | User sees all cards in the shared repo, including other users' decks | RLS policy or edge function filters by `file_path LIKE user_id || '/%'`; or dedicated `decks` table with `owner_id` |
+| Using Supabase anon key as GitHub API credential | Confusion between Supabase auth and GitHub auth; anon key has no GitHub access | Keep GitHub credentials strictly in edge function env; Supabase anon key is only for Supabase client |
+| Allowing arbitrary markdown that enables XSS in preview | Script injection via markdown preview (e.g., `<script>` tags, `javascript:` URLs) | Sanitize HTML output from markdown renderer; use a library that strips dangerous elements by default (react-markdown does this) |
+| Not validating deck/card names for path traversal | User creates deck named `../../other-user/` to write outside their directory | Sanitize deck names: allow only alphanumeric, hyphens, underscores; reject paths containing `..`, `/`, or special characters |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Side-by-side editor on mobile screens | Editor and preview squished to half-width; unusable on phones | Tab-based toggle (Edit/Preview) on small screens; side-by-side only on desktop |
+| No confirmation before publishing deck | User accidentally publishes incomplete deck; cards appear in study immediately | Explicit "Publish" step separate from "Save Draft"; confirmation dialog |
+| No progress indicator during GitHub commit | User clicks save, nothing happens for 3-5 seconds, clicks again (double commit) | Show loading spinner immediately; disable save button during commit; toast on success/failure |
+| Requiring login before showing any content | User bounces before seeing what the deck builder does | Show landing/demo page for unauthenticated users; require login only for create/edit |
+| No way to delete a deck once published | User stuck with unwanted decks in their study rotation | Implement deck deletion: edge function removes files from GitHub; Docora processes deletions via webhook |
+| Markdown frontmatter exposed to non-technical users | Confusion about YAML syntax; broken cards from invalid frontmatter | Hide frontmatter behind a form UI (title input, tags selector, difficulty slider); generate frontmatter in the edge function |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Signup works:** Test with a brand new email -- check that verification email arrives (local: check Inbucket at port 54324)
-- [ ] **Duplicate email detected:** Test signUp with an existing Google email -- check that the app shows "account exists" message, not a fake success
-- [ ] **Email verification completes:** Test OTP entry -- check that user transitions from unverified to verified state
-- [ ] **Password reset works end-to-end:** Request reset, receive email, enter OTP, set new password, log in with new password
-- [ ] **Google sign-in still works:** After all changes, verify that existing Google OAuth flow is unchanged
-- [ ] **Sign out works for both auth types:** Email-only user can log out without crash; Google user can log out
-- [ ] **Session persists after app restart:** For email user, for Google user, and for dual-identity user
-- [ ] **handle_new_user trigger works for email signup:** Check `public.users` row has non-null display_name
-- [ ] **Settings shows correct account info:** Email-only user sees email and fallback avatar; Google user sees name and Google avatar; dual-identity user sees Google profile
-- [ ] **config.toml matches production:** `enable_confirmations = true`, redirect URLs include `lumio://auth/callback`
-
----
+- [ ] **OAuth login on deployed subdomain:** Test Google OAuth on `deck.lumio.toto-castaldi.com`, not just localhost -- redirect URL must be configured in both Supabase Dashboard and Google Console
+- [ ] **Multi-file commit atomicity:** Verify that creating a 10-card deck results in ONE Git commit, not 10 separate commits
+- [ ] **GitHub API rate limit handling:** Simulate hitting rate limit (or check `X-RateLimit-Remaining` after a burst) -- edge function should retry gracefully
+- [ ] **User data isolation:** Log in as User A, create a deck; log in as User B -- User B should NOT see User A's decks
+- [ ] **Concurrent save safety:** Open two browser tabs, edit the same card, save both -- second save should not corrupt data
+- [ ] **SRS impact of card edits:** Edit a card that has study history -- verify SRS schedule is not silently reset (or is intentionally reset with user notification)
+- [ ] **Docora processes deck builder commits:** After the edge function commits, verify Docora fires webhooks and cards appear in the mobile app's study rotation
+- [ ] **Session expiry during editing:** Wait 1 hour while editing, then save -- should re-authenticate and save, not lose content
+- [ ] **Path traversal blocked:** Try creating a deck with name `../other-user-id/stolen-deck` -- edge function should reject it
+- [ ] **Edge function timeout on large decks:** Create a deck with 30 cards -- should not timeout
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| handle_new_user trigger fails for email signup | MEDIUM | Write migration to update trigger; backfill NULL display_names from email |
-| User stuck on verification screen (email never sent) | LOW | Add "Resend" button; check SMTP config; check Supabase email rate limits |
-| signOut crash for email users | LOW | Hotfix: wrap GoogleSignin.signOut in try-catch |
-| SecureStore overflow with dual identity | HIGH | Requires storage adapter migration to MMKV; all users must re-login |
-| Wrong event handling in onAuthStateChange | MEDIUM | Update AuthContext; no data loss but users cannot reset password until fixed |
-| Obfuscated signup response not detected | LOW | Add identities-check logic; no data corruption, just UX confusion |
-| Email templates not customized for OTP | LOW | Update templates in Supabase Dashboard; re-send verification emails |
+| GitHub API 409 Conflict on save | LOW | Re-fetch current SHA, retry commit; user sees "save failed, retrying" |
+| Rate limit exceeded | LOW | Wait for `Retry-After` period; queue pending operations; user sees temporary "service busy" |
+| Docora webhook storm causes duplicate questions | MEDIUM | Deduplicate `card_questions` by card_id; add unique constraint on (card_id, question_hash) |
+| PAT expired, all saves blocked | HIGH | Generate new PAT; update edge function env var; redeploy; 10-30 minute outage for all users |
+| RLS allows cross-user data access | HIGH | Emergency migration to add ownership column/policy; audit all affected data; notify users |
+| SRS progress lost from content hash change | MEDIUM | Restore from `card_review_schedule` backup; change hash to body-only hash; re-run affected schedules |
+| CORS blocks web app from edge functions | LOW | Update CORS headers; redeploy edge functions; immediate fix, no data loss |
+| User content lost due to missing auto-save | HIGH | Content is permanently lost; implement auto-save; apologize to affected users |
 
----
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| GitHub API 409 Conflict (P1) | Edge function implementation | Test: rapid double-save returns success for both |
+| Rate limit handling (P2) | Edge function implementation | Test: create 50-card deck; check X-RateLimit-Remaining in logs |
+| Docora webhook storm (P3) | Architecture/design | Verify: multi-file commit results in correct card count in DB |
+| Cross-origin auth (P4) | Foundation/scaffold | Test: full OAuth flow on deployed subdomain |
+| RLS for write operations (P5) | Database schema | Test: User B cannot see/modify User A's decks via Supabase client |
+| Shared PAT management (P6) | Infrastructure/foundation | Verify: canary health check endpoint exists; rotation procedure documented |
+| Edge function timeout (P7) | Edge function implementation | Test: 30-card deck commits within 30 seconds |
+| SRS hash reset (P8) | Architecture/design | Test: typo fix in card does not reset SRS schedule |
+| Web Supabase client config (P9) | Foundation/scaffold | Test: OAuth + session persistence work on web without affecting mobile |
+| Unsaved content loss (P10) | Editor implementation | Test: close tab during editing; reopen; draft is restored |
+| CORS issues (P11) | Edge function implementation | Test: web app can call all edge functions from deployed domain |
 
 ## Sources
 
-- Direct inspection: `supabase/migrations/20241230000003_auth_trigger.sql` -- handle_new_user trigger extracting OAuth metadata (PRIMARY)
-- Direct inspection: `apps/android/contexts/AuthContext.tsx` -- signOut calls GoogleSignin.signOut unconditionally (PRIMARY)
-- Direct inspection: `apps/android/lib/supabase.ts` -- SecureStoreAdapter for session storage (PRIMARY)
-- Direct inspection: `supabase/config.toml` -- enable_confirmations = false, redirect URLs (PRIMARY)
-- Direct inspection: `apps/android/screens/LoginScreen.tsx` -- single Google button layout (PRIMARY)
-- Direct inspection: `apps/android/screens/SettingsScreen.tsx` -- avatar_url and full_name from user_metadata (PRIMARY)
-- Direct inspection: `apps/android/app.json` -- scheme: "lumio" configured (PRIMARY)
-- [Supabase Identity Linking docs](https://supabase.com/docs/guides/auth/auth-identity-linking) -- automatic linking, manual linking, linkIdentity/unlinkIdentity APIs -- HIGH confidence
-- [Supabase Password-based Auth docs](https://supabase.com/docs/guides/auth/passwords) -- signUp, resetPasswordForEmail, updateUser flows -- HIGH confidence
-- [Supabase Native Mobile Deep Linking docs](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- deep link setup for Expo, createSessionFromUrl pattern -- HIGH confidence
-- [Supabase verifyOtp API Reference](https://supabase.com/docs/reference/javascript/auth-verifyotp) -- OTP types: signup, recovery, email_change -- HIGH confidence
-- [Supabase Discussion #7632](https://github.com/orgs/supabase/discussions/7632) -- signUp duplicate email obfuscated response behavior -- HIGH confidence
-- [Supabase auth-js Issue #513](https://github.com/supabase/auth-js/issues/513) -- signUp not returning error on duplicate email -- HIGH confidence
-- [Supabase Discussion #14306](https://github.com/orgs/supabase/discussions/14306) -- SecureStore 2048-byte limit with OAuth JWT tokens -- HIGH confidence
-- [Supabase Custom SMTP docs](https://supabase.com/docs/guides/auth/auth-smtp) -- SMTP setup, rate limits, link tracking issues -- HIGH confidence
-- [Token-based password reset for mobile](https://dev.to/tanmay_kaushik_/why-i-ditched-deep-linking-for-a-token-based-password-reset-in-supabase-3e69) -- OTP approach for mobile apps, avoiding deep link complexity -- MEDIUM confidence
-- [Supabase Discussion #12324](https://github.com/orgs/supabase/discussions/12324) -- password reset with React Native and Supabase auth flow -- MEDIUM confidence
-- [Supabase onAuthStateChange docs](https://supabase.com/docs/reference/javascript/auth-onauthstatechange) -- PASSWORD_RECOVERY event fires after SIGNED_IN -- HIGH confidence
-- [Supabase auth Issue #1645](https://github.com/supabase/auth/issues/1645) -- linkIdentity does not work natively in React Native (uses browser flow) -- HIGH confidence
+- Direct inspection: `supabase/functions/docora-webhook/index.ts` -- webhook handler, CORS headers, chunk handling, card insert with duplicate detection (PRIMARY)
+- Direct inspection: `supabase/functions/git-sync/index.ts` -- Docora API client, repository CRUD, PAT handling (PRIMARY)
+- Direct inspection: `supabase/migrations/20260115000001_shared_repositories.sql` -- RLS policies for shared repos, SECURITY DEFINER functions (PRIMARY)
+- Direct inspection: `packages/core/src/supabase/client.ts` -- singleton pattern, mobile-specific auth options (PRIMARY)
+- Direct inspection: `supabase/config.toml` -- site_url, redirect URLs, JWT expiry, auth configuration (PRIMARY)
+- [GitHub REST API Rate Limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) -- 5,000/hour primary, 80/minute content-generating secondary -- HIGH confidence
+- [GitHub REST API Best Practices](https://docs.github.com/rest/guides/best-practices-for-using-the-rest-api) -- sequential requests, Retry-After, conditional requests -- HIGH confidence
+- [Retool: Gotchas with Git and the GitHub API](https://retool.com/blog/gotchas-git-github-api) -- tree size limits, base_tree pattern, sequential vs parallel API calls -- HIGH confidence
+- [GitHub Community Discussion #62198](https://github.com/orgs/community/discussions/62198) -- 409 Conflict after sequential commits via Contents API -- MEDIUM confidence
+- [Supabase Discussion #5742](https://github.com/orgs/supabase/discussions/5742) -- cross-subdomain session sharing, cookie domain configuration -- HIGH confidence
+- [Share Sessions Across Subdomains with Supabase](https://micheleong.com/blog/share-sessions-subdomains-supabase) -- cookieOptions domain configuration -- MEDIUM confidence
+- [Supabase auth-js Issue #1026](https://github.com/supabase/auth-js/issues/1026) -- PKCE code verifier lost on cross-origin redirect -- HIGH confidence
+- [Supabase PKCE Flow docs](https://supabase.com/docs/guides/auth/sessions/pkce-flow) -- PKCE recommended for SPAs -- HIGH confidence
+- [Webhook Chaos: Delays, Duplicates, and How to Tame Them](https://medium.com/@techo.square.in/webhook-chaos-delays-duplicates-and-how-to-tame-them-a359d285cc89) -- deduplication, idempotency, rate limiting -- MEDIUM confidence
+- [Hookdeck Deduplication Guide](https://hookdeck.com/docs/guides/deduplication-guide) -- event ID based deduplication, time windows -- MEDIUM confidence
+- [GitHub API Contents API docs](https://docs.github.com/en/rest/repos/contents) -- SHA requirement for updates, 100MB file limit, 1000 file directory limit -- HIGH confidence
+- [Markdown editor UX considerations](https://adamlynch.com/markdown/) -- dual mode complexity, preview UX patterns -- MEDIUM confidence
 
 ---
-*Pitfalls research for: Lumio v2.1 -- Adding email/password auth with account linking to existing Google OAuth app*
-*Researched: 2026-02-27*
+*Pitfalls research for: Lumio v3.0 -- Deck Builder Web App with GitHub API Commits*
+*Researched: 2026-03-11*

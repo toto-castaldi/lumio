@@ -1,365 +1,216 @@
 # Feature Landscape
 
-**Domain:** Email/password authentication with account linking for React Native/Expo Android app
-**Researched:** 2026-02-27
-**Existing auth:** Google OAuth via @react-native-google-signin + Supabase signInWithIdToken
+**Domain:** Markdown-based flashcard deck builder web application
+**Researched:** 2026-03-11
+**Overall confidence:** HIGH
+
+## Context
+
+Lumio v3.0 adds a React SPA at `deck.lumio.toto-castaldi.com` where authenticated users create decks and cards in markdown. Content is committed via edge function to a shared Git repo (`/{user_id}/{deck_name}/`), then Docora syncs it and generates AI questions -- the same pipeline used for user-owned GitHub repos. This is a content authoring tool, not a study tool (studying happens in the mobile app).
+
+### Infrastructure Constraints
+
+- **Auth:** Shared Supabase project (Google OAuth + email/password already exist)
+- **Card format:** YAML frontmatter (title, tags, difficulty, language) + markdown body, parsed by `parseFrontmatter()` in docora-webhook
+- **Repo structure:** `/{user_id}/{deck_name}/` in a single shared Git repo
+- **Sync pipeline:** Edge function commits to GitHub API, Docora monitors repo, fires webhook, docora-webhook edge function parses and inserts cards into DB
+- **Existing tables:** `repositories`, `cards`, `user_repositories`, `card_review_schedule`, `card_questions` -- deck builder content enters this same data model
 
 ## Table Stakes
 
-Features users expect. Missing = product feels incomplete.
+Features users expect from any deck/card builder. Missing any of these makes the product feel broken.
 
-| Feature | Why Expected | Complexity | Dependencies on Existing |
-|---------|--------------|------------|--------------------------|
-| Email + password signup | Standard alternative to social login; users who distrust OAuth or lack Google accounts need this | Medium | Supabase `signUp({ email, password })`. New SignupScreen. Requires `auth.email.enable_confirmations = true` in config.toml (currently `false`). |
-| Email + password login | Complement to signup; returning users must be able to sign in | Low | `signInWithPassword({ email, password })`. Modify existing LoginScreen to add email form below Google button with "or"/"oppure" separator (per PROJECT.md requirement). |
-| Email verification after signup (OTP) | Prevents fake account spam; required for secure identity linking | Medium | Supabase `verifyOtp({ email, token, type: 'email' })`. New VerifyEmailScreen. Custom email template using `{{ .Token }}` instead of `{{ .ConfirmationURL }}` to send 6-digit OTP code instead of deep link. |
-| Password reset via email (OTP) | 75% of users who start reset flows drop off; must be frictionless | Medium | `resetPasswordForEmail()` sends recovery code. Custom recovery template with `{{ .Token }}`. New ForgotPasswordScreen + ResetPasswordScreen. User enters OTP + new password in-app. |
-| Password visibility toggle | Users expect show/hide on password fields; removing "confirm password" + adding toggle increases conversion 56% | Low | Single password field + eye icon toggle using Ionicons (already installed). No "confirm password" field. |
-| Form validation with inline errors | Users expect immediate feedback on invalid email format, weak password | Low | Client-side validation before API call. Inline error text near fields. Supabase minimum password: 6 characters. |
-| Loading states during auth operations | Network calls take time; spinners prevent double-taps | Low | Already have this pattern in LoginScreen for Google sign-in. Replicate for email auth. |
-| Bilingual auth strings (IT/EN) | App is already bilingual; new screens must match | Low | Add ~30 new i18n keys to en.ts and it.ts. |
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Deck CRUD** | Core purpose of the app. Users must create, rename, and delete decks. | Low | Maps to directories in `/{user_id}/{deck_name}/` in the shared repo. Delete = remove all files in that directory via GitHub API. |
+| **Card CRUD** | Core purpose. Users must create, edit, and delete cards within decks. | Med | Each card = one markdown file committed via GitHub API. Edit = update file content + new commit. Delete = delete file from repo. |
+| **Markdown editor with live preview** | Markdown is the content format. Users need to see what they're writing. | Med | Split-pane or toggle editor/preview. Must render the same markdown features the mobile app supports: GFM, code highlighting, KaTeX math, images. Use `@uiw/react-md-editor` or similar to avoid building from scratch. |
+| **YAML frontmatter form** | Card metadata (title, tags, difficulty, language) is structured. Raw YAML editing is hostile. | Low | Structured form fields that generate frontmatter automatically. Title is required, tags are optional chips/tokens, difficulty is 1-5 selector, language is dropdown. Never expose raw YAML to users. |
+| **Authentication (shared with mobile)** | Users must log in to manage their content. Same accounts as mobile app. | Low | Supabase auth with same project. Google OAuth + email/password. Session management via `@supabase/supabase-js`. Already proven patterns in the codebase. |
+| **Deck list / card list navigation** | Users need to browse their decks and drill into cards. | Low | Two-level navigation: decks list -> cards list -> card editor. Standard CRUD list pattern with create/edit/delete actions. |
+| **Card content preview** | Before saving, users must verify their markdown renders correctly -- especially code blocks and math formulas. | Med | Live preview panel using same remark/rehype pipeline as mobile app. Must support `remark-gfm`, `remark-math`, `rehype-katex`, `rehype-highlight` (already in `packages/core`). |
+| **Save confirmation / feedback** | Users need to know their content was saved successfully (commit completed). | Low | Toast notification on successful save. Error toast with message on failure. Loading state on save button during commit. |
+| **Bilingual UI (IT/EN)** | Existing app is bilingual. Deck builder must match. | Low | Reuse i18n-js pattern from mobile app. New key set for deck builder screens. Same language detection logic. |
+| **Responsive layout** | Must work on desktop (primary) and tablet. Phone users use the mobile app. | Med | Desktop-first design. Sidebar for deck list, main area for editor. Collapses to single-column on tablet. No mobile-phone optimization needed (that is the native app's job). |
+| **User content isolation** | Each user sees and manages only their own decks/cards. | Low | Enforced by repo path structure (`/{user_id}/...`) and RLS policies. Edge function validates `auth.uid()` matches the user_id path segment. |
+| **Delete confirmation** | Destructive actions need a safety net. | Low | Confirmation dialog before deleting decks or cards. "Are you sure? This cannot be undone." pattern. |
 
 ## Differentiators
 
-Features that set product apart. Not expected, but valued.
+Features that add value beyond the minimum. Not expected by users, but appreciated.
 
-| Feature | Value Proposition | Complexity | Dependencies on Existing |
-|---------|-------------------|------------|--------------------------|
-| Account linking: add Google to email account | Users who signed up with email can later connect Google for faster login | Medium | Supabase `linkIdentity({ provider: 'google', token: idToken })` uses same native Google Sign-In SDK already installed. Requires `auth.enable_manual_linking = true` in config.toml. New section in SettingsScreen. |
-| Account linking: add password to Google account | Google OAuth users can add email+password as fallback auth method | Low | Supabase `updateUser({ password })` adds email identity to existing OAuth account. No email verification needed since Google already verified the email. New "Set password" option in SettingsScreen. |
-| Visual account identities in Settings | Show which auth methods are connected (Google checkmark, email checkmark) | Low | `getUserIdentities()` to list linked providers. New "Connected Accounts" section in SettingsScreen. |
-| Unlink identity | Users can remove a linked auth method if they have 2+ methods | Low | `unlinkIdentity(identity)`. Supabase enforces minimum 1 identity. Show "Disconnect" only when 2+ identities exist. |
-| Auto-login after email verification | After confirming email OTP, immediately create session instead of forcing re-login | Low | `verifyOtp()` returns a session. Navigate directly to Dashboard via AuthContext state change. |
-| Auto-login after password reset | After setting new password, keep user logged in | Low | `updateUser({ password })` on active recovery session. User stays authenticated. |
-| Pre-filled email on password reset | Carry email from login screen to forgot password screen | Low | Pass email as navigation param from LoginScreen to ForgotPasswordScreen. |
-| Resend verification/reset email | Users who don't receive email need retry with cooldown | Low | `resend({ type: 'signup', email })` with 60s cooldown matching Supabase `max_frequency`. Visual countdown timer. |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Autosave with debounce** | Reduces friction -- users never lose work. Content auto-saves after 2-3 seconds of inactivity. | Med | Debounce (2000ms) triggers GitHub API commit. Visual indicator ("Saving..." / "Saved" / "Unsaved changes"). Must handle rapid edits without creating excessive commits. Consider batching: save all changed fields in one commit. |
+| **Deck card count display** | Users see how many cards each deck has at a glance. | Low | Count files in the deck directory. Can derive from card list or query `cards` table filtered by file_path prefix. |
+| **Markdown toolbar** | Insert common markdown syntax with button clicks: bold, italic, code block, math block, heading, list, link, image. | Med | Standard toolbar above editor textarea. Particularly valuable for code fences (triple-backtick with language) and KaTeX blocks (`$$...$$`) since the syntax is non-trivial. |
+| **Card template / scaffolding** | Pre-fill new cards with a standard frontmatter structure and example body. | Low | When user clicks "New Card", start with a template: frontmatter with title placeholder, empty tags, difficulty 3, language auto-detected from deck or user locale. Body with "Write your content here..." placeholder. |
+| **Drag-and-drop card reordering** | Users can control the order cards appear in their deck. | Med | Maps to file naming convention (e.g., `01-topic.md`, `02-topic.md`). Visual drag-and-drop in the card list. Reorder triggers file renames via GitHub API. Defer to later -- ordering is not critical when Docora generates questions per-card. |
+| **Tag autocomplete** | When adding tags to a card, suggest tags already used in the deck or across the user's decks. | Low | Query existing tags from the user's cards. Show dropdown suggestions as user types. Reduces typos and inconsistency. |
+| **Bulk import from markdown files** | Upload one or more `.md` files to create multiple cards at once. | Med | File input that reads local `.md` files, parses frontmatter if present, creates cards in batch. Useful for users migrating from other systems. Single commit with multiple file creations. |
+| **Dark mode** | Consistency with mobile app which already has dark mode. | Low | Use CSS variables or Tailwind dark mode. Theme toggle in header. Persist preference. System detection as default. |
+| **Deck description** | Short text describing what the deck covers. | Low | Maps to a `_deck.yaml` or `README.md` file in the deck directory root with deck metadata. |
+| **Sync status indicator** | Show whether Docora has synced the latest changes and AI questions are ready. | Med | Poll or subscribe to repository `sync_status` from the DB. Show badge: "Synced", "Syncing...", "Pending". Gives users confidence their content will appear in the mobile app. |
+| **Keyboard shortcuts** | Power users expect Ctrl+S to save, Ctrl+B for bold, etc. | Low | Standard editor shortcuts. Minimal implementation cost if using a component like `@uiw/react-md-editor` which includes them. |
 
 ## Anti-Features
 
-Features to explicitly NOT build.
+Features to explicitly NOT build. Each would add complexity without proportional value.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Phone/SMS authentication | Requires SMS provider (Twilio/MessageBird), recurring cost, phone recycling security risks, overkill for a study app | Email-only authentication |
-| Magic link login (passwordless email) | Adds third auth method creating confusion; deep link handling unreliable on Android; OTP is simpler | Use email+password with OTP verification |
-| Social providers beyond Google (Apple, GitHub, Facebook) | Android-only app; each provider adds OAuth config complexity; Google covers social login use case | Keep Google as sole social provider |
-| Biometric authentication (fingerprint/face) | Requires native module, additional native rebuild; SecureStore already persists session across app restarts | Rely on persistent sessions via SecureStore |
-| Multi-factor authentication (TOTP/SMS 2FA) | Over-engineering for a flashcard study app; Supabase MFA adds significant UI complexity (QR code enrollment, recovery codes) | Single-factor auth is sufficient |
-| Username-based login (no email) | Cannot do email verification or password reset without email; violates Supabase auth model | Always require email |
-| "Confirm password" field on signup/reset | Studies show removing it + adding show/hide toggle increases conversions 56%; reduces form friction | Show/hide password toggle instead |
-| Email enumeration protection bypass | Supabase returns obfuscated responses when email already exists (security feature); don't try to give specific "email already registered" messages | Show generic "Check your email" message for all signup attempts |
-| Deep link-based email verification | Deep links on Android are inconsistent, fail in some email clients, require intent filter configuration | Use 6-digit OTP code entry in-app |
-| Deep link-based password reset | Same deep link reliability issues; user leaves app, clicks link, may not return correctly | Use 6-digit OTP code entry in-app for recovery token |
-| Custom SMTP for local dev | Supabase local already has Inbucket (port 54324) for email capture; no need for external SMTP | Use Inbucket for local testing; configure production SMTP in Supabase dashboard |
-| Password strength meter (animated bar) | Over-engineering; clear requirements text + inline validation is sufficient | Show password requirements as text with real-time validation checkmark |
-| Change password screen (standalone) | Low priority; users can use "forgot password" as workaround. Adds another screen and UX flow. | Defer. "Forgot password" flow works as reset mechanism. |
+| **In-browser study/quiz mode** | The mobile app is the study experience. Building a second study interface fragments the UX and duplicates SM-2/quiz logic. The deck builder is a content authoring tool only. | Show a callout: "Open the Lumio app to study this deck." Link to mobile app download if needed. |
+| **WYSIWYG / rich text editor** | WYSIWYG markdown editors (Tiptap, ProseMirror) add massive complexity, fight with code blocks and math notation, and produce inconsistent markdown output. Mochi and other markdown-first tools prove that markdown editing with preview works well. | Split-pane markdown + preview is the proven pattern. A toolbar for common syntax insertions covers the usability gap. |
+| **Real-time collaboration** | Single developer, personal use case. Collaborative editing requires CRDT/OT, presence indicators, conflict resolution. Enormous complexity for zero current demand. | Each user manages their own content in their own path. No shared editing. |
+| **Image upload in cards** | Storing images in the Git repo adds complexity (base64 encoding, large commits, binary handling via GitHub API). The mobile app already handles images via Supabase Storage for synced repos. | Markdown image syntax with external URLs (e.g., hosted images). Docora already handles image extraction from Git repos -- if images are needed, users can use a GitHub repo instead of the deck builder. |
+| **Card versioning / history UI** | Git already provides full version history. Building a UI for version comparison and rollback is complex and rarely needed. | The shared repo is on GitHub. Advanced users can check commit history there. The deck builder always shows current content. |
+| **Deck sharing / publishing** | v3.1 plans "Deck Discovery" for the mobile app. Building sharing in the deck builder prematurely couples authoring with discovery. | Defer to v3.1. The deck builder creates private user content. Discovery/search comes later. |
+| **Offline support** | The mobile app explicitly does NOT support offline mode. A web-based editor requires connectivity to commit to GitHub. | Show clear error state if network is unavailable. Do not cache unsaved content locally beyond the current session (browser tab). |
+| **Custom card templates with multiple fields** | Anki's template system (Front/Back fields, custom note types) is powerful but enormously complex. Lumio cards are single markdown documents with AI-generated questions. | One markdown body per card. The frontmatter covers metadata. AI generates questions from the content. |
+| **Bulk export** | Users can already access their content via the Git repo. Export functionality duplicates what Git provides. | Link to the GitHub repo for users who want their raw files. |
+| **Spaced repetition configuration** | SRS parameters (ease factor, intervals) are managed by the mobile app and server-side RPCs. The deck builder has no business touching scheduling. | Not shown in the deck builder at all. SRS is a study concern, not an authoring concern. |
+| **Cloze deletion syntax** | Mochi and Anki use cloze deletions (`{{text}}`) for fill-in-the-blank cards. Lumio uses AI-generated multiple-choice questions from full content. Cloze deletion is a different paradigm. | Lumio's value is that users write knowledge (markdown) and AI generates quiz questions. No special card syntax needed. |
+| **Card search / full-text search** | With the expected scale (single developer, personal decks), browsing the deck/card tree is sufficient. Full-text search adds indexing complexity. | Hierarchical navigation (deck list -> card list) is enough. Search can be added later if scale warrants it. |
 
 ## Feature Dependencies
 
 ```
-Email+password signup --> Email verification (OTP) --> Auto-login after verification
-                                                   --> Dashboard access
+Authentication ─────────────────────────────────────> All features
+                                                        |
+Deck CRUD ──────────────> Card CRUD ──────────────> Card editor (markdown + frontmatter)
+    |                         |                         |
+    |                         |                    Live preview (remark/rehype pipeline)
+    |                         |                         |
+    |                         |                    Markdown toolbar (convenience)
+    |                         |
+    |                    Autosave (debounce + commit)
+    |                         |
+    |                    Save confirmation (toast)
+    |
+Deck list ──────────────> Card list
+    |                         |
+    |                    Card count display
+    |
+Deck description
 
-Email+password login --> Dashboard access
-                    --> "Forgot password?" link
+User content isolation ──> Edge function commit (/{user_id}/{deck_name}/ path)
+    |
+    └──────────────────> RLS policies
 
-Forgot password --> Recovery OTP email --> Enter OTP + new password --> Auto-login
+Bilingual UI ──────────> i18n key definitions
+Dark mode ─────────────> CSS/Tailwind config
 
-Google OAuth login (existing) --> Dashboard access (unchanged)
-
-Account linking: add Google --> Requires active email+password session
-                             --> Requires @react-native-google-signin (already installed)
-                             --> Requires auth.enable_manual_linking = true
-
-Account linking: add password --> Requires active Google OAuth session
-                               --> updateUser({ password }) call
-
-Unlink identity --> Requires 2+ linked identities (enforced by Supabase)
-
-Resend email --> Requires knowing which email was used (state from signup/reset flow)
-             --> 60s cooldown (Supabase max_frequency)
+Sync status indicator ──> Repository sync_status column (existing)
+Tag autocomplete ───────> Existing tags query
 ```
-
-## Login Screen Layout
-
-Per PROJECT.md: "Google OAuth prominente in alto, form email sotto separatore 'oppure'":
-
-```
-+----------------------------------+
-|         [Lumio Logo]             |
-|           Lumio                  |
-|  "Your flashcards, supercharged" |
-|                                  |
-|  [G] Sign in with Google         |  <-- Primary, prominent (existing)
-|                                  |
-|  ---------- or ----------        |  <-- "oppure" in IT
-|                                  |
-|  [Email field                 ]  |
-|  [Password field         [eye]]  |
-|                                  |
-|  [      Sign In              ]   |  <-- Primary button
-|                                  |
-|  Forgot password?    No account? |
-|                      Sign up     |
-|                                  |
-|  {Error message if any}          |
-+----------------------------------+
-```
-
-## Signup Screen Layout
-
-```
-+----------------------------------+
-|  <-- Back                        |
-|                                  |
-|        Create Account            |
-|                                  |
-|  [Email field                 ]  |
-|  [Password field         [eye]]  |
-|                                  |
-|  At least 6 characters  [check]  |
-|                                  |
-|  [     Create Account        ]   |
-|                                  |
-|  Already have an account?        |
-|  Sign in                         |
-|                                  |
-|  {Error message if any}          |
-+----------------------------------+
-```
-
-## Email Verification Screen (OTP)
-
-```
-+----------------------------------+
-|  <-- Back                        |
-|                                  |
-|     Verify Your Email            |
-|                                  |
-|  We sent a 6-digit code to      |
-|  user@example.com                |
-|                                  |
-|  [  _  _  _  _  _  _  ]         |  <-- 6-digit OTP input
-|                                  |
-|  [      Verify              ]    |
-|                                  |
-|  Didn't receive the email?       |
-|  Resend (available in 45s)       |  <-- Cooldown timer
-|                                  |
-|  {Error message if any}          |
-+----------------------------------+
-```
-
-## Password Reset Flow (2 screens)
-
-**Screen 1: Request Reset**
-```
-+----------------------------------+
-|  <-- Back                        |
-|                                  |
-|     Reset Password               |
-|                                  |
-|  Enter your email and we'll      |
-|  send you a reset code.          |
-|                                  |
-|  [Email field                 ]  |  <-- Pre-filled if from login
-|                                  |
-|  [     Send Reset Code       ]   |
-|                                  |
-|  {Error/success message}         |
-+----------------------------------+
-```
-
-**Screen 2: Enter Code + New Password**
-```
-+----------------------------------+
-|  <-- Back                        |
-|                                  |
-|     New Password                 |
-|                                  |
-|  Enter the code sent to          |
-|  user@example.com                |
-|                                  |
-|  [  _  _  _  _  _  _  ]         |  <-- 6-digit OTP
-|  [New password field     [eye]]  |
-|                                  |
-|  [    Reset Password         ]   |
-|                                  |
-|  Didn't receive the code?        |
-|  Resend                          |
-|                                  |
-|  {Error message if any}          |
-+----------------------------------+
-```
-
-## Account Linking in Settings
-
-New section added to existing SettingsScreen (between ACCOUNT and APPEARANCE):
-
-```
-+----------------------------------+
-|  ACCOUNT                         |
-|  +----------------------------+  |
-|  | [Avatar]  Display Name     |  |
-|  |           user@email.com   |  |
-|  +----------------------------+  |
-|                                  |
-|  CONNECTED ACCOUNTS              |
-|  +----------------------------+  |
-|  | [G] Google    [Connected]  |  |  <-- "Disconnect" if 2+ identities
-|  | [E] Email     [Set up]     |  |  <-- Tapping opens password setup
-|  +----------------------------+  |
-|                                  |
-|  APPEARANCE                      |
-|  ...existing settings...         |
-+----------------------------------+
-```
-
-## Edge Cases and Behavioral Expectations
-
-### Automatic Identity Linking (Supabase built-in)
-- User signs up with email+password, verifies email, then later signs in with Google using same email: Supabase automatically links both identities to one account. All data (repos, study history, SRS schedule) preserved.
-- User signs in with Google first, then tries to sign up with email+password using same email: Supabase returns obfuscated response (no verification email sent) to prevent user enumeration. Correct path: sign in with Google, then add password via `updateUser()` from Settings.
-- Automatic linking only works when the email identity is verified. Unverified email identities are removed when a new identity can be linked.
-
-### Session and Token Handling
-- Email+password sessions use the same JWT/refresh token mechanism as Google OAuth -- no changes needed to SecureStore adapter or token refresh logic in AuthContext.
-- `onAuthStateChange` fires for all auth events (SIGNED_IN, SIGNED_UP, TOKEN_REFRESHED, PASSWORD_RECOVERY) -- existing AuthContext listener handles all cases.
-- The `PASSWORD_RECOVERY` event fires when a user arrives via recovery flow. Must detect this to show the new password form.
-
-### Password Requirements
-- Supabase default minimum: 6 characters. No uppercase/number/symbol requirements by default.
-- Client-side validation should enforce the same minimum before API call to avoid unnecessary network requests.
-
-### OTP Specifics
-- Default OTP length: 6 digits (configurable 6-10 in config.toml via `otp_length`).
-- Default OTP expiry: 3600 seconds (1 hour).
-- Rate limit: 1 email per 60 seconds (`max_frequency: "1m"`).
-- Each OTP is single-use; entering it verifies and consumes the token.
-- For signup verification: use `verifyOtp({ email, token, type: 'email' })`.
-- For password recovery: use `verifyOtp({ email, token, type: 'recovery' })`.
-
-### Error Scenarios
-- **Wrong password on login:** Supabase returns `"Invalid login credentials"`. Display generic error, don't clear email field.
-- **Unverified email on login:** With `enable_confirmations = true`, login returns error until email is verified. Show "Please verify your email" with resend option.
-- **Expired OTP:** Returns verification error. Show "Code expired, please request a new one" with resend button.
-- **Email already registered (signup):** Obfuscated response, no error exposed. Show generic "If this email is registered, you'll receive a verification code."
-- **Weak password:** Supabase returns error if < 6 chars. Client-side validation prevents this.
-- **Rate limited (too many emails):** Supabase returns 429. Show "Please wait before requesting another email."
-- **User tries to unlink only identity:** Supabase returns error. UI should hide Disconnect button when only 1 identity exists.
-
-### Display Name and Avatar After Email Signup
-- Google OAuth provides `full_name` and `avatar_url` in user_metadata. Email signup does NOT.
-- SettingsScreen and Dashboard already handle missing avatar (fallback icon exists at line 99-103 of SettingsScreen).
-- Display name defaults to null for email users. Consider showing email as display name when `full_name` is missing (already handled: line 109-111 shows email).
-- When email user later links Google, user_metadata updates with Google profile data.
-
-## Supabase Config Changes Required
-
-| Setting | Current Value | New Value | Why |
-|---------|--------------|-----------|-----|
-| `auth.email.enable_confirmations` | `false` | `true` | Required for email verification flow |
-| `auth.enable_manual_linking` | not set (`false`) | `true` | Required for linkIdentity/unlinkIdentity APIs |
-| Email confirmation template | default (uses ConfirmationURL) | Custom with `{{ .Token }}` | Send 6-digit OTP code instead of deep link |
-| Email recovery template | default (uses ConfirmationURL) | Custom with `{{ .Token }}` | Send 6-digit OTP code for password reset |
-
-Production Supabase project requires matching changes in the dashboard:
-- Auth > Providers > Email: enable confirmations
-- Auth > Email Templates: confirmation and recovery templates with `{{ .Token }}`
-- Auth > General: enable manual identity linking
-
-## New Screens Required
-
-| Screen | Navigation Route | Purpose |
-|--------|-----------------|---------|
-| SignupScreen | LoginScreen --> SignupScreen | Email+password registration form |
-| VerifyEmailScreen | SignupScreen --> VerifyEmailScreen | OTP code entry after signup |
-| ForgotPasswordScreen | LoginScreen --> ForgotPasswordScreen | Enter email to receive reset code |
-| ResetPasswordScreen | ForgotPasswordScreen --> ResetPasswordScreen | Enter OTP + set new password |
-
-Account linking fits within existing SettingsScreen as a new section. No new screen needed.
-
-## New i18n Keys Required (~30 keys)
-
-Login screen additions:
-- `login.or` / "or" / "oppure"
-- `login.email` / "Email"
-- `login.password` / "Password"
-- `login.signIn` / "Sign In" / "Accedi"
-- `login.forgotPassword` / "Forgot password?" / "Password dimenticata?"
-- `login.noAccount` / "No account?" / "Non hai un account?"
-- `login.signUp` / "Sign up" / "Registrati"
-
-Signup screen:
-- `signup.title` / "Create Account" / "Crea Account"
-- `signup.createAccount` / "Create Account" / "Crea Account"
-- `signup.hasAccount` / "Already have an account?" / "Hai gia un account?"
-- `signup.passwordMin` / "At least 6 characters" / "Almeno 6 caratteri"
-
-Email verification screen:
-- `verify.title` / "Verify Your Email" / "Verifica la tua Email"
-- `verify.codeSent` / "We sent a 6-digit code to %{email}" / "Abbiamo inviato un codice a 6 cifre a %{email}"
-- `verify.verify` / "Verify" / "Verifica"
-- `verify.resend` / "Resend" / "Reinvia"
-- `verify.resendIn` / "Resend in %{seconds}s" / "Reinvia tra %{seconds}s"
-- `verify.didntReceive` / "Didn't receive the email?" / "Non hai ricevuto l'email?"
-
-Password reset screens:
-- `forgot.title` / "Reset Password" / "Reimposta Password"
-- `forgot.description` / "Enter your email and we'll send you a reset code" / "Inserisci la tua email e ti invieremo un codice di reset"
-- `forgot.sendCode` / "Send Reset Code" / "Invia Codice di Reset"
-- `reset.title` / "New Password" / "Nuova Password"
-- `reset.codeSent` / "Enter the code sent to %{email}" / "Inserisci il codice inviato a %{email}"
-- `reset.newPassword` / "New password" / "Nuova password"
-- `reset.resetPassword` / "Reset Password" / "Reimposta Password"
-
-Settings account linking:
-- `settings.connectedAccounts` / "Connected Accounts" / "Account Collegati"
-- `settings.google` / "Google"
-- `settings.emailPassword` / "Email & Password"
-- `settings.connected` / "Connected" / "Collegato"
-- `settings.setUp` / "Set up" / "Configura"
-- `settings.disconnect` / "Disconnect" / "Scollega"
-- `settings.addPassword` / "Set password" / "Imposta password"
-
-Error messages:
-- `auth.invalidCredentials` / "Invalid email or password" / "Email o password non validi"
-- `auth.emailNotVerified` / "Please verify your email first" / "Verifica prima la tua email"
-- `auth.codeExpired` / "Code expired. Please request a new one." / "Codice scaduto. Richiedine uno nuovo."
-- `auth.rateLimited` / "Please wait before requesting another email" / "Attendi prima di richiedere un'altra email"
-- `auth.checkEmail` / "If this email is registered, you'll receive a code" / "Se questa email e registrata, riceverai un codice"
 
 ## MVP Recommendation
 
-**Phase 1 -- Core Email Auth (must ship together):**
-1. Supabase config changes (enable_confirmations, email templates with OTP)
-2. Email+password signup with OTP email verification (SignupScreen + VerifyEmailScreen)
-3. Email+password login (refactored LoginScreen with Google button + email form + separator)
-4. Password reset via OTP (ForgotPasswordScreen + ResetPasswordScreen)
-5. Bilingual strings for all new screens
+The MVP must prove the core loop: **create deck -> add cards with markdown -> content appears in mobile app for study**.
 
-**Phase 2 -- Account Linking:**
-6. Connected accounts section in Settings (show identities)
-7. Add password to Google account (updateUser)
-8. Add Google to email account (linkIdentity)
-9. Unlink identity (with 2+ identity guard)
+### Phase 1: Foundation + Auth
+1. **Authentication** -- shared Supabase auth, login/logout, protected routes
+2. **Responsive layout shell** -- sidebar + main area, responsive breakpoints
+3. **Bilingual UI** -- i18n setup with IT/EN
+4. **Dark mode** -- theme toggle, system detection
 
-**Defer:**
-- Change password (standalone flow) -- users can use "forgot password" as workaround
-- Security notification emails (password_changed, identity_linked) -- Supabase sends automatically if templates configured, not critical for MVP
-- Password strength meter beyond basic validation
+### Phase 2: Deck + Card CRUD
+5. **Deck CRUD** -- create, rename, delete decks (maps to repo directories)
+6. **Card CRUD** -- create, edit, delete cards (maps to markdown files via GitHub API commit)
+7. **YAML frontmatter form** -- structured fields for title, tags, difficulty, language
+8. **Deck/card list navigation** -- browse decks, drill into cards
+9. **Delete confirmation** -- safety dialogs
+10. **Save confirmation** -- toast feedback
+
+### Phase 3: Editor Polish
+11. **Markdown editor with live preview** -- split-pane or toggle, with remark/rehype rendering
+12. **Card content preview** -- exact same rendering as mobile app
+13. **Markdown toolbar** -- bold, italic, code, math, heading shortcuts
+14. **Card template** -- pre-filled new card scaffold
+
+### Defer to post-MVP:
+- **Autosave** -- valuable but adds complexity to the commit flow. Manual save first.
+- **Tag autocomplete** -- nice-to-have, not critical for first release
+- **Drag-and-drop reorder** -- ordering is cosmetic since AI generates questions per-card
+- **Sync status indicator** -- useful but requires polling/subscription infrastructure
+- **Bulk import** -- edge case for first-time migration
+- **Deck description** -- low priority metadata
+- **Keyboard shortcuts** -- comes free if using `@uiw/react-md-editor`
+- **Card count display** -- trivial to add but not MVP-blocking
+
+## Infrastructure Integration Points
+
+### Existing Infrastructure (reuse as-is)
+| Component | How Deck Builder Uses It |
+|-----------|-------------------------|
+| Supabase Auth | Shared project, same Google OAuth + email/password flows |
+| `repositories` table | Shared Git repo registered as a repository entry |
+| `cards` table | Cards created by deck builder appear here after Docora sync |
+| `user_repositories` table | Links user to the shared repo |
+| `card_review_schedule` table | SM-2 scheduling applies to deck builder cards (handled by mobile app) |
+| `card_questions` table | AI-generated questions for deck builder cards (handled by Docora pipeline) |
+| `docora-webhook` edge function | Receives file change notifications, parses frontmatter, inserts cards |
+| `@lumio/shared` package | TypeScript types, version info |
+| `@lumio/core` package | Supabase client initialization, markdown rendering pipeline |
+
+### New Infrastructure (must build)
+| Component | Purpose |
+|-----------|---------|
+| `deck-commit` edge function | Accepts card content from web app, commits to GitHub API (create/update/delete files in `/{user_id}/{deck_name}/` path) |
+| `apps/deck-builder` SPA | React app with Vite, Supabase auth, editor UI |
+| Shared Git repo on GitHub | Single GitHub repo registered with Docora, contains all user content in `/{user_id}/` directories |
+| CI/CD pipeline addition | Build and deploy to `deck.lumio.toto-castaldi.com` |
+
+### Critical Integration: Commit -> Sync -> Cards Pipeline
+1. User writes markdown in deck builder
+2. Edge function commits file to shared Git repo via GitHub Contents API
+3. Docora detects file change (monitoring the shared repo)
+4. Docora fires webhook to `docora-webhook` edge function
+5. `docora-webhook` parses frontmatter + body, upserts card in `cards` table
+6. AI question generation runs on the new/updated card
+7. Card appears in mobile app for study
+
+**Latency expectation:** Steps 2-7 are asynchronous. User sees "Saved" immediately after step 2. Cards may take 30-120 seconds to appear in the mobile app depending on Docora sync interval.
+
+## Card Markdown Format Reference
+
+The deck builder must produce markdown files compatible with the existing `parseFrontmatter()` and `extractCardMetadata()` functions in `docora-webhook`:
+
+```markdown
+---
+title: "Card Title Here"
+tags:
+  - javascript
+  - async
+difficulty: 3
+language: en
+---
+
+# Card Content
+
+Your markdown content here. Supports:
+
+- **GFM** (tables, strikethrough, task lists)
+- Code blocks with syntax highlighting
+- KaTeX math: $E = mc^2$ and $$\int_0^1 f(x)dx$$
+- Images via external URLs
+```
+
+**Frontmatter fields:**
+- `title` (string, required) -- falls back to filename without extension if missing
+- `tags` (string array, optional) -- lowercase, used for filtering
+- `difficulty` (integer 1-5, optional) -- defaults to 3, clamped to bounds
+- `language` (string, optional) -- defaults to "en"
 
 ## Sources
 
-- [Supabase Identity Linking](https://supabase.com/docs/guides/auth/auth-identity-linking) -- HIGH confidence
-- [Supabase Password-Based Auth](https://supabase.com/docs/guides/auth/passwords) -- HIGH confidence
-- [Supabase resetPasswordForEmail](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail) -- HIGH confidence
-- [Supabase verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp) -- HIGH confidence
-- [Supabase Native Mobile Deep Linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- HIGH confidence
-- [Supabase Email Templates](https://supabase.com/docs/guides/local-development/customizing-email-templates) -- HIGH confidence
-- [Supabase CLI Config Reference](https://supabase.com/docs/guides/local-development/cli/config) -- HIGH confidence
-- [Login & Signup UX Guide 2025](https://www.authgear.com/post/login-signup-ux-guide) -- MEDIUM confidence
-- [Token-Based Password Reset for Supabase (dev.to)](https://dev.to/tanmay_kaushik_/why-i-ditched-deep-linking-for-a-token-based-password-reset-in-supabase-3e69) -- MEDIUM confidence
-- [Supabase Password Reset Discussion #12324](https://github.com/orgs/supabase/discussions/12324) -- MEDIUM confidence
-- [Supabase Password Reset Ghost Password Discussion #37737](https://github.com/orgs/supabase/discussions/37737) -- MEDIUM confidence
-- Lumio codebase: LoginScreen.tsx, AuthContext.tsx, auth.ts, SettingsScreen.tsx, config.toml, app.json -- HIGH confidence
+- [Mochi - Spaced repetition flashcards](https://mochi.cards/) -- markdown-first flashcard app with SRS, primary competitor reference
+- [Mochi docs - Advanced formatting](https://mochi.cards/docs/markdown/advanced-formatting/) -- cloze deletion, KaTeX, card sides
+- [@uiw/react-md-editor](https://github.com/uiwjs/react-md-editor) -- React markdown editor with preview, KaTeX support
+- [Best Flashcard Apps: Anki vs RemNote vs Quizlet (2025)](https://notigo.ai/blog/best-flashcard-apps-students-anki-remnote-quizlet-2025) -- feature comparison across major players
+- [GitHub API - Simpler commit authoring](https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/) -- createCommitOnBranch mutation for simplified commits
+- [EasyMDE - Autosave with debounce](https://github.com/Ionaru/easy-markdown-editor) -- autosave implementation patterns
+- [StackEdit - In-browser Markdown editor](https://stackedit.io/) -- scroll-sync split-pane UX reference
+- [CRUD UX patterns for product design](https://medium.com/design-bootcamp/mastering-crud-operations-a-framework-for-seamless-product-design-2630affbc1e5) -- CRUD operation UX best practices
+- [Best Anki Alternatives 2026](https://goodoff.co/blog/best-anki-alternatives-2026-flashcard-apps) -- modern flashcard app landscape
+- Lumio codebase: `supabase/functions/docora-webhook/index.ts` (card parsing), `supabase/functions/git-sync/index.ts` (repo management), `supabase/migrations/` (data model)

@@ -1,519 +1,768 @@
 # Architecture Patterns
 
-**Domain:** Email/password auth with account linking for existing React Native + Supabase app
-**Researched:** 2026-02-27
+**Domain:** Deck builder web app integrating with existing Lumio flashcard platform
+**Researched:** 2026-03-11
 
 ## Recommended Architecture
 
-### High-Level Integration Map
+### High-Level System Diagram
 
 ```
-EXISTING (unchanged)                    NEW (this milestone)
-========================               ========================
-
-App.tsx
-  AuthProvider -----.
-    ThemeProvider   |
-      I18nProvider  |
-        ...         |
-          AppNavigator
-            |
-     state=='loading' -> Spinner
-     state=='logged_out' -> AuthNavigator ----> NEW: SignUpScreen
-                              |                       ForgotPasswordScreen
-                              |                       EmailVerificationScreen
-                              v
-                          LoginScreen ----> MODIFY: Add email/password form
-     state=='ready' -> RootStack
-                         MainNavigator
-                           SettingsScreen ----> MODIFY: Add account linking section
-                         ResetPassword ----> NEW: Conditional on passwordRecoveryPending
-
-  + NEW: Deep link handler in App.tsx (Linking.useURL + createSessionFromUrl)
+                         deck.lumio.toto-castaldi.com
+                        +---------------------------+
+                        |   React SPA (Vite)        |
+                        |   apps/deck-builder       |
+                        |                           |
+                        |  Auth: Supabase JS Client |
+                        |  (localStorage, PKCE)     |
+                        +------+--------+-----------+
+                               |        |
+                    Supabase   |        | Edge Function
+                    Auth/DB    |        | (deck-commit)
+                               v        v
+           +-----------+  +-----------+-----------+
+           | Supabase  |  | Edge Functions        |
+           | Auth      |  | - deck-commit (NEW)   |
+           | (shared   |  | - git-sync (existing) |
+           |  project) |  | - docora-webhook      |
+           +-----------+  +------+----------------+
+                                 |
+                    GitHub API   | createCommitOnBranch
+                    (GraphQL)    | mutation
+                                 v
+                          +-----------+
+                          | Shared    |
+                          | GitHub    |
+                          | Repo      |
+                          | lumio-    |
+                          | decks     |
+                          +-----------+
+                                 |
+                    Docora       | webhook
+                    monitors     | (file changes)
+                                 v
+                          +-----------+
+                          | Docora    |
+                          +-----------+
+                                 |
+                    Webhook      | create/update/delete
+                    back         |
+                                 v
+                          +-----------+
+                          | docora-   |
+                          | webhook   |
+                          | (existing)|
+                          +-----------+
+                                 |
+                                 v
+                          +-----------+
+                          | Supabase  |
+                          | DB        |
+                          | (cards,   |
+                          |  repos)   |
+                          +-----------+
+                                 |
+                    Study        |
+                                 v
+                          +-----------+
+                          | Android   |
+                          | App       |
+                          +-----------+
 ```
 
 ### Component Boundaries
 
-| Component | Responsibility | Status | Communicates With |
-|-----------|---------------|--------|-------------------|
-| `AuthContext` | Auth state machine, sign-in/out methods | MODIFY: Add signInWithEmail, signUpWithEmail, resetPassword, linkGoogleIdentity, passwordRecoveryPending | Supabase Auth API |
-| `AuthNavigator` | Stack navigator for unauthenticated screens | MODIFY: Add SignUp, ForgotPassword, EmailVerification screens | LoginScreen, SignUpScreen, ForgotPasswordScreen, EmailVerificationScreen |
-| `LoginScreen` | Login UI | MODIFY: Add email/password form below Google button | AuthContext |
-| `SignUpScreen` | NEW: Registration form | NEW | AuthContext |
-| `ForgotPasswordScreen` | NEW: Password reset request | NEW | AuthContext |
-| `EmailVerificationScreen` | NEW: Post-signup "check your email" | NEW | Navigation only (informational screen) |
-| `ResetPasswordScreen` | NEW: Set new password (after deep link) | NEW | AuthContext, deep link params |
-| `SettingsScreen` | User settings | MODIFY: Add account linking section | AuthContext |
-| `App.tsx` | Root provider tree | MODIFY: Add deep link handler | Linking API, Supabase Auth |
-| `lib/auth.ts` | Google Sign-In config | UNCHANGED | - |
-| `supabase/config.toml` | Local Supabase config | MODIFY: Enable email confirmations, add redirect URLs | - |
-| `handle_new_user()` trigger | Creates public.users from auth.users | Already handles NULL gracefully via COALESCE | DB trigger |
+| Component | Responsibility | Communicates With | Status |
+|-----------|---------------|-------------------|--------|
+| `apps/deck-builder` | React SPA for deck/card CRUD, markdown editing | Supabase Auth, `deck-commit` edge function, Supabase DB (reads) | NEW |
+| `deck-commit` edge function | Commits markdown files to shared GitHub repo via GitHub API | GitHub GraphQL API, Supabase DB (metadata tracking) | NEW |
+| DB migration (`user_decks`) | Track user decks and their GitHub file state | Used by `deck-commit` and web app | NEW |
+| Supabase Auth | Shared auth (Google OAuth + email/password) across mobile and web | Both apps, edge functions | EXISTING - needs redirect URL config |
+| `git-sync` edge function | User-facing CRUD for repositories, Docora registration | Supabase DB, Docora API | EXISTING - unchanged |
+| `docora-webhook` edge function | Receives file change webhooks from Docora, upserts cards | Supabase DB (cards, repositories) | EXISTING - needs path-based routing enhancement |
+| Docora | Monitors GitHub repos, sends webhooks on file changes | GitHub, `docora-webhook` edge function | EXISTING - monitors shared repo |
+| Shared GitHub repo (`lumio-decks`) | Single repo where all user-created decks live as markdown | GitHub API (writes from edge function), Docora (reads) | NEW - needs creation |
+| Android app | Study interface, dashboard, card browsing | Supabase Auth/DB, `git-sync` edge function | EXISTING - sees deck-builder cards via existing flow |
 
-### Data Flow
+### Data Flow: Create a Deck
 
-#### 1. Email Sign-Up Flow
+**Confidence: HIGH** (based on existing codebase patterns)
 
 ```
-User enters email+password on SignUpScreen
-  -> supabase.auth.signUp({ email, password, options: { emailRedirectTo } })
-  -> Supabase sends verification email
-  -> Navigate to EmailVerificationScreen ("Check your email")
-  -> User opens email, taps link
-  -> Deep link: lumio://auth/callback?access_token=...&refresh_token=...
-  -> App.tsx Linking.useURL() captures URL
-  -> createSessionFromUrl() calls supabase.auth.setSession()
-  -> onAuthStateChange fires SIGNED_IN
-  -> AuthContext state -> 'ready'
-  -> AppNavigator renders RootStack (user is in the app)
+1. User clicks "New Deck" in web app
+2. Web app calls `deck-commit` edge function:
+   POST /functions/v1/deck-commit
+   { action: "create_deck", deckName: "javascript-basics", displayName: "JavaScript Basics" }
+
+3. Edge function:
+   a. Validates user auth (JWT -> user_id)
+   b. Generates deck path: /{user_id}/javascript-basics/
+   c. Creates README.md with Lumio frontmatter:
+      ---
+      lumio_format_version: 1
+      description: "JavaScript Basics"
+      ---
+   d. Commits to shared repo via GitHub GraphQL API
+      (createCommitOnBranch mutation)
+   e. Creates/updates user_decks record in DB
+   f. Auto-registers shared repo in Docora (if first deck ever)
+   g. Creates Lumio repository record for this deck (if first time)
+   h. Creates user_repositories link
+   i. Returns deck info to web app
+
+4. Docora detects commit -> sends webhook to docora-webhook
+5. docora-webhook processes README.md -> updates repository record
+6. Deck appears in user's mobile app library
 ```
 
-#### 2. Email Sign-In Flow
+### Data Flow: Create/Edit a Card
 
 ```
-User enters email+password on LoginScreen
-  -> supabase.auth.signInWithPassword({ email, password })
-  -> Returns session immediately (no redirect needed)
-  -> onAuthStateChange fires SIGNED_IN
-  -> AuthContext state -> 'ready'
+1. User writes card in markdown editor
+2. User clicks "Save"
+3. Web app calls `deck-commit` edge function:
+   POST /functions/v1/deck-commit
+   {
+     action: "save_card",
+     deckName: "javascript-basics",
+     cardSlug: "closures",
+     content: "---\ntitle: Closures\ntags:\n  - javascript\n..."
+   }
+
+4. Edge function:
+   a. Validates user auth
+   b. Resolves file path: /{user_id}/javascript-basics/closures.md
+   c. Gets current branch HEAD OID from GitHub API
+   d. Commits file via createCommitOnBranch mutation
+   e. Returns success
+
+5. Docora detects commit -> webhook -> card upserted in DB
+6. Card is immediately available for study in mobile app
 ```
 
-#### 3. Password Reset Flow
+### Data Flow: Delete a Card
 
 ```
-User taps "Forgot password?" on LoginScreen
-  -> Navigate to ForgotPasswordScreen
-  -> User enters email
-  -> supabase.auth.resetPasswordForEmail(email, { redirectTo })
-  -> Supabase sends reset email
-  -> Show "Check your email" confirmation on ForgotPasswordScreen
-  -> User opens email, taps link
-  -> Deep link: lumio://auth/callback?access_token=...&refresh_token=...&type=recovery
-  -> App.tsx Linking.useURL() captures URL
-  -> createSessionFromUrl() creates session
-  -> onAuthStateChange fires PASSWORD_RECOVERY event
-  -> AuthContext sets passwordRecoveryPending = true
-  -> AppNavigator is in state='ready' but passwordRecoveryPending gate
-     forces navigation to ResetPasswordScreen
-  -> User enters new password
-  -> supabase.auth.updateUser({ password: newPassword })
-  -> clearPasswordRecovery()
-  -> Navigate to main app
+1. User deletes card in web app
+2. Web app calls `deck-commit` edge function:
+   POST /functions/v1/deck-commit
+   { action: "delete_card", deckName: "javascript-basics", cardSlug: "closures" }
+
+3. Edge function:
+   a. Validates user auth and path ownership
+   b. Commits file deletion via createCommitOnBranch (fileDeletions)
+
+4. Docora detects deletion -> webhook -> card deleted from DB
 ```
 
-#### 4. Account Linking Flow (Settings)
+## New Components Detail
 
+### 1. `deck-commit` Edge Function (Supabase/Deno)
+
+**Purpose:** Server-side proxy between the web app and GitHub API. The edge function holds the GitHub PAT (repo-scoped) as an environment variable. Users never see or need this token.
+
+**Why an edge function instead of direct GitHub API calls from the browser:**
+- GitHub PAT must stay server-side (security)
+- Path validation and user isolation (prevents path traversal)
+- Consistent commit author metadata
+- Rate limit management (single token, controlled)
+
+**Actions:**
+
+| Action | Input | GitHub API Operation |
+|--------|-------|---------------------|
+| `create_deck` | deckName, displayName | Create `/{user_id}/{deck_name}/README.md` |
+| `save_card` | deckName, cardSlug, content | Create/update `/{user_id}/{deck_name}/{slug}.md` |
+| `delete_card` | deckName, cardSlug | Delete `/{user_id}/{deck_name}/{slug}.md` |
+| `delete_deck` | deckName | Delete all files in `/{user_id}/{deck_name}/` |
+| `list_deck_files` | deckName | List files in `/{user_id}/{deck_name}/` via GitHub Contents API |
+| `get_file` | deckName, cardSlug | Get content of specific file via GitHub Contents API |
+
+**GitHub API choice: GraphQL `createCommitOnBranch` mutation for writes, REST Contents API for reads**
+
+Use the GraphQL mutation for writes because:
+- Supports multiple file changes in a single atomic commit (deck deletion = multiple files)
+- Supports file deletions alongside additions
+- Single API call instead of the blob -> tree -> commit -> ref sequence
+- Commits are automatically signed by GitHub
+
+Use REST Contents API for reads because:
+- Simpler for single file/directory listing
+- `GET /repos/{owner}/{repo}/contents/{path}` returns file content or directory listing
+- No need for GraphQL complexity for read operations
+
+**Confidence: MEDIUM** for GraphQL mutation (documented since 2021, widely used, but exact Deno fetch ergonomics untested), **HIGH** for REST Contents API
+
+**Key environment variables for `deck-commit`:**
+- `LUMIO_GITHUB_PAT` - Personal Access Token with `repo` scope for the shared repo
+- `LUMIO_GITHUB_REPO_OWNER` - Owner of the shared repo (e.g., `toto-castaldi`)
+- `LUMIO_GITHUB_REPO_NAME` - Name of the shared repo (e.g., `lumio-decks`)
+
+### 2. Shared GitHub Repository (`lumio-decks`)
+
+**Structure:**
 ```
-User is logged in with email/password, taps "Link Google Account" in Settings
-  -> GoogleSignin.signIn() (native dialog)
-  -> Gets Google ID token
-  -> supabase.auth.linkIdentity({ provider: 'google', token: idToken })
-  -> Identity linked to existing Supabase user
-  -> UI updates to show linked Google account
+lumio-decks/
+  README.md                           # Repo-level README (documentation)
+  {user_id_1}/
+    javascript-basics/
+      README.md                       # Deck metadata (frontmatter)
+      closures.md                     # Card
+      promises.md                     # Card
+      async-await.md                  # Card
+    python-data-structures/
+      README.md
+      lists.md
+      dictionaries.md
+  {user_id_2}/
+    ...
+```
 
-User is logged in with Google, taps "Add Password" in Settings
-  -> Shows inline password form
-  -> supabase.auth.updateUser({ password: newPassword })
-  -> Email identity is added to user
-  -> UI updates to show email+password is configured
+**Critical design decisions:**
+
+1. **User ID (UUID) as top-level directory** -- not username, because user_id is immutable. Usernames could change and would break paths.
+
+2. **One repository for all users** -- not per-user repos, because:
+   - Simplifies Docora monitoring (one registration, one webhook endpoint).
+   - Simplifies PAT management (one token, one repo).
+   - The v3.1 "Deck Discovery" milestone needs all decks discoverable from one source.
+
+3. **Each `{user_id}/{deck_name}/` directory = one Lumio "repository" record in the DB.** This is the key mapping: Docora sees the whole repo as one entity, but the `docora-webhook` uses the file path prefix to route cards to the correct Lumio repository record.
+
+### 3. Solving the One-Repo-Many-Decks Problem
+
+**The core tension:** Docora monitors one GitHub repo. Lumio needs many "repositories" (one per deck per user) so that each deck shows up separately in the mobile app with its own cards.
+
+**Recommended approach: Path-based routing in `docora-webhook`**
+
+When `docora-webhook` receives a file change from the shared deck repo, it:
+1. Checks if this repository is the shared deck repo (via a flag on the repository record)
+2. Parses the file path to extract `{user_id}` and `{deck_name}`
+3. Finds or auto-creates the corresponding Lumio child repository record
+4. Creates `user_repositories` link if not already present
+5. Stores the card under the child repository (using relative path as `file_path`)
+
+**Implementation sketch:**
+
+```typescript
+// In docora-webhook, after finding the repo by docora_repository_id:
+if (repo.is_shared_deck_repo) {
+  const pathParts = filePath.split('/');
+  if (pathParts.length < 3) {
+    // File at root or user-level, not inside a deck directory
+    return { success: true, message: "Ignored: file not inside a deck directory" };
+  }
+
+  const [userId, deckName, ...rest] = pathParts;
+  const relativeFilePath = rest.join('/'); // "closures.md" or "README.md"
+
+  // Find or create the deck-specific child repository record
+  let deckRepo = await findDeckRepository(serviceClient, userId, deckName);
+  if (!deckRepo) {
+    deckRepo = await createDeckRepository(
+      serviceClient,
+      userId,
+      deckName,
+      repo.id  // parent repo reference
+    );
+  }
+
+  // Process file under deckRepo with relativeFilePath
+  // This reuses all existing card processing logic
+}
+```
+
+**New DB columns on `repositories` table:**
+- `is_shared_deck_repo BOOLEAN DEFAULT FALSE` -- only the parent shared repo record has this flag
+- `parent_repository_id UUID REFERENCES repositories(id)` -- child deck repos point to parent
+- `deck_owner_id UUID REFERENCES auth.users(id)` -- which user owns this deck (extracted from path)
+- `deck_name TEXT` -- the deck directory name
+
+**These columns are nullable** because they only apply to the shared deck repo ecosystem. Normal user-added GitHub repos have all of these as NULL.
+
+**Alternative considered and rejected: Multiple Docora registrations (one per deck)**
+- Docora monitors entire repos, not subdirectories
+- Would send duplicate webhooks for every file in the repo
+- Would waste Docora API quota
+
+**Alternative considered and rejected: Single "virtual" repository for all deck-builder content**
+- Would put all users' cards into one repository record
+- Cards from different decks would be mixed together
+- Cannot show individual decks in the mobile app's repository list
+
+### 4. `user_decks` Database Table
+
+**Purpose:** Web app local state for listing decks and tracking creation metadata. The source of truth for card content is GitHub, but this table enables fast listing without hitting GitHub API.
+
+```sql
+CREATE TABLE public.user_decks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    deck_name TEXT NOT NULL,              -- URL-safe slug (e.g., "javascript-basics")
+    display_name TEXT NOT NULL,           -- Human-readable name
+    description TEXT DEFAULT '',
+    repository_id UUID REFERENCES public.repositories(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(user_id, deck_name)
+);
+
+ALTER TABLE public.user_decks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own decks"
+    ON public.user_decks FOR SELECT
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can manage own decks"
+    ON public.user_decks FOR ALL
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Service role can manage all decks"
+    ON public.user_decks FOR ALL
+    USING ((SELECT auth.jwt() ->> 'role') = 'service_role');
+```
+
+**Why `repository_id` is nullable:** The deck record is created when the user creates the deck in the web app (via `deck-commit`). The corresponding Lumio repository child record is created either by `deck-commit` itself (proactively) or when Docora delivers the first webhook (reactively). With the proactive approach, the `repository_id` is set immediately, but the nullable design is safer.
+
+### 5. Auth Configuration for Web
+
+**Confidence: HIGH** (existing `@lumio/core` client is well understood)
+
+The `createSupabaseClient` in `@lumio/core` sets `detectSessionInUrl: false` -- correct for mobile but WRONG for web OAuth PKCE flow. The web app needs the Supabase client to automatically detect the auth code in the callback URL.
+
+**Recommended: Web app creates its own Supabase client directly.**
+
+The web app should import types from `@lumio/shared` but NOT use `@lumio/core`. Reasons:
+- `@lumio/core`'s auth module has mobile-specific code paths (native Google Sign-In guard in signOut, etc.)
+- `@lumio/core` has React Native dependencies (`supermemo`, mobile markdown plugins)
+- The web Supabase client needs `detectSessionInUrl: true` and no custom storage adapter (browser localStorage is the default and correct choice)
+- Simpler dependency tree for the web app
+
+```typescript
+// apps/deck-builder/src/lib/supabase.ts
+import { createClient } from '@supabase/supabase-js';
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,  // Required for PKCE OAuth callback
+      flowType: 'pkce',
+    },
+  }
+);
+```
+
+**Supabase config changes needed:**
+- Add `https://deck.lumio.toto-castaldi.com/auth/callback` to `additional_redirect_urls` in `config.toml`
+- Add same URL to Supabase dashboard redirect allow list in production
+- Add same URL to Google OAuth console authorized redirect URIs
+
+**Auth callback handling in the web app:**
+
+```typescript
+// apps/deck-builder/src/pages/AuthCallback.tsx
+// This page is at /auth/callback
+// Supabase client with detectSessionInUrl:true auto-processes the code
+// Just redirect to home after session is established
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+
+export function AuthCallback() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        navigate('/');
+      }
+    });
+  }, [navigate]);
+
+  return <div>Signing in...</div>;
+}
 ```
 
 ## Patterns to Follow
 
-### Pattern 1: Deep Link Session Handler
+### Pattern 1: Edge Function Action Router
 
-**What:** Centralized deep link handler in App.tsx that intercepts auth-related URLs and creates sessions.
-**When:** Always -- this is the bridge between email links and the app.
-**Why:** The Supabase client is configured with `detectSessionInUrl: false` (already set in `packages/core/src/supabase/client.ts`), so we must manually parse deep link URLs.
+**What:** Single edge function with `action` parameter routing to handler functions. Already used by `git-sync`.
+**When:** All `deck-commit` operations.
 
 ```typescript
-// In lib/deepLink.ts
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
-import { getSupabaseClient } from '@lumio/core';
-
-export const createSessionFromUrl = async (url: string) => {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
-  if (errorCode) throw new Error(errorCode);
-
-  const { access_token, refresh_token } = params;
-  if (!access_token) return null;
-
-  const { data, error } = await getSupabaseClient().auth.setSession({
-    access_token,
-    refresh_token,
-  });
-  if (error) throw error;
-  return data.session;
-};
-
-// In App.tsx, inside the component:
-import * as Linking from 'expo-linking';
-import { createSessionFromUrl } from './lib/deepLink';
-
-const url = Linking.useURL();
-useEffect(() => {
-  if (url) {
-    createSessionFromUrl(url).catch(err =>
-      console.error('[DeepLink] Failed to create session:', err)
-    );
+// deck-commit/index.ts (follows git-sync pattern exactly)
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
-}, [url]);
-```
 
-**Confidence:** HIGH -- This is the official Supabase pattern for Expo deep linking, documented at supabase.com/docs/guides/auth/native-mobile-deep-linking.
+  const body = await req.json();
+  const { action } = body;
 
-### Pattern 2: Auth Event Type Handling for PASSWORD_RECOVERY
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return errorResponse("Missing authorization header", 401);
+  }
 
-**What:** Extend the existing `onAuthStateChange` listener to detect `PASSWORD_RECOVERY` events.
-**When:** When a user clicks a password reset link and the app receives the deep link.
-**Why:** The reset link creates a valid session, but we must redirect to a password update screen instead of the main app.
+  const supabase = createUserSupabaseClient(authHeader);
+  const userId = await getUserId(supabase);
 
-```typescript
-// In AuthContext.tsx, extend the existing onAuthStateChange
-const [passwordRecoveryPending, setPasswordRecoveryPending] = useState(false);
-
-getSupabaseClient().auth.onAuthStateChange((event, newSession) => {
-  setSession(newSession);
-  setUser(newSession?.user ?? null);
-  setState(newSession ? 'ready' : 'logged_out');
-
-  // NEW: Handle password recovery flow
-  if (event === 'PASSWORD_RECOVERY') {
-    setPasswordRecoveryPending(true);
+  switch (action) {
+    case "create_deck": return handleCreateDeck(supabase, userId, body);
+    case "save_card":   return handleSaveCard(supabase, userId, body);
+    case "delete_card": return handleDeleteCard(supabase, userId, body);
+    case "delete_deck": return handleDeleteDeck(supabase, userId, body);
+    case "list_deck_files": return handleListFiles(userId, body);
+    case "get_file":    return handleGetFile(userId, body);
+    default: return errorResponse(`Unknown action: ${action}`, 400);
   }
 });
 ```
 
-**Confidence:** HIGH -- PASSWORD_RECOVERY is a documented Supabase onAuthStateChange event type.
+### Pattern 2: Optimistic UI with Eventual Consistency
 
-### Pattern 3: Conditional Auth Navigator Routing
+**What:** The web app shows changes immediately after the edge function confirms the GitHub commit succeeded. The actual card record in the Supabase DB is created asynchronously when Docora delivers the webhook (typically seconds later).
+**When:** After every save/delete operation.
+**Why:** This mirrors the existing flow. When a user adds a GitHub repo in the mobile app, cards arrive via Docora webhook -- not instantly. The deck builder follows the same pipeline.
 
-**What:** Expand AuthNavigator from single-screen (Login only) to multi-screen stack.
-**When:** Auth flow now has 4 screens instead of just Login.
+**Implication for the web app:** After saving a card, the web app should NOT query the `cards` table to verify it appeared. Instead, it should use local state (markdown content in memory, deck list from `user_decks` table) and trust that Docora will eventually deliver the card to the DB. For listing card files within a deck, the web app uses the `list_deck_files` action which reads directly from GitHub (source of truth for the editor).
+
+### Pattern 3: Path Isolation for Security
+
+**What:** The `deck-commit` edge function MUST validate that all file operations are scoped to `/{authenticated_user_id}/`. A user must never write to or delete files outside their own directory.
+**When:** Every GitHub API call in `deck-commit`.
 
 ```typescript
-export type AuthStackParamList = {
-  Login: undefined;
-  SignUp: undefined;
-  ForgotPassword: undefined;
-  EmailVerification: { email: string };
-};
+function validateAndBuildPath(userId: string, deckName: string, cardSlug?: string): string {
+  // Sanitize deck name: lowercase alphanumeric, hyphens, underscores only
+  if (!/^[a-z0-9][a-z0-9_-]{0,50}$/.test(deckName)) {
+    throw new Error("Invalid deck name: use lowercase letters, numbers, hyphens, underscores");
+  }
+  // Sanitize card slug
+  if (cardSlug && !/^[a-z0-9][a-z0-9_-]{0,50}$/.test(cardSlug)) {
+    throw new Error("Invalid card name: use lowercase letters, numbers, hyphens, underscores");
+  }
 
-const Stack = createNativeStackNavigator<AuthStackParamList>();
+  const path = cardSlug
+    ? `${userId}/${deckName}/${cardSlug}.md`
+    : `${userId}/${deckName}/README.md`;
 
-export function AuthNavigator() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
-    </Stack.Navigator>
-  );
+  // Defense in depth: reject path traversal
+  if (path.includes('..') || path.includes('//')) {
+    throw new Error("Invalid path");
+  }
+
+  return path;
 }
 ```
 
-**Confidence:** HIGH -- Standard react-navigation pattern already used in the codebase.
+### Pattern 4: Reuse @lumio/shared for Types Only
 
-### Pattern 4: Password Recovery Screen in Root Stack (Not Auth Stack)
+**What:** The web app imports types from `@lumio/shared` for type safety on shared data structures (Repository, Card, UserStats, etc.).
+**When:** All data structures shared between web and mobile.
+**Why:** Maintains single source of truth for types. The web app does NOT use `@lumio/core` (which bundles React Native dependencies and mobile-specific auth/markdown code).
 
-**What:** Add ResetPasswordScreen to the root stack (authenticated navigator), not AuthNavigator.
-**When:** After deep link creates a session with PASSWORD_RECOVERY event.
-**Why:** When a user clicks a password reset link, Supabase creates a valid session (the user is technically logged in with state='ready'). AuthNavigator only renders when state='logged_out'. Placing ResetPassword in AuthNavigator means the user would never see it -- they would jump straight to the main app.
+### Pattern 5: GitHub GraphQL for Atomic Multi-File Commits
 
-```typescript
-// In AppNavigator.tsx, inside the authenticated stack:
-const { passwordRecoveryPending } = useAuth();
-
-// Inside the Stack.Navigator:
-<Stack.Screen name="Main" component={MainNavigator} />
-{/* ... existing screens ... */}
-{passwordRecoveryPending && (
-  <Stack.Screen
-    name="ResetPassword"
-    component={ResetPasswordScreen}
-    options={{ presentation: 'card', gestureEnabled: false }}
-  />
-)}
-```
-
-**Confidence:** HIGH -- Password recovery creates a valid session, so the user is in the 'ready' state.
-
-### Pattern 5: Account Linking via User Identity Inspection
-
-**What:** In SettingsScreen, inspect `user.identities` to determine which providers are linked and offer appropriate actions.
-**When:** Always on SettingsScreen render.
+**What:** Use the `createCommitOnBranch` GraphQL mutation for all write operations to the shared repo.
+**When:** Creating decks (README.md), saving cards, deleting cards, deleting entire decks.
 
 ```typescript
-const { user } = useAuth();
+// Simplified example of the GraphQL mutation
+const COMMIT_MUTATION = `
+  mutation CreateCommit($input: CreateCommitOnBranchInput!) {
+    createCommitOnBranch(input: $input) {
+      commit {
+        oid
+        url
+      }
+    }
+  }
+`;
 
-const identities = user?.identities ?? [];
-const hasGoogleIdentity = identities.some(i => i.provider === 'google');
-const hasEmailIdentity = identities.some(i => i.provider === 'email');
+async function commitFiles(
+  additions: Array<{ path: string; contents: string }>,
+  deletions: Array<{ path: string }>,
+  message: string,
+): Promise<string> {
+  // 1. Get current HEAD OID
+  const headOid = await getHeadOid();
 
-// Show appropriate linking options:
-// If has Google but no email -> Show "Add Password" form
-// If has email but no Google -> Show "Link Google Account" button
-// If has both -> Show both as linked (checkmarks, no action needed)
+  // 2. Base64 encode file contents (required by GitHub GraphQL)
+  const encodedAdditions = additions.map(f => ({
+    path: f.path,
+    contents: btoa(unescape(encodeURIComponent(f.contents))),
+  }));
+
+  // 3. Execute mutation
+  const response = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${GITHUB_PAT}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: COMMIT_MUTATION,
+      variables: {
+        input: {
+          branch: {
+            repositoryNameWithOwner: `${REPO_OWNER}/${REPO_NAME}`,
+            branchName: 'main',
+          },
+          expectedHeadOid: headOid,
+          message: { headline: message },
+          fileChanges: {
+            additions: encodedAdditions,
+            deletions: deletions,
+          },
+        },
+      },
+    }),
+  });
+
+  const result = await response.json();
+
+  // 4. Handle HEAD OID conflict (concurrent commits)
+  if (result.errors?.some(e => e.message.includes('expected OID'))) {
+    // Retry once with fresh HEAD
+    return commitFiles(additions, deletions, message);
+  }
+
+  return result.data.createCommitOnBranch.commit.oid;
+}
 ```
-
-**Confidence:** HIGH -- `user.identities` is a standard Supabase Auth property available on the User object. The `linkIdentity` with ID token support was shipped in supabase-js (late 2025) and is available with the project's `^2.45.0` semver range.
-
-### Pattern 6: Redirect URL with makeRedirectUri
-
-**What:** Use `expo-auth-session`'s `makeRedirectUri()` to generate the correct deep link URI.
-**When:** For all email-based auth operations that need a redirect (signUp, resetPasswordForEmail).
-
-```typescript
-import { makeRedirectUri } from 'expo-auth-session';
-
-const redirectTo = makeRedirectUri();
-// Returns something like: lumio:// (based on app.json scheme: "lumio")
-```
-
-**Confidence:** HIGH -- expo-auth-session is the standard Expo utility for this. The app already has `scheme: "lumio"` in app.json.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Separate AuthContext for Email Auth
+### Anti-Pattern 1: Direct GitHub API from Browser
 
-**What:** Creating a new EmailAuthContext alongside the existing AuthContext.
-**Why bad:** Two auth contexts would both listen to the same `onAuthStateChange` and fight over state. The Supabase client is singular.
-**Instead:** Extend the existing AuthContext with new methods (signUpWithEmail, signInWithEmail, etc.).
+**What:** Calling GitHub API directly from the React SPA.
+**Why bad:** Exposes PAT in browser, no server-side path validation, CORS issues with GitHub API, no user isolation enforcement.
+**Instead:** All GitHub operations go through the `deck-commit` edge function with a server-held PAT.
 
-### Anti-Pattern 2: In-App OTP Code Instead of Deep Links
+### Anti-Pattern 2: Polling for Card Creation After Save
 
-**What:** Asking users to copy a verification code from their email instead of using deep link redirect.
-**Why bad:** Supabase's email verification default flow uses URL-based confirmation, not OTP codes. Fighting this requires custom email templates and server-side workarounds.
-**Instead:** Use the standard Supabase email-link-based verification with deep link handling.
+**What:** After saving a card, polling Supabase DB until the card record appears.
+**Why bad:** Adds latency, wastes API calls, creates complexity. Docora webhook delivery time is variable (seconds to minutes).
+**Instead:** Optimistic UI -- show saved content immediately from local state. For listing files, read from GitHub (via edge function). The DB record appears when Docora delivers the webhook and is used for study/mobile app, not for editing state.
 
-### Anti-Pattern 3: ResetPasswordScreen in AuthNavigator
+### Anti-Pattern 3: Importing @lumio/core in the Web App
 
-**What:** Placing ResetPasswordScreen inside the AuthNavigator (the logged-out stack).
-**Why bad:** When a user clicks a password reset link, Supabase creates a valid session (the user is technically logged in). AuthNavigator only renders when `state === 'logged_out'`. The user would skip directly to the main app, never seeing the password reset form.
-**Instead:** Place ResetPasswordScreen in the root stack (authenticated navigator) gated by a `passwordRecoveryPending` flag.
+**What:** Making `apps/deck-builder` depend on `@lumio/core`.
+**Why bad:** `@lumio/core` bundles `supermemo`, `remark-*`, `rehype-*`, and mobile-specific Supabase client configuration (`detectSessionInUrl: false`, SecureStore storage adapter). The auth functions assume native Google Sign-In availability. None of this applies to the web app.
+**Instead:** Import only `@lumio/shared` for types. Create a thin Supabase client in `apps/deck-builder/src/lib/supabase.ts` with web-appropriate settings.
 
-### Anti-Pattern 4: Using updateUser for Google Linking
+### Anti-Pattern 4: Storing Card Content in Supabase as Source of Truth for the Editor
 
-**What:** Trying to link a Google identity by calling `updateUser()` with Google metadata.
-**Why bad:** `updateUser()` updates email/password/metadata, not identity providers. Identity linking requires `linkIdentity()` which creates a new identity record.
-**Instead:** Use `linkIdentity({ provider: 'google', token: idToken })` for Google linking.
+**What:** Writing markdown content to a Supabase table, then syncing to GitHub.
+**Why bad:** Creates two sources of truth. The existing pipeline is unidirectional: GitHub -> Docora -> Supabase. Adding a reverse flow (Supabase -> GitHub) breaks this clean architecture and requires conflict resolution.
+**Instead:** GitHub is the sole source of truth for content. Write to GitHub (via edge function), read from GitHub (for editing). Supabase DB only has cards because Docora puts them there.
 
-### Anti-Pattern 5: Disabling Email Confirmation
+### Anti-Pattern 5: Per-User GitHub Repos
 
-**What:** Setting `enable_confirmations: false` to avoid deep link complexity.
-**Why bad:** Allows anyone to create accounts with unverified emails. Users could sign up with emails they don't own. This also breaks automatic identity linking security (which requires verified emails to safely merge accounts).
-**Instead:** Enable email confirmations and implement proper deep link handling. The complexity is one-time setup.
+**What:** Creating a separate GitHub repository for each user's decks.
+**Why bad:** Explodes Docora registrations (each repo needs separate monitoring). Complicates PAT management. Makes deck discovery (v3.1) much harder.
+**Instead:** Single shared repo with user_id subdirectories. One Docora registration. One PAT.
 
-## Detailed Component Specifications
+### Anti-Pattern 6: Reusing @lumio/core's signInWithGoogle for Web
 
-### New Files
+**What:** Calling the existing `signInWithGoogle()` from `@lumio/core` in the web app.
+**Why bad:** On mobile, this function uses the native Google Sign-In SDK to get an ID token. On web, it should use Supabase's `signInWithOAuth({ provider: 'google' })` which redirects to Google's consent screen and returns via PKCE callback. Completely different flow.
+**Instead:** Implement web-specific auth functions in `apps/deck-builder/src/lib/auth.ts`.
 
-| File | Type | Purpose |
-|------|------|---------|
-| `screens/SignUpScreen.tsx` | Screen | Email+password registration form with validation |
-| `screens/ForgotPasswordScreen.tsx` | Screen | Enter email, request password reset |
-| `screens/EmailVerificationScreen.tsx` | Screen | "Check your email" informational screen post-signup |
-| `screens/ResetPasswordScreen.tsx` | Screen | New password entry form (after deep link from reset email) |
-| `lib/deepLink.ts` | Utility | createSessionFromUrl: parse deep link, create Supabase session |
+## Modified Existing Components
 
-### Modified Files
+### docora-webhook (Enhancement Required)
 
-| File | Change | Impact |
-|------|--------|--------|
-| `contexts/AuthContext.tsx` | Add signUpWithEmail, signInWithEmail, resetPassword, updatePassword, linkGoogleIdentity, passwordRecoveryPending state, clearPasswordRecovery, PASSWORD_RECOVERY event handler | Core -- all new auth flows depend on this |
-| `navigation/AuthNavigator.tsx` | Add SignUp, ForgotPassword, EmailVerification to AuthStackParamList and Stack.Navigator | Navigation -- new screens in logged-out flow |
-| `navigation/AppNavigator.tsx` | Add ResetPassword to RootStackParamList, conditionally render when passwordRecoveryPending is true | Navigation -- password recovery after deep link |
-| `screens/LoginScreen.tsx` | Add email/password form below Google button with "or" separator, "Forgot password?" link, "Sign up" link | UI -- largest visual change |
-| `screens/SettingsScreen.tsx` | Add account linking section: display linked identities, offer "Add Password" or "Link Google" based on current identities | UI -- new section in settings |
-| `App.tsx` | Add Linking.useURL() hook + createSessionFromUrl for deep link handling | Core -- bridges email links to app sessions |
-| `i18n/en.ts` | Add ~25 new translation keys for signup, verification, password reset, account linking | i18n |
-| `i18n/it.ts` | Add corresponding Italian translations | i18n |
-| `supabase/config.toml` | Set `enable_confirmations = true`, add `lumio://**` to redirect URLs | Backend config for local dev |
-| `packages/core/src/supabase/auth.ts` | Add signUpWithEmail, signInWithEmail, resetPasswordForEmail exports | Shared auth functions |
-| `packages/core/src/index.ts` | Re-export new auth functions | Package public API |
+The existing `docora-webhook` needs path-based routing for the shared deck repo. The change is additive -- all existing behavior is preserved for normal repos.
 
-### Unchanged Files (Explicitly No Touch Needed)
-
-| File | Why Unchanged |
-|------|---------------|
-| `lib/supabase.ts` | Client config already correct: `detectSessionInUrl: false`, `flowType: 'pkce'`, SecureStore adapter |
-| `lib/auth.ts` | Google Sign-In config unchanged -- still needed for Google login and account linking |
-| `App.tsx` provider tree order | AuthProvider remains outermost -- new email auth methods go in same context |
-| `handle_new_user()` trigger | `COALESCE` on `display_name`/`avatar_url` already handles NULL for email signups (no Google metadata) |
-| All edge functions | They use session tokens (auth.uid()), not provider-specific logic |
-| All RLS policies | Policies are based on `auth.uid()`, not auth provider type |
-| `lib/theme.ts`, `lib/i18n.ts`, `lib/studySettings.ts` | Unrelated to auth |
-| Study-related files | `useStudySession.ts`, `StudyScreen.tsx`, etc. -- no auth changes needed |
-
-## AuthContext Extended Interface
-
-```typescript
-export interface AuthContextType {
-  // EXISTING (unchanged)
-  user: User | null;
-  session: Session | null;
-  state: AuthState;
-  signInWithGoogle: () => Promise<void>;
-  signOut: () => Promise<void>;
-
-  // NEW: Email auth
-  signUpWithEmail: (email: string, password: string) => Promise<{ needsVerification: boolean }>;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (newPassword: string) => Promise<void>;
-
-  // NEW: Account linking
-  linkGoogleIdentity: () => Promise<void>;
-
-  // NEW: Password recovery state
-  passwordRecoveryPending: boolean;
-  clearPasswordRecovery: () => void;
-}
-```
-
-## Navigation Structure (Updated)
+**New logic (inserted after existing `findRepositoryByDocoraId`):**
 
 ```
-App.tsx
-  NavigationContainer
-    AppNavigator
-      state='loading' -> ActivityIndicator spinner
-      state='logged_out' -> AuthNavigator (NativeStack)
-        Login              (EXISTING, modified with email form)
-        SignUp             (NEW)
-        ForgotPassword     (NEW)
-        EmailVerification  (NEW)
-      state='ready' -> RootStack (NativeStack)
-        Main               (EXISTING - bottom tab navigator)
-        Study              (EXISTING)
-        StudySummary       (EXISTING)
-        CardList           (EXISTING)
-        CardDetail         (EXISTING)
-        StudyHistory       (EXISTING)
-        ResetPassword      (NEW, conditional: rendered only when passwordRecoveryPending)
+1. Webhook arrives with repository.repository_id
+2. Look up Lumio repository by docora_repository_id (existing code)
+3. IF repo.is_shared_deck_repo:
+   a. Parse file path to extract user_id and deck_name
+   b. Validate user_id is a valid UUID
+   c. Find or auto-create child repository record for this user+deck
+   d. Create user_repositories link if not present
+   e. Rewrite file_path to relative path (remove user_id/deck_name prefix)
+   f. Process the file under the child repository (reuses all existing handlers)
+4. ELSE: process normally (existing behavior, no changes)
 ```
 
-## Deep Link Configuration
-
-### app.json (Already Correct -- No Changes)
-
-```json
-{
-  "expo": {
-    "scheme": "lumio"
-  }
-}
+**RPC function needed:**
+```sql
+CREATE OR REPLACE FUNCTION find_or_create_deck_repository(
+    p_user_id UUID,
+    p_deck_name TEXT,
+    p_parent_repo_id UUID
+) RETURNS UUID  -- returns repository_id
+LANGUAGE plpgsql
+SECURITY DEFINER
 ```
 
-### supabase/config.toml Updates (Local Dev)
+### Supabase Auth Config (config.toml)
 
+Add web app redirect URLs:
 ```toml
-[auth]
-site_url = "lumio://auth/callback"
 additional_redirect_urls = [
-  "http://localhost:5173/auth/callback",
-  "http://localhost:5174/auth/callback",
-  "https://m-lumio.toto-castaldi.com/auth/callback",
-  "lumio://auth/callback",
-  "lumio://**"
+  # ... existing entries ...
+  "https://deck.lumio.toto-castaldi.com/auth/callback",
 ]
-
-[auth.email]
-enable_signup = true
-double_confirm_changes = true
-enable_confirmations = true   # CHANGE from false -- required for email verification
 ```
 
-### Production Supabase Dashboard
+The `http://localhost:5173/auth/callback` entry already exists and covers local development.
 
-- Add `lumio://auth/callback` and `lumio://**` to Redirect URL allow list
-- Ensure email confirmations are enabled
-- Default email templates are sufficient for MVP (they include {{ .RedirectTo }})
+### CI/CD Pipeline (ci-deploy.yml)
 
-### Required New Package
+**Two additions:**
 
-```bash
-pnpm --filter @lumio/android add expo-auth-session
+1. New job `deploy-deck-builder` (parallel with `deploy-landing`):
+```yaml
+deploy-deck-builder:
+  runs-on: ubuntu-latest
+  needs: [lint-and-typecheck]
+  if: # same condition as deploy-landing
+  steps:
+    - uses: actions/checkout@v4
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+    - run: pnpm install --frozen-lockfile
+    - run: pnpm build:packages
+    - name: Build deck-builder
+      working-directory: apps/deck-builder
+      run: pnpm build
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    - name: Deploy to DigitalOcean
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        source: 'apps/deck-builder/dist/*'
+        target: '/var/www/deck-lumio'
+        strip_components: 3
+    - name: Reload Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        script: sudo systemctl reload nginx
 ```
 
-`expo-linking` is already installed (`~8.0.11`). `expo-auth-session` is needed for `makeRedirectUri()` and `QueryParams.getQueryParams()` -- these are the standard Expo utilities for deep link URL parsing.
+2. Add `deck-commit` to the `deploy-functions` job:
+```yaml
+supabase functions deploy deck-commit --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+```
 
-No native rebuild is required for `expo-auth-session` (pure JS package).
+### Nginx Configuration (DigitalOcean server)
 
-## Supabase Email Templates
+New server block for `deck.lumio.toto-castaldi.com`:
+```nginx
+server {
+    listen 443 ssl;
+    server_name deck.lumio.toto-castaldi.com;
 
-For local development, emails are captured by Inbucket (http://127.0.0.1:54324). For production, Supabase Cloud provides default email delivery (rate limited to 2/hour in free tier -- sufficient for single dev but needs Custom SMTP for real usage).
+    root /var/www/deck-lumio;
+    index index.html;
 
-The email templates use `{{ .RedirectTo }}` which Supabase populates from the `emailRedirectTo` parameter passed in `signUp()` and `resetPasswordForEmail()`.
+    # SPA fallback: all routes serve index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-No custom email templates are needed for this milestone.
+    # Cache static assets aggressively
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Never cache index.html
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    ssl_certificate /etc/letsencrypt/live/deck.lumio.toto-castaldi.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/deck.lumio.toto-castaldi.com/privkey.pem;
+}
+```
 
 ## Build Order (Dependency-Driven)
 
-```
-Phase 1: Deep Link Foundation
-  1. supabase/config.toml: enable email confirmations, add redirect URLs
-  2. Install expo-auth-session
-  3. lib/deepLink.ts: createSessionFromUrl utility
-  4. App.tsx: add Linking.useURL() handler
-  -> Validates: deep links arrive in the app, session can be created from URL
+The build order is dictated by component dependencies.
 
-Phase 2: Email Auth Core
-  5. packages/core/src/supabase/auth.ts: add signUpWithEmail, signInWithEmail, resetPasswordForEmail
-  6. packages/core/src/index.ts: re-export new functions
-  7. contexts/AuthContext.tsx: add new methods + PASSWORD_RECOVERY event handling
-  8. i18n/en.ts + it.ts: add all new translation keys
-  -> Validates: email signup/signin round-trips through AuthContext
+### Phase 1: Backend Foundation (no UI)
 
-Phase 3: Auth Screens
-  9. screens/SignUpScreen.tsx
-  10. screens/EmailVerificationScreen.tsx
-  11. screens/ForgotPasswordScreen.tsx
-  12. navigation/AuthNavigator.tsx: register new screens
-  13. screens/LoginScreen.tsx: add email/password form + "or" separator + navigation links
-  -> Validates: full signup -> verification email -> deep link -> logged in
+1. **Create shared GitHub repo** (`lumio-decks`) with initial README.md
+2. **Register shared repo with Docora** for monitoring
+3. **DB migration** -- `user_decks` table, repository columns (`is_shared_deck_repo`, `parent_repository_id`, `deck_owner_id`, `deck_name`)
+4. **`deck-commit` edge function** -- core commit logic (create_deck, save_card, delete_card, list_deck_files, get_file)
+5. **`docora-webhook` enhancement** -- path-based routing for shared repo, find_or_create_deck_repository RPC
 
-Phase 4: Password Reset
-  14. screens/ResetPasswordScreen.tsx
-  15. navigation/AppNavigator.tsx: add conditional ResetPassword screen gated by passwordRecoveryPending
-  -> Validates: reset email -> deep link -> new password form -> password updated
+**Rationale:** The complete backend pipeline (edge function commits -> Docora webhook -> card in DB -> visible in mobile app) must be validated end-to-end before building UI. Can test by calling the edge function directly via curl.
 
-Phase 5: Account Linking
-  16. contexts/AuthContext.tsx: add linkGoogleIdentity method
-  17. screens/SettingsScreen.tsx: add linked identities display + linking actions
-  -> Validates: Google user can add password, email user can link Google
+### Phase 2: Web App Shell + Auth
 
-Phase 6: Production Config
-  18. Supabase Dashboard: add redirect URLs, verify email confirmations enabled
-  19. End-to-end test with production Supabase (not just local Inbucket)
-```
+6. **Vite + React project scaffold** in `apps/deck-builder` with pnpm workspace integration
+7. **Supabase auth** (Google OAuth + email/password with PKCE callback)
+8. **Basic routing** (react-router-dom: login, auth callback, dashboard)
+9. **Auth-protected layout** (redirect unauthenticated users to login)
 
-**Phase ordering rationale:**
-- Phase 1 first because deep links are the foundation for email verification and password reset. Without them, signUp confirmation is broken.
-- Phase 2 before Phase 3 because screens need the auth methods to exist.
-- Phase 3 before Phase 4 because ForgotPasswordScreen (in auth stack) must exist before ResetPasswordScreen (in root stack) can be useful.
-- Phase 5 last because it requires both email and Google auth to already work independently.
-- Phase 6 last because local development testing should pass before touching production.
+**Rationale:** Auth must work before any authenticated features. The shell provides the frame for all subsequent UI work.
+
+### Phase 3: Deck Management
+
+10. **Deck list view** (fetch from `user_decks` table via Supabase client)
+11. **Create deck flow** (name input -> slug generation -> edge function call)
+12. **Delete deck flow** (confirmation -> edge function call)
+
+**Rationale:** Deck CRUD is simpler than card CRUD and validates the edge function integration.
+
+### Phase 4: Card Editor
+
+13. **Card list within a deck** (fetch via `list_deck_files` edge function action or from Supabase `cards` table)
+14. **Markdown editor** (create/edit card with live preview)
+15. **Save card flow** (editor -> edge function -> GitHub commit)
+16. **Delete card flow**
+
+**Rationale:** This is the core feature. Depends on deck management (Phase 3) for navigation context.
+
+### Phase 5: Deploy and Polish
+
+17. **CI/CD pipeline** for deck-builder deploy
+18. **Nginx configuration** for deck.lumio.toto-castaldi.com
+19. **DNS record** for deck.lumio.toto-castaldi.com
+20. **Production environment variables** (GitHub PAT as Supabase Edge Function secret, Supabase config)
+21. **Error handling**, loading states, empty states, edge cases
 
 ## Scalability Considerations
 
-| Concern | Current (single dev) | At 100 users | At 1000+ users |
-|---------|---------------------|--------------|----------------|
-| Email delivery | Inbucket (local), Supabase default (prod) | Supabase default OK for low volume | Custom SMTP needed (2/hour rate limit) |
-| Account merging conflicts | Rare | Occasional same-email Google + email signups | Need clear error messages for linking failures |
-| Session management | SecureStore, single device | Fine | Fine (server-managed sessions) |
-| Password reset abuse | N/A | Rate limiting built into Supabase Auth | Monitor for email enumeration attempts |
+| Concern | At 1 user (MVP) | At 100 users | At 10K users |
+|---------|-----------------|--------------|-------------|
+| GitHub API rate limit | 5,000 req/hr plenty | Comfortable | May need GitHub App token (15,000/hr) |
+| Shared repo file count | Trivial | ~5K-10K files fine for Git | Consider repo sharding |
+| Docora webhook volume | Low | Moderate (batched commits help) | May need Docora scaling |
+| `deck-commit` concurrency | No issue | Rare HEAD OID conflicts | Need retry logic (one retry with fresh HEAD) |
+| `user_decks` table size | Trivial | Trivial | Standard Postgres, indexed |
+| Web app bundle size | ~200KB gzipped | Same (static assets) | Same |
+
+**HEAD OID conflict handling:** When two users commit to the shared repo nearly simultaneously, the second commit will fail because `expectedHeadOid` no longer matches. The `deck-commit` edge function should retry once: re-fetch HEAD OID, re-attempt commit. This is the standard Git concurrent-write pattern. At MVP scale with a single developer, this is extremely unlikely but should be handled for correctness.
 
 ## Sources
 
-- [Supabase Identity Linking Docs](https://supabase.com/docs/guides/auth/auth-identity-linking) -- HIGH confidence
-- [Supabase Native Mobile Deep Linking](https://supabase.com/docs/guides/auth/native-mobile-deep-linking) -- HIGH confidence
-- [Supabase signUp API Reference](https://supabase.com/docs/reference/javascript/auth-signup) -- HIGH confidence
-- [Supabase resetPasswordForEmail API](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail) -- HIGH confidence
-- [Supabase Password-Based Auth Guide](https://supabase.com/docs/guides/auth/passwords) -- HIGH confidence
-- [Supabase signInWithIdToken API](https://supabase.com/docs/reference/javascript/auth-signinwithidtoken) -- HIGH confidence
-- [Supabase PKCE Flow Docs](https://supabase.com/docs/guides/auth/sessions/pkce-flow) -- HIGH confidence
-- [linkIdentityWithIdToken support issue #1591](https://github.com/supabase/supabase-js/issues/1591) -- MEDIUM confidence (feature shipped Nov 2025, exact API surface should be verified at build time)
-- [linkIdentity React Native discussion #25976](https://github.com/orgs/supabase/discussions/25976) -- MEDIUM confidence
-- [Expo Using Supabase guide](https://docs.expo.dev/guides/using-supabase/) -- HIGH confidence
-- Lumio codebase analysis (direct code reading) -- HIGH confidence
+- Existing codebase analysis: `supabase/functions/git-sync/index.ts`, `supabase/functions/docora-webhook/index.ts`, `packages/core/src/supabase/client.ts`, `packages/core/src/supabase/auth.ts`, `supabase/migrations/20260115000001_shared_repositories.sql` -- HIGH confidence
+- [GitHub GraphQL createCommitOnBranch mutation announcement](https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/) -- MEDIUM confidence (stable since 2021, but exact Deno usage untested)
+- [GitHub REST API Contents endpoint](https://developer.github.com/v3/repos/contents/) -- HIGH confidence (well-documented, stable)
+- [GitHub GraphQL mutations reference](https://docs.github.com/en/graphql/reference/mutations) -- MEDIUM confidence (full input schema not extracted)
+- [createCommitOnBranch community discussion](https://github.com/orgs/community/discussions/24599) -- MEDIUM confidence (community examples)
+- [Multi-file commit via GitHub API](https://dev.to/bro3886/create-a-folder-and-push-multiple-files-under-a-single-commit-through-github-api-23kc) -- MEDIUM confidence
+- [Supabase PKCE flow documentation](https://supabase.com/docs/guides/auth/sessions/pkce-flow) -- HIGH confidence
+- [Supabase React quickstart](https://supabase.com/docs/guides/auth/quickstarts/react) -- HIGH confidence
+- [Supabase Google OAuth guide](https://supabase.com/docs/guides/auth/social-login/auth-google) -- HIGH confidence
+- [Vite static deploy guide](https://vite.dev/guide/static-deploy) -- HIGH confidence
+- Existing DB migration `20260115000001_shared_repositories.sql` -- pattern reference for shared repository architecture
+- Existing `supabase/config.toml` -- redirect URLs, auth settings
