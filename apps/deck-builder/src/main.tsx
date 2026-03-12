@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { I18nProvider } from './contexts/I18nContext';
+import { DeckProvider } from './contexts/DeckContext';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { AuthCallback } from './pages/AuthCallback';
@@ -30,9 +31,11 @@ function ProtectedLayout() {
   }
   if (state === 'logged_out') return <Navigate to="/login" replace />;
   return (
-    <Layout>
-      <Outlet />
-    </Layout>
+    <DeckProvider>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </DeckProvider>
   );
 }
 
