@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
-status: ready_to_plan
-stopped_at: null
-last_updated: "2026-03-11"
+status: planning
+stopped_at: Phase 36 context gathered
+last_updated: "2026-03-12T07:19:34.543Z"
 last_activity: 2026-03-11 — Roadmap created for v3.0
 progress:
   total_phases: 5
@@ -70,9 +70,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11
-Stopped at: Roadmap created for v3.0 Deck Builder Web
-Resume file: None
+Last session: 2026-03-12T07:19:34.537Z
+Stopped at: Phase 36 context gathered
+Resume file: .planning/phases/36-scaffold-auth/36-CONTEXT.md
 
 ---
 *State initialized: 2026-01-29*
