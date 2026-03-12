@@ -8,10 +8,12 @@ import { I18nProvider } from './contexts/I18nContext';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { AuthCallback } from './pages/AuthCallback';
+import Layout from './components/Layout';
+import DashboardPage from './pages/DashboardPage';
 import './index.css';
 
 // ---------------------------------------------------------------------------
-// Placeholder page components (Plans 02 and 03 replace with real implementations)
+// Placeholder page components (future plans replace with real implementations)
 // ---------------------------------------------------------------------------
 
 function OtpVerification() {
@@ -38,15 +40,6 @@ function ResetPassword() {
   );
 }
 
-function DashboardPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-lumio-text">Welcome to Lumio Deck Builder</h1>
-      <p className="mt-2 text-lumio-text-secondary">Select a deck to start editing</p>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Layout wrappers
 // ---------------------------------------------------------------------------
@@ -62,9 +55,9 @@ function ProtectedLayout() {
   }
   if (state === 'logged_out') return <Navigate to="/login" replace />;
   return (
-    <div className="min-h-screen bg-lumio-bg">
+    <Layout>
       <Outlet />
-    </div>
+    </Layout>
   );
 }
 

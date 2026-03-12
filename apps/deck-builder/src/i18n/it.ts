@@ -53,6 +53,9 @@ export default {
   header: {
     language: 'Lingua',
     theme: 'Tema',
+    themeSystem: 'Tema di sistema',
+    themeLight: 'Tema chiaro',
+    themeDark: 'Tema scuro',
     account: 'Account',
   },
   sidebar: {
