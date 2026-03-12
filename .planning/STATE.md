@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: completed
-stopped_at: Completed 36-03-PLAN.md (Phase 36 complete)
-last_updated: "2026-03-12T11:17:09.721Z"
-last_activity: 2026-03-12 — Plan 36-03 app shell complete
+stopped_at: Completed 37-01-PLAN.md
+last_updated: "2026-03-12T11:42:17.204Z"
+last_activity: 2026-03-12 — Plan 37-01 deck-commit edge function complete
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 20
+  total_plans: 5
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 36 - Scaffold & Auth (v3.0 Deck Builder Web)
+**Current focus:** Phase 37 - Backend Pipeline (v3.0 Deck Builder Web)
 
 ## Current Position
 
-Phase: 36 of 40 (Scaffold & Auth) — first of 5 phases in v3.0
-Plan: 3 of 3 complete
-Status: Phase 36 complete
-Last activity: 2026-03-12 — Plan 36-03 app shell complete
+Phase: 37 of 40 (Backend Pipeline) — second of 5 phases in v3.0
+Plan: 1 of 2 complete
+Status: Plan 37-01 complete
+Last activity: 2026-03-12 — Plan 37-01 deck-commit edge function complete
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 73 (70 across v1.1-v2.3 + 3 in v3.0)
+- Total plans completed: 74 (70 across v1.1-v2.3 + 4 in v3.0)
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -54,6 +54,11 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (36-03) Inline SVG icons for hamburger/sun/moon/monitor -- no icon library dependency
 - (36-03) CSS transform transition for mobile sidebar slide-in animation
 - (36-03) Sidebar auto-closes on route change via useLocation() effect
+- (37-01) Path traversal check runs before user prefix check to prevent bypass via ../other-user
+- (37-01) Separate validateUserDirectoryPath for list_files (no .md requirement) vs validateUserPath for file ops
+- (37-01) list_decks always scoped to userId -- no path param needed, no validation needed
+- (37-01) GitHub API env vars via lazy getters for Deno cold start compatibility
+- (37-01) deck-commit deployed with --no-verify-jwt (auth handled internally via supabase.auth.getUser)
 
 ### Pending Todos
 
@@ -77,13 +82,14 @@ None.
 | 6 | Fix i18n countdown interpolation bug on OTP verification screens | 2026-03-03 | d771d4b | [6-fix-i18n-countdown-bug-on-email-verifica](./quick/6-fix-i18n-countdown-bug-on-email-verifica/) |
 | 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
+| Phase 37 P01 | 3min | 1 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-12T11:09:13Z
-Stopped at: Completed 36-03-PLAN.md (Phase 36 complete)
-Resume file: .planning/phases/36-scaffold-auth/36-03-SUMMARY.md
+Last session: 2026-03-12T11:42:17.198Z
+Stopped at: Completed 37-01-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 36-03 complete, Phase 36 complete)*
+*Last updated: 2026-03-12 (Plan 37-01 complete)*
