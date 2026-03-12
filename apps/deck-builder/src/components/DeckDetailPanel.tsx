@@ -35,7 +35,6 @@ export default function DeckDetailPanel() {
   const {
     selectedDeck,
     loading,
-    cardCounts,
     deckCreatedAt,
     renameDeck,
     deleteDeck,
@@ -77,7 +76,9 @@ export default function DeckDetailPanel() {
 
   if (!selectedDeck) return null;
 
-  const count = cardCounts[selectedDeck.name] ?? 0;
+  // Use live card list length (always up-to-date) instead of cached cardCounts
+  const { cards: cardList } = useCard();
+  const count = cardList.length;
   const createdIso = deckCreatedAt[selectedDeck.name];
   const formattedDate = createdIso
     ? new Date(createdIso).toLocaleDateString(

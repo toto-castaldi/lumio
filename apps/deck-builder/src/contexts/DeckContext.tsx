@@ -28,6 +28,7 @@ interface DeckContextType {
   renameDeck: (oldName: string, newName: string) => Promise<void>;
   deleteDeck: (name: string) => Promise<void>;
   refreshDecks: () => Promise<void>;
+  updateCardCount: (deckName: string, count: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -264,6 +265,11 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshDecks, t]);
 
+  // Update card count for a specific deck (avoids stale API cache)
+  const updateCardCount = useCallback((deckName: string, count: number) => {
+    setCardCounts((prev) => ({ ...prev, [deckName]: count }));
+  }, []);
+
   const value = useMemo<DeckContextType>(() => ({
     decks,
     selectedDeck,
@@ -276,6 +282,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     renameDeck: handleRenameDeck,
     deleteDeck: handleDeleteDeck,
     refreshDecks,
+    updateCardCount,
   }), [
     decks,
     selectedDeck,
@@ -288,6 +295,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     handleRenameDeck,
     handleDeleteDeck,
     refreshDecks,
+    updateCardCount,
   ]);
 
   return (

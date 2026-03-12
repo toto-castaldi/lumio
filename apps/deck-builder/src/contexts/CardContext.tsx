@@ -71,7 +71,7 @@ const CardContext = createContext<CardContextType | null>(null);
 
 export function CardProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
-  const { selectedDeck, refreshDecks } = useDeck();
+  const { selectedDeck, updateCardCount } = useDeck();
 
   const [cards, setCards] = useState<CardState[]>([]);
   const [selectedCard, setSelectedCard] = useState<CardState | null>(null);
@@ -90,12 +90,14 @@ export function CardProvider({ children }: { children: ReactNode }) {
       const cardFiles = files
         .filter((f: FileEntry) => f.name !== '.gitkeep' && f.name.endsWith('.md'));
       setCards(cardFiles.map(fileToCard));
+      // Keep sidebar count in sync immediately
+      updateCardCount(selectedDeck.name, cardFiles.length);
     } catch {
       // Non-critical -- leave cards as-is
     } finally {
       setLoading(false);
     }
-  }, [selectedDeck]);
+  }, [selectedDeck, updateCardCount]);
 
   // When selectedDeck changes, refresh cards and clear selection
   useEffect(() => {
@@ -130,7 +132,6 @@ export function CardProvider({ children }: { children: ReactNode }) {
 
       await api.commitFile(filePath, content);
       await refreshCards();
-      await refreshDecks(); // update card count
 
       // Auto-select the newly created card
       setSelectedCard((prev) => {
@@ -155,7 +156,7 @@ export function CardProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false);
     }
-  }, [selectedDeck, refreshCards, refreshDecks, t]);
+  }, [selectedDeck, refreshCards, t]);
 
   // Save card
   const saveCard = useCallback(async (path: string, content: string, sha?: string): Promise<{ sha: string }> => {
@@ -179,7 +180,6 @@ export function CardProvider({ children }: { children: ReactNode }) {
     try {
       await api.deleteFile(path, sha);
       await refreshCards();
-      await refreshDecks(); // update card count
       setSelectedCard(null);
       toast.success(t('card.deleteSuccess'));
     } catch (err) {
@@ -188,7 +188,7 @@ export function CardProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false);
     }
-  }, [refreshCards, refreshDecks, t]);
+  }, [refreshCards, t]);
 
   const value = useMemo<CardContextType>(() => ({
     cards,
