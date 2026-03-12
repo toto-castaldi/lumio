@@ -1,0 +1,503 @@
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+// =============================================================================
+// ENVIRONMENT
+// =============================================================================
+
+const GITHUB_PAT = () => Deno.env.get("GITHUB_PAT")!;
+const GITHUB_OWNER = () => Deno.env.get("GITHUB_REPO_OWNER")!;
+const GITHUB_REPO = () => Deno.env.get("GITHUB_REPO_NAME")!;
+
+// =============================================================================
+// SUPABASE CLIENT (same pattern as git-sync)
+// =============================================================================
+
+function createUserSupabaseClient(authHeader: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: authHeader },
+    },
+  });
+}
+
+async function getUserId(
+  supabase: ReturnType<typeof createClient>
+): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+  return user.id;
+}
+
+// =============================================================================
+// PATH VALIDATION (must stay in sync with deck-commit-path.test.ts)
+// =============================================================================
+
+/**
+ * Validate that a file path belongs to the authenticated user.
+ * Enforces:
+ * - Path starts with {userId}/
+ * - No path traversal (..)
+ * - Only .md files allowed
+ * Returns the normalized path (leading slash stripped).
+ */
+function validateUserPath(userId: string, filePath: string): string {
+  const normalized = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+
+  // Check path traversal BEFORE user prefix check to prevent bypass
+  if (normalized.includes("..")) {
+    throw new Error("Access denied: path traversal not allowed");
+  }
+
+  if (!normalized.startsWith(`${userId}/`)) {
+    throw new Error("Access denied: cannot write outside your directory");
+  }
+
+  if (!normalized.endsWith(".md")) {
+    throw new Error("Only .md files are supported");
+  }
+
+  return normalized;
+}
+
+/**
+ * Validate a directory path for list operations.
+ * Looser than validateUserPath: does not require .md extension.
+ */
+function validateUserDirectoryPath(userId: string, dirPath: string): string {
+  const normalized = dirPath.startsWith("/") ? dirPath.slice(1) : dirPath;
+
+  if (normalized.includes("..")) {
+    throw new Error("Access denied: path traversal not allowed");
+  }
+
+  // Must be the user's root or a subdirectory of it
+  const trimmed = normalized.endsWith("/")
+    ? normalized.slice(0, -1)
+    : normalized;
+
+  if (trimmed !== userId && !trimmed.startsWith(`${userId}/`)) {
+    throw new Error("Access denied: cannot list outside your directory");
+  }
+
+  return trimmed;
+}
+
+// =============================================================================
+// CONTENT ENCODING
+// =============================================================================
+
+/**
+ * UTF-8 safe base64 encoding for GitHub API.
+ * Standard btoa() only handles Latin-1; this handles full Unicode.
+ */
+function encodeContent(content: string): string {
+  return btoa(unescape(encodeURIComponent(content)));
+}
+
+// =============================================================================
+// GITHUB API HELPERS
+// =============================================================================
+
+interface GitHubFileInfo {
+  name: string;
+  path: string;
+  sha: string;
+  content?: string;
+  size: number;
+  type: string;
+}
+
+interface GitHubCommitResult {
+  sha: string;
+  commit_sha: string;
+}
+
+/**
+ * Make an authenticated request to the GitHub Contents API.
+ */
+async function githubFetch(
+  path: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER()}/${GITHUB_REPO()}/contents/${path}`;
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${GITHUB_PAT()}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
+
+/**
+ * Get a file from the GitHub repo.
+ * Returns file info + decoded content, or null if the file doesn't exist.
+ */
+async function getFile(
+  path: string
+): Promise<{ content: string; sha: string; name: string; path: string } | null> {
+  const response = await githubFetch(path);
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(
+      `GitHub API error (${response.status}): ${error.message || "Unknown error"}`
+    );
+  }
+
+  const data = await response.json();
+
+  // Decode base64 content (GitHub returns base64-encoded file content)
+  // GitHub uses standard base64 with possible newlines
+  const rawContent = data.content?.replace(/\n/g, "") || "";
+  const decoded = decodeURIComponent(escape(atob(rawContent)));
+
+  return {
+    content: decoded,
+    sha: data.sha,
+    name: data.name,
+    path: data.path,
+  };
+}
+
+/**
+ * Create or update a file in the GitHub repo.
+ * If sha is provided, it's an update (GitHub requires the current blob SHA).
+ * If sha is omitted, it's a create.
+ */
+async function commitFile(
+  path: string,
+  content: string,
+  message: string,
+  sha?: string
+): Promise<GitHubCommitResult> {
+  const body: Record<string, string> = {
+    message,
+    content: encodeContent(content),
+  };
+
+  if (sha) {
+    body.sha = sha;
+  }
+
+  const response = await githubFetch(path, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(
+      `GitHub API error (${response.status}): ${error.message || "Unknown error"}`
+    );
+  }
+
+  const data = await response.json();
+  return {
+    sha: data.content.sha,
+    commit_sha: data.commit.sha,
+  };
+}
+
+/**
+ * Delete a file from the GitHub repo. Requires the current blob SHA.
+ */
+async function deleteFile(
+  path: string,
+  sha: string,
+  message: string
+): Promise<void> {
+  const response = await githubFetch(path, {
+    method: "DELETE",
+    body: JSON.stringify({ message, sha }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(
+      `GitHub API error (${response.status}): ${error.message || "Unknown error"}`
+    );
+  }
+}
+
+/**
+ * List files/directories at a given path in the GitHub repo.
+ */
+async function listDirectory(
+  path: string
+): Promise<GitHubFileInfo[]> {
+  const response = await githubFetch(path);
+
+  if (response.status === 404) {
+    // Directory doesn't exist yet -- return empty list
+    return [];
+  }
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(
+      `GitHub API error (${response.status}): ${error.message || "Unknown error"}`
+    );
+  }
+
+  const data = await response.json();
+
+  // GitHub returns an array for directories, an object for files
+  if (!Array.isArray(data)) {
+    throw new Error("Path is a file, not a directory");
+  }
+
+  return data.map((item: GitHubFileInfo) => ({
+    name: item.name,
+    path: item.path,
+    sha: item.sha,
+    type: item.type,
+    size: item.size,
+  }));
+}
+
+// =============================================================================
+// REQUEST HANDLER
+// =============================================================================
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json();
+    const { action } = body;
+
+    // All actions require user authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
+    }
+
+    // Create Supabase client with user's auth context
+    const supabase = createUserSupabaseClient(authHeader);
+    const userId = await getUserId(supabase);
+
+    switch (action) {
+      // -----------------------------------------------------------------
+      // commit_file: Create or update a markdown file
+      // -----------------------------------------------------------------
+      case "commit_file": {
+        const { path, content, sha, message } = body;
+        if (!path || content === undefined) {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields: path, content" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const normalizedPath = validateUserPath(userId, path);
+        const commitMessage =
+          message ||
+          (sha
+            ? `[deck-builder] Update ${normalizedPath}`
+            : `[deck-builder] Create ${normalizedPath}`);
+
+        const result = await commitFile(
+          normalizedPath,
+          content,
+          commitMessage,
+          sha
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            sha: result.sha,
+            commit_sha: result.commit_sha,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // delete_file: Remove a markdown file (requires SHA)
+      // -----------------------------------------------------------------
+      case "delete_file": {
+        const { path, sha } = body;
+        if (!path || !sha) {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields: path, sha" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const normalizedPath = validateUserPath(userId, path);
+        await deleteFile(
+          normalizedPath,
+          sha,
+          `[deck-builder] Delete ${normalizedPath}`
+        );
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // get_file: Retrieve file content and SHA
+      // -----------------------------------------------------------------
+      case "get_file": {
+        const { path } = body;
+        if (!path) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: path" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const normalizedPath = validateUserPath(userId, path);
+        const file = await getFile(normalizedPath);
+
+        if (!file) {
+          return new Response(
+            JSON.stringify({ error: "File not found" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 404,
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            content: file.content,
+            sha: file.sha,
+            name: file.name,
+            path: file.path,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // list_files: List files in a user's directory
+      // -----------------------------------------------------------------
+      case "list_files": {
+        const { path } = body;
+        if (!path) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: path" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const normalizedPath = validateUserDirectoryPath(userId, path);
+        const files = await listDirectory(normalizedPath);
+
+        return new Response(
+          JSON.stringify({ success: true, files }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // list_decks: List user's deck directories (always scoped to user)
+      // -----------------------------------------------------------------
+      case "list_decks": {
+        const files = await listDirectory(userId);
+        const decks = files
+          .filter((f) => f.type === "dir")
+          .map((f) => ({ name: f.name, path: f.path }));
+
+        return new Response(
+          JSON.stringify({ success: true, decks }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // Unknown action
+      // -----------------------------------------------------------------
+      default:
+        return new Response(
+          JSON.stringify({ error: `Unknown action: ${action}` }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+
+    // Map specific errors to appropriate status codes
+    let status = 500;
+    if (message === "Unauthorized") {
+      status = 401;
+    } else if (message.startsWith("Access denied:") || message === "Only .md files are supported") {
+      status = 403;
+    }
+
+    return new Response(JSON.stringify({ error: message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status,
+    });
+  }
+});
