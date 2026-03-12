@@ -176,10 +176,11 @@ Plans:
   1. Edge function accepts a card file (path + content) and creates/updates it in the shared GitHub repo via GitHub API
   2. Edge function rejects any request that attempts to write outside the user's own `/{user_id}/` directory
   3. Docora syncs the shared repo and generates AI questions for committed cards (verified end-to-end: commit -> sync -> questions appear in mobile app)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 37-01: TBD
+- [ ] 37-01-PLAN.md — deck-commit edge function with GitHub API integration and path isolation
+- [ ] 37-02-PLAN.md — Client API module, CI/CD deploy, Docora registration documentation
 
 ### Phase 38: Deck Management
 **Goal**: Users can create, view, rename, and delete their own decks in the web app
@@ -242,11 +243,11 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
-| 37. Backend Pipeline | v3.0 | 0/? | Not started | - |
+| 37. Backend Pipeline | v3.0 | 0/2 | Not started | - |
 | 38. Deck Management | v3.0 | 0/? | Not started | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-12 after Plan 36-01 complete*
+*Last updated: 2026-03-12 after Phase 37 planning complete*
