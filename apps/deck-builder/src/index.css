@@ -23,3 +23,19 @@
   --color-lumio-danger: #f87171;
   --color-lumio-border: #374151;
 }
+
+/* MDEditor preview: restore Tailwind-preflight-stripped defaults */
+.wmde-markdown h1 { font-size: 2em; font-weight: bold; margin: 0.67em 0; }
+.wmde-markdown h2 { font-size: 1.5em; font-weight: bold; margin: 0.83em 0; }
+.wmde-markdown h3 { font-size: 1.17em; font-weight: bold; margin: 1em 0; }
+.wmde-markdown h4 { font-size: 1em; font-weight: bold; margin: 1.33em 0; }
+.wmde-markdown h5 { font-size: 0.83em; font-weight: bold; margin: 1.67em 0; }
+.wmde-markdown h6 { font-size: 0.67em; font-weight: bold; margin: 2.33em 0; }
+.wmde-markdown ul { list-style: disc; padding-left: 1.5em; }
+.wmde-markdown ol { list-style: decimal; padding-left: 1.5em; }
+.wmde-markdown blockquote { border-left: 4px solid var(--color-lumio-border); padding-left: 1em; margin: 1em 0; color: var(--color-lumio-text-secondary); }
+.wmde-markdown pre { background: var(--color-lumio-bg); border-radius: 0.375rem; padding: 1em; overflow-x: auto; }
+.wmde-markdown code { font-size: 0.875em; }
+.wmde-markdown p { margin: 0.5em 0; }
+.wmde-markdown a { color: var(--color-lumio-primary); text-decoration: underline; }
+.wmde-markdown img { max-width: 100%; height: auto; }
