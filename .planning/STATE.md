@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: executing
-stopped_at: Completed 36-01-PLAN.md
-last_updated: "2026-03-12T07:54:09Z"
-last_activity: 2026-03-12 — Plan 36-01 scaffold and lib layer complete
+stopped_at: Completed 36-02-PLAN.md
+last_updated: "2026-03-12T08:01:28Z"
+last_activity: 2026-03-12 — Plan 36-02 auth pages complete
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 6
+  completed_plans: 2
+  percent: 13
 ---
 
 # Project State
@@ -26,16 +26,16 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 36 of 40 (Scaffold & Auth) — first of 5 phases in v3.0
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: Executing
-Last activity: 2026-03-12 — Plan 36-01 scaffold and lib layer complete
+Last activity: 2026-03-12 — Plan 36-02 auth pages complete
 
-Progress: [█░░░░░░░░░] 6%
+Progress: [█▓░░░░░░░░] 13%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 71 (70 across v1.1-v2.3 + 1 in v3.0)
+- Total plans completed: 72 (70 across v1.1-v2.3 + 2 in v3.0)
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -48,6 +48,9 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (36-01) Used vi.hoisted() for test mock functions to handle Vitest module hoisting correctly
 - (36-01) Added vite-env.d.ts for import.meta.env type support in deck-builder
 - (36-01) Default matchMedia mock in theme tests since jsdom does not implement matchMedia
+- (36-02) Used inline Google SVG icon for brand recognition without adding an icon library dependency
+- (36-02) Auto-submit OTP when 6th digit entered for faster verification UX
+- (36-02) ResetPassword uses single component with step state (1 or 2) rather than two separate routes
 
 ### Pending Todos
 
@@ -74,10 +77,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T07:54:09Z
-Stopped at: Completed 36-01-PLAN.md
-Resume file: .planning/phases/36-scaffold-auth/36-01-SUMMARY.md
+Last session: 2026-03-12T08:01:28Z
+Stopped at: Completed 36-02-PLAN.md
+Resume file: .planning/phases/36-scaffold-auth/36-02-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 36-01 complete)*
+*Last updated: 2026-03-12 (Plan 36-02 complete)*

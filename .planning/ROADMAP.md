@@ -161,7 +161,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
   3. App layout is responsive with a sidebar area and main content area that adapts to screen size
   4. User can switch between Italian and English, and the UI updates immediately
   5. User can toggle dark mode (system/light/dark) and the theme applies across all UI elements
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 36-01-PLAN.md — Scaffold Vite project with lib layer, contexts, router, and Wave 0 tests
@@ -241,7 +241,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
-| 36. Scaffold & Auth | v3.0 | 1/3 | In progress | - |
+| 36. Scaffold & Auth | 2/3 | In Progress|  | - |
 | 37. Backend Pipeline | v3.0 | 0/? | Not started | - |
 | 38. Deck Management | v3.0 | 0/? | Not started | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |

@@ -9,8 +9,8 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 ### Authentication & Infrastructure
 
-- [ ] **AUTH-01**: User can login on deck builder web app with Google OAuth (same Supabase project)
-- [ ] **AUTH-02**: User can login on deck builder web app with email/password (same Supabase project)
+- [x] **AUTH-01**: User can login on deck builder web app with Google OAuth (same Supabase project)
+- [x] **AUTH-02**: User can login on deck builder web app with email/password (same Supabase project)
 - [ ] **AUTH-03**: Web app has responsive layout with sidebar deck list and main editor area
 - [ ] **AUTH-04**: Web app supports IT/EN bilingual UI with language toggle
 - [ ] **AUTH-05**: Web app supports dark mode with system detection and manual toggle
