@@ -1,13 +1,15 @@
-import matter from 'gray-matter';
+import { parse as yamlParse, stringify as yamlStringify } from 'yaml';
 import type { CardFrontmatter } from '@lumio/shared';
+
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 
 /**
  * Parse a raw markdown string into CardFrontmatter + body.
- * Uses gray-matter to extract YAML frontmatter.
  */
 export function parseCard(raw: string): { frontmatter: CardFrontmatter; body: string } {
-  const parsed = matter(raw);
-  const data = parsed.data as Record<string, unknown>;
+  const match = raw.match(FRONTMATTER_RE);
+  const data: Record<string, unknown> = match ? (yamlParse(match[1]) ?? {}) : {};
+  const content = match ? match[2] : raw;
 
   const frontmatter: CardFrontmatter = {
     title: typeof data.title === 'string' ? data.title : '',
@@ -16,15 +18,13 @@ export function parseCard(raw: string): { frontmatter: CardFrontmatter; body: st
     ...(data.language !== undefined && { language: String(data.language) }),
   };
 
-  return { frontmatter, body: parsed.content };
+  return { frontmatter, body: content };
 }
 
 /**
  * Serialize CardFrontmatter + body back into a markdown string with YAML frontmatter.
- * Uses gray-matter stringify.
  */
 export function serializeCard(frontmatter: CardFrontmatter, body: string): string {
-  // Build a clean data object, omitting undefined fields
   const data: Record<string, unknown> = {
     title: frontmatter.title,
     tags: frontmatter.tags,
@@ -36,7 +36,8 @@ export function serializeCard(frontmatter: CardFrontmatter, body: string): strin
     data.language = frontmatter.language;
   }
 
-  return matter.stringify(body, data);
+  const yaml = yamlStringify(data).trimEnd();
+  return `---\n${yaml}\n---\n${body}`;
 }
 
 /**
