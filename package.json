@@ -1,7 +1,7 @@
 {
   "name": "lumio",
   "private": true,
-  "version": "2.1",
+  "version": "2.2",
   "pnpm": {
     "overrides": {
       "react": "19.1.0"
@@ -16,6 +16,7 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:functions": "supabase functions serve --env-file supabase/.env.local --no-verify-jwt",
+    "dev:deck-builder": "pnpm --filter @lumio/deck-builder dev",
     "extract-version": "node scripts/extract-version.cjs"
   },
   "devDependencies": {

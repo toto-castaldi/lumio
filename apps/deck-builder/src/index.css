@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-lumio-bg: #f5f5f5;
+  --color-lumio-surface: #ffffff;
+  --color-lumio-text: #333333;
+  --color-lumio-text-secondary: #6B7280;
+  --color-lumio-primary: #3B82F6;
+  --color-lumio-primary-light: #DBEAFE;
+  --color-lumio-danger: #ef4444;
+  --color-lumio-border: #e5e7eb;
+}
+
+.dark {
+  --color-lumio-bg: #111827;
+  --color-lumio-surface: #1f2937;
+  --color-lumio-text: #f9fafb;
+  --color-lumio-text-secondary: #9ca3af;
+  --color-lumio-primary: #60a5fa;
+  --color-lumio-primary-light: #1e3a5f;
+  --color-lumio-danger: #f87171;
+  --color-lumio-border: #374151;
+}

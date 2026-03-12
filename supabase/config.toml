@@ -35,6 +35,7 @@ additional_redirect_urls = [
   "http://localhost:5173/auth/callback",
   "http://localhost:5174/auth/callback",
   "https://m-lumio.toto-castaldi.com/auth/callback",
+  "https://deck.lumio.toto-castaldi.com/auth/callback",
   "lumio://auth/callback"
 ]
 jwt_expiry = 3600
