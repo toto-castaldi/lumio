@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: completed
-stopped_at: Completed 37-01-PLAN.md
-last_updated: "2026-03-12T11:42:17.204Z"
-last_activity: 2026-03-12 — Plan 37-01 deck-commit edge function complete
+stopped_at: Completed 37-02-PLAN.md
+last_updated: "2026-03-12T11:46:59.591Z"
+last_activity: 2026-03-12 — Plan 37-02 client API module complete (Phase 37 done)
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 37 of 40 (Backend Pipeline) — second of 5 phases in v3.0
-Plan: 1 of 2 complete
-Status: Plan 37-01 complete
-Last activity: 2026-03-12 — Plan 37-01 deck-commit edge function complete
+Plan: 2 of 2 complete
+Status: Phase 37 complete
+Last activity: 2026-03-12 — Plan 37-02 client API module complete (Phase 37 done)
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,8 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (37-01) list_decks always scoped to userId -- no path param needed, no validation needed
 - (37-01) GitHub API env vars via lazy getters for Deno cold start compatibility
 - (37-01) deck-commit deployed with --no-verify-jwt (auth handled internally via supabase.auth.getUser)
+- (37-02) Extract clean typed objects from edge function responses (strip success field) for type-safe downstream usage
+- (37-02) Private invoke<T> helper centralizes error handling -- single point of change for edge function calls
 
 ### Pending Todos
 
@@ -83,13 +85,14 @@ None.
 | 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
 | Phase 37 P01 | 3min | 1 tasks | 3 files |
+| Phase 37 P02 | 2min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-12T11:42:17.198Z
-Stopped at: Completed 37-01-PLAN.md
+Last session: 2026-03-12T11:46:59.585Z
+Stopped at: Completed 37-02-PLAN.md
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 37-01 complete)*
+*Last updated: 2026-03-12 (Phase 37 complete)*

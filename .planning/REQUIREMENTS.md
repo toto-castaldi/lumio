@@ -41,7 +41,7 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 - [x] **PIPE-01**: Edge function commits card files to shared Lumio Git repo via GitHub API
 - [x] **PIPE-02**: Edge function enforces user path isolation (user can only write to `/{user_id}/`)
-- [ ] **PIPE-03**: Docora syncs shared repo and generates AI questions (existing pipeline)
+- [x] **PIPE-03**: Docora syncs shared repo and generates AI questions (existing pipeline)
 
 ### Deploy
 
@@ -100,7 +100,7 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 | EDIT-03 | Phase 39 | Pending |
 | PIPE-01 | Phase 37 | Complete |
 | PIPE-02 | Phase 37 | Complete |
-| PIPE-03 | Phase 37 | Pending |
+| PIPE-03 | Phase 37 | Complete |
 | DEPL-01 | Phase 40 | Pending |
 | DEPL-02 | Phase 40 | Pending |
 

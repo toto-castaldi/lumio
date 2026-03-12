@@ -144,7 +144,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 **Milestone Goal:** Web app React SPA where authenticated users create decks and flashcards in markdown, committed via edge function to a shared Git repo, synced by Docora for AI question generation.
 
 - [x] **Phase 36: Scaffold & Auth** - Vite/React/Tailwind project with Supabase auth, responsive layout shell, i18n, and dark mode (completed 2026-03-12)
-- [ ] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration
+- [x] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration (completed 2026-03-12)
 - [ ] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation
 - [ ] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback
 - [ ] **Phase 40: Deploy & CI/CD** - Production deploy to deck.lumio.toto-castaldi.com with automated build pipeline
@@ -176,7 +176,7 @@ Plans:
   1. Edge function accepts a card file (path + content) and creates/updates it in the shared GitHub repo via GitHub API
   2. Edge function rejects any request that attempts to write outside the user's own `/{user_id}/` directory
   3. Docora syncs the shared repo and generates AI questions for committed cards (verified end-to-end: commit -> sync -> questions appear in mobile app)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 37-01-PLAN.md — deck-commit edge function with GitHub API integration and path isolation
@@ -243,7 +243,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
-| 37. Backend Pipeline | 1/2 | In Progress|  | - |
+| 37. Backend Pipeline | 2/2 | Complete   | 2026-03-12 | - |
 | 38. Deck Management | v3.0 | 0/? | Not started | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
