@@ -10,23 +10,27 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@lumio/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.45.0",
+    "@uiw/react-md-editor": "^4.0.11",
+    "gray-matter": "^4.0.3",
+    "i18n-js": "^4.5.2",
+    "katex": "^0.16.38",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-router": "^7.13.1",
-    "@supabase/supabase-js": "^2.45.0",
     "react-hot-toast": "^2.5.2",
-    "i18n-js": "^4.5.2",
-    "@lumio/shared": "workspace:*"
+    "react-router": "^7.13.1"
   },
   "devDependencies": {
-    "vite": "^7.3.1",
-    "@vitejs/plugin-react": "^4.5.0",
-    "tailwindcss": "^4.2.1",
     "@tailwindcss/vite": "^4.2.1",
-    "typescript": "~5.9.2",
+    "@types/katex": "^0.16.8",
     "@types/react": "~19.1.0",
     "@types/react-dom": "~19.1.0",
-    "vitest": "^4.0.0",
-    "jsdom": "^26.1.0"
+    "@vitejs/plugin-react": "^4.5.0",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.2",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.0"
   }
 }
