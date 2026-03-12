@@ -98,6 +98,33 @@ function validateUserDirectoryPath(userId: string, dirPath: string): string {
 }
 
 // =============================================================================
+// DECK NAME VALIDATION (must stay in sync with apps/deck-builder/src/lib/validation.ts)
+// =============================================================================
+
+const DECK_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9 -]*$/;
+const MAX_DECK_NAME_LENGTH = 50;
+const RESERVED_DECK_NAMES = [".", "..", ".git"];
+
+/**
+ * Validate a deck name server-side. Returns error message if invalid, null if valid.
+ */
+function validateDeckName(name: string): string | null {
+  if (name.length === 0) {
+    return "Deck name cannot be empty";
+  }
+  if (name.length > MAX_DECK_NAME_LENGTH) {
+    return `Deck name must be ${MAX_DECK_NAME_LENGTH} characters or less`;
+  }
+  if (RESERVED_DECK_NAMES.includes(name)) {
+    return "Reserved name not allowed";
+  }
+  if (!DECK_NAME_REGEX.test(name)) {
+    return "Deck name must start with a letter or number and contain only letters, numbers, spaces, and hyphens";
+  }
+  return null;
+}
+
+// =============================================================================
 // CONTENT ENCODING
 // =============================================================================
 
@@ -465,6 +492,200 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, decks }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // create_deck: Create a new deck directory via .gitkeep
+      // -----------------------------------------------------------------
+      case "create_deck": {
+        const { name } = body;
+        if (!name || typeof name !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: name" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const trimmedName = name.trim();
+
+        // Validate deck name
+        const nameError = validateDeckName(trimmedName);
+        if (nameError) {
+          return new Response(
+            JSON.stringify({ error: nameError }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const deckPath = `${userId}/${trimmedName}`;
+
+        // Check if deck already exists
+        const existingFiles = await listDirectory(deckPath);
+        if (existingFiles.length > 0) {
+          return new Response(
+            JSON.stringify({ error: "Deck already exists" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 409,
+            }
+          );
+        }
+
+        // Commit .gitkeep to establish the deck directory
+        await commitFile(
+          `${deckPath}/.gitkeep`,
+          "",
+          `[deck-builder] Create deck: ${trimmedName}`
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            deck: { name: trimmedName, path: deckPath },
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // rename_deck: Move all files from old deck path to new deck path
+      // -----------------------------------------------------------------
+      case "rename_deck": {
+        const { old_name, new_name } = body;
+        if (!old_name || typeof old_name !== "string" || !new_name || typeof new_name !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields: old_name, new_name" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const trimmedNewName = new_name.trim();
+
+        // Validate new deck name
+        const newNameError = validateDeckName(trimmedNewName);
+        if (newNameError) {
+          return new Response(
+            JSON.stringify({ error: newNameError }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const oldPath = `${userId}/${old_name.trim()}`;
+        const newPath = `${userId}/${trimmedNewName}`;
+
+        // Check old deck exists
+        const oldFiles = await listDirectory(oldPath);
+        if (oldFiles.length === 0) {
+          return new Response(
+            JSON.stringify({ error: "Deck not found" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 404,
+            }
+          );
+        }
+
+        // Check new deck does NOT exist
+        const newFiles = await listDirectory(newPath);
+        if (newFiles.length > 0) {
+          return new Response(
+            JSON.stringify({ error: "Deck already exists" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 409,
+            }
+          );
+        }
+
+        // Move each file sequentially (GitHub Contents API can conflict with concurrent ops)
+        for (const file of oldFiles) {
+          const fileData = await getFile(file.path);
+          if (fileData) {
+            await commitFile(
+              `${newPath}/${file.name}`,
+              fileData.content,
+              `[deck-builder] Rename deck: ${old_name.trim()} -> ${trimmedNewName}`
+            );
+            await deleteFile(
+              file.path,
+              file.sha,
+              `[deck-builder] Rename deck: ${old_name.trim()} -> ${trimmedNewName}`
+            );
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            deck: { name: trimmedNewName, path: newPath },
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // delete_deck: Remove all files in a deck directory
+      // -----------------------------------------------------------------
+      case "delete_deck": {
+        const { name: deckName } = body;
+        if (!deckName || typeof deckName !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: name" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const deletePath = `${userId}/${deckName.trim()}`;
+
+        // List all files in the deck
+        const deckFiles = await listDirectory(deletePath);
+        if (deckFiles.length === 0) {
+          return new Response(
+            JSON.stringify({ error: "Deck not found" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 404,
+            }
+          );
+        }
+
+        // Delete each file sequentially
+        for (const file of deckFiles) {
+          await deleteFile(
+            file.path,
+            file.sha,
+            `[deck-builder] Delete deck: ${deckName.trim()}`
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,

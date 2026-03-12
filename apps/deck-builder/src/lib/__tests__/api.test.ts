@@ -14,7 +14,7 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 // Import after mock setup
-import { commitFile, deleteFile, getFile, listFiles, listDecks } from '../api';
+import { commitFile, deleteFile, getFile, listFiles, listDecks, createDeck, renameDeck, deleteDeck } from '../api';
 
 describe('api module', () => {
   beforeEach(() => {
@@ -190,6 +190,115 @@ describe('api module', () => {
       });
 
       await expect(listFiles('other-user/deck')).rejects.toThrow('Access denied');
+    });
+  });
+
+  describe('createDeck', () => {
+    it('calls invoke with action create_deck and name', async () => {
+      const deck = { name: 'Math 101', path: 'user1/Math 101' };
+      mockInvoke.mockResolvedValue({
+        data: { success: true, deck },
+        error: null,
+      });
+
+      const result = await createDeck('Math 101');
+
+      expect(mockInvoke).toHaveBeenCalledWith('deck-commit', {
+        body: { action: 'create_deck', name: 'Math 101' },
+      });
+      expect(result).toEqual(deck);
+    });
+
+    it('returns DeckEntry from successful response', async () => {
+      const deck = { name: 'Science', path: 'user1/Science' };
+      mockInvoke.mockResolvedValue({
+        data: { success: true, deck },
+        error: null,
+      });
+
+      const result = await createDeck('Science');
+
+      expect(result).toEqual({ name: 'Science', path: 'user1/Science' });
+    });
+
+    it('throws on error response', async () => {
+      mockInvoke.mockResolvedValue({
+        data: null,
+        error: { message: 'Deck already exists' },
+      });
+
+      await expect(createDeck('existing')).rejects.toThrow('Deck already exists');
+    });
+  });
+
+  describe('renameDeck', () => {
+    it('calls invoke with action rename_deck, old_name, and new_name', async () => {
+      const deck = { name: 'New Name', path: 'user1/New Name' };
+      mockInvoke.mockResolvedValue({
+        data: { success: true, deck },
+        error: null,
+      });
+
+      const result = await renameDeck('old-name', 'New Name');
+
+      expect(mockInvoke).toHaveBeenCalledWith('deck-commit', {
+        body: { action: 'rename_deck', old_name: 'old-name', new_name: 'New Name' },
+      });
+      expect(result).toEqual(deck);
+    });
+
+    it('returns DeckEntry from successful response', async () => {
+      const deck = { name: 'Renamed', path: 'user1/Renamed' };
+      mockInvoke.mockResolvedValue({
+        data: { success: true, deck },
+        error: null,
+      });
+
+      const result = await renameDeck('old', 'Renamed');
+
+      expect(result).toEqual({ name: 'Renamed', path: 'user1/Renamed' });
+    });
+
+    it('throws on error response', async () => {
+      mockInvoke.mockResolvedValue({
+        data: null,
+        error: { message: 'Deck not found' },
+      });
+
+      await expect(renameDeck('missing', 'new-name')).rejects.toThrow('Deck not found');
+    });
+  });
+
+  describe('deleteDeck', () => {
+    it('calls invoke with action delete_deck and name', async () => {
+      mockInvoke.mockResolvedValue({
+        data: { success: true },
+        error: null,
+      });
+
+      await deleteDeck('deck-name');
+
+      expect(mockInvoke).toHaveBeenCalledWith('deck-commit', {
+        body: { action: 'delete_deck', name: 'deck-name' },
+      });
+    });
+
+    it('resolves on success', async () => {
+      mockInvoke.mockResolvedValue({
+        data: { success: true },
+        error: null,
+      });
+
+      await expect(deleteDeck('deck-name')).resolves.toBeUndefined();
+    });
+
+    it('throws on error response', async () => {
+      mockInvoke.mockResolvedValue({
+        data: null,
+        error: { message: 'Deck not found' },
+      });
+
+      await expect(deleteDeck('missing')).rejects.toThrow('Deck not found');
     });
   });
 });

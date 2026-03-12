@@ -71,3 +71,20 @@ export async function listDecks(): Promise<DeckEntry[]> {
   const data = await invoke<{ decks: DeckEntry[] }>({ action: 'list_decks' });
   return data.decks;
 }
+
+/** Create a new deck with the given name */
+export async function createDeck(name: string): Promise<DeckEntry> {
+  const data = await invoke<{ deck: DeckEntry }>({ action: 'create_deck', name });
+  return data.deck;
+}
+
+/** Rename an existing deck */
+export async function renameDeck(oldName: string, newName: string): Promise<DeckEntry> {
+  const data = await invoke<{ deck: DeckEntry }>({ action: 'rename_deck', old_name: oldName, new_name: newName });
+  return data.deck;
+}
+
+/** Delete a deck and all its contents */
+export async function deleteDeck(name: string): Promise<void> {
+  await invoke<{ success: true }>({ action: 'delete_deck', name });
+}
