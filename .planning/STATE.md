@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
-status: planning
-stopped_at: Phase 36 context gathered
-last_updated: "2026-03-12T07:19:34.543Z"
-last_activity: 2026-03-11 — Roadmap created for v3.0
+status: executing
+stopped_at: Completed 36-01-PLAN.md
+last_updated: "2026-03-12T07:54:09Z"
+last_activity: 2026-03-12 — Plan 36-01 scaffold and lib layer complete
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 6
 ---
 
 # Project State
@@ -26,16 +26,16 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 36 of 40 (Scaffold & Auth) — first of 5 phases in v3.0
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-11 — Roadmap created for v3.0
+Plan: 1 of 3 complete
+Status: Executing
+Last activity: 2026-03-12 — Plan 36-01 scaffold and lib layer complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 6%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 70 (across v1.1-v2.3)
+- Total plans completed: 71 (70 across v1.1-v2.3 + 1 in v3.0)
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -44,6 +44,10 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (66 entries).
+
+- (36-01) Used vi.hoisted() for test mock functions to handle Vitest module hoisting correctly
+- (36-01) Added vite-env.d.ts for import.meta.env type support in deck-builder
+- (36-01) Default matchMedia mock in theme tests since jsdom does not implement matchMedia
 
 ### Pending Todos
 
@@ -70,10 +74,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T07:19:34.537Z
-Stopped at: Phase 36 context gathered
-Resume file: .planning/phases/36-scaffold-auth/36-CONTEXT.md
+Last session: 2026-03-12T07:54:09Z
+Stopped at: Completed 36-01-PLAN.md
+Resume file: .planning/phases/36-scaffold-auth/36-01-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-11 (v3.0 roadmap created)*
+*Last updated: 2026-03-12 (Plan 36-01 complete)*

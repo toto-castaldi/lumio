@@ -80,11 +80,11 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 36 | Pending |
-| AUTH-02 | Phase 36 | Pending |
-| AUTH-03 | Phase 36 | Pending |
-| AUTH-04 | Phase 36 | Pending |
-| AUTH-05 | Phase 36 | Pending |
+| AUTH-01 | Phase 36 | In Progress (36-01: lib + context) |
+| AUTH-02 | Phase 36 | In Progress (36-01: lib + context) |
+| AUTH-03 | Phase 36 | In Progress (36-01: lib + context) |
+| AUTH-04 | Phase 36 | In Progress (36-01: lib + context) |
+| AUTH-05 | Phase 36 | In Progress (36-01: lib + context) |
 | DECK-01 | Phase 38 | Pending |
 | DECK-02 | Phase 38 | Pending |
 | DECK-03 | Phase 38 | Pending |
@@ -111,4 +111,4 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after roadmap creation (traceability updated)*
+*Last updated: 2026-03-12 after Plan 36-01 complete (AUTH requirements in progress)*
