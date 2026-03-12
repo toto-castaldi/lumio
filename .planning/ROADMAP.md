@@ -220,10 +220,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. deck.lumio.toto-castaldi.com serves the deck builder web app with SSL
   2. Pushing to main triggers an automated build and deploy of the web app
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 40-01: TBD
+- [ ] 40-01-PLAN.md — Nginx config, version stamp, deploy-deck-builder CI job, and production server setup
 
 ## Progress
 
@@ -247,8 +247,8 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
 | 39. Card Authoring | 2/2 | Complete    | 2026-03-12 | - |
-| 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
+| 40. Deploy & CI/CD | v3.0 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-12 after Phase 39 complete*
+*Last updated: 2026-03-12 after Phase 40 planned*
