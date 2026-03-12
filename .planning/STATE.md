@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: in_progress
-stopped_at: Completed 39-01-PLAN.md
-last_updated: "2026-03-12T17:44:15.000Z"
-last_activity: 2026-03-12 — Plan 39-01 card data layer complete
+stopped_at: Completed 39-02-PLAN.md
+last_updated: "2026-03-12T18:12:40Z"
+last_activity: 2026-03-12 — Plan 39-02 card authoring UI complete
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 39 - Card Authoring (v3.0 Deck Builder Web) -- IN PROGRESS
+**Current focus:** Phase 39 - Card Authoring (v3.0 Deck Builder Web) -- COMPLETE, ready for Phase 40
 
 ## Current Position
 
 Phase: 39 of 40 (Card Authoring) — fourth of 5 phases in v3.0
-Plan: 1 of 2 complete
-Status: Plan 39-01 complete, ready for Plan 39-02
-Last activity: 2026-03-12 — Plan 39-01 card data layer complete
+Plan: 2 of 2 complete
+Status: Phase 39 complete, ready for Phase 40
+Last activity: 2026-03-12 — Plan 39-02 card authoring UI complete
 
-Progress: [█████-----] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 77 (70 across v1.1-v2.3 + 7 in v3.0)
+- Total plans completed: 78 (70 across v1.1-v2.3 + 8 in v3.0)
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -71,6 +71,10 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (39-01) gray-matter works in jsdom/Vite without Buffer polyfill -- no extra config needed
 - (39-01) CardContext auto-selects newly created card via setTimeout micro-task after refreshCards
 - (39-01) De-slugify filenames to titles with title case for CardState display
+- (39-02) Replaced gray-matter with yaml package for browser compatibility (Buffer not available in browser)
+- (39-02) Card count synced in sidebar and header after CRUD operations via DeckContext totalCards state
+- (39-02) Responsive MDEditor: split-pane live preview on desktop, toggle tabs on mobile via matchMedia
+- (39-02) Custom math and image toolbar commands using MDEditor commands API
 
 ### Pending Todos
 
@@ -99,13 +103,14 @@ None.
 | Phase 38 P01 | 4min | 2 tasks | 5 files |
 | Phase 38 P02 | 5min | 3 tasks | 8 files |
 | Phase 39 P01 | 4min | 2 tasks | 7 files |
+| Phase 39 P02 | 8min | 3 tasks | 13 files |
 
 ## Session Continuity
 
-Last session: 2026-03-12T17:44:15Z
-Stopped at: Completed 39-01-PLAN.md
-Resume file: .planning/phases/39-card-authoring/39-01-SUMMARY.md
+Last session: 2026-03-12T18:12:40Z
+Stopped at: Completed 39-02-PLAN.md
+Resume file: .planning/phases/39-card-authoring/39-02-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 39-01 complete)*
+*Last updated: 2026-03-12 (Plan 39-02 complete)*

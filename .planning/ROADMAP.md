@@ -146,7 +146,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 36: Scaffold & Auth** - Vite/React/Tailwind project with Supabase auth, responsive layout shell, i18n, and dark mode (completed 2026-03-12)
 - [x] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration (completed 2026-03-12)
 - [x] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation (completed 2026-03-12)
-- [ ] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback
+- [x] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback (completed 2026-03-12)
 - [ ] **Phase 40: Deploy & CI/CD** - Production deploy to deck.lumio.toto-castaldi.com with automated build pipeline
 
 ## Phase Details
@@ -207,7 +207,7 @@ Plans:
   3. User can set card metadata (title, tags, difficulty, language) via a structured form that produces valid frontmatter
   4. User can delete a card after confirming in a dialog
   5. User receives toast feedback confirming successful save or showing error details
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 39-01-PLAN.md — Foundation: deps install, frontmatter/validation libs with tests, CardContext
@@ -246,9 +246,9 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
-| 39. Card Authoring | 1/2 | In Progress|  | - |
+| 39. Card Authoring | 2/2 | Complete   | 2026-03-12 | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-12 after Phase 39 planning complete*
+*Last updated: 2026-03-12 after Phase 39 complete*

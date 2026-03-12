@@ -26,16 +26,16 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 - [x] **CARD-01**: User can create a new card with markdown content in a deck
 - [x] **CARD-02**: User can edit an existing card's markdown content
-- [ ] **CARD-03**: User can delete a card with confirmation dialog
+- [x] **CARD-03**: User can delete a card with confirmation dialog
 - [x] **CARD-04**: User can set card metadata via structured form (title, tags, difficulty, language)
 - [x] **CARD-05**: New card starts with pre-filled template (frontmatter + placeholder body)
 - [x] **CARD-06**: User can see list of cards within a deck
 
 ### Editor
 
-- [ ] **EDIT-01**: Markdown editor with live preview (split-pane or toggle)
-- [ ] **EDIT-02**: Toolbar with buttons for bold, italic, code block, math block, heading, list
-- [ ] **EDIT-03**: User receives toast feedback on successful save or error
+- [x] **EDIT-01**: Markdown editor with live preview (split-pane or toggle)
+- [x] **EDIT-02**: Toolbar with buttons for bold, italic, code block, math block, heading, list
+- [x] **EDIT-03**: User receives toast feedback on successful save or error
 
 ### Backend Pipeline
 
@@ -91,13 +91,13 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 | DECK-04 | Phase 38 | Complete |
 | CARD-01 | Phase 39 | Complete |
 | CARD-02 | Phase 39 | Complete |
-| CARD-03 | Phase 39 | Pending |
+| CARD-03 | Phase 39 | Complete |
 | CARD-04 | Phase 39 | Complete |
 | CARD-05 | Phase 39 | Complete |
 | CARD-06 | Phase 39 | Complete |
-| EDIT-01 | Phase 39 | Pending |
-| EDIT-02 | Phase 39 | Pending |
-| EDIT-03 | Phase 39 | Pending |
+| EDIT-01 | Phase 39 | Complete |
+| EDIT-02 | Phase 39 | Complete |
+| EDIT-03 | Phase 39 | Complete |
 | PIPE-01 | Phase 37 | Complete |
 | PIPE-02 | Phase 37 | Complete |
 | PIPE-03 | Phase 37 | Complete |
