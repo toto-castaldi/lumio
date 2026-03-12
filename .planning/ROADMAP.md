@@ -191,7 +191,7 @@ Plans:
   2. User can rename an existing deck
   3. User can delete a deck after confirming in a dialog
   4. User sees only their own decks (not other users' content from the shared repo)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 38-01-PLAN.md — Edge function deck actions (create/rename/delete) + client API + validation utility
@@ -245,7 +245,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
-| 38. Deck Management | v3.0 | 0/2 | Not started | - |
+| 38. Deck Management | 1/2 | In Progress|  | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
