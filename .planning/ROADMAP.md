@@ -241,7 +241,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
-| 36. Scaffold & Auth | 3/3 | Complete   | 2026-03-12 | - |
+| 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | v3.0 | 0/? | Not started | - |
 | 38. Deck Management | v3.0 | 0/? | Not started | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
