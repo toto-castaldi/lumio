@@ -207,7 +207,7 @@ Plans:
   3. User can set card metadata (title, tags, difficulty, language) via a structured form that produces valid frontmatter
   4. User can delete a card after confirming in a dialog
   5. User receives toast feedback confirming successful save or showing error details
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 39-01-PLAN.md — Foundation: deps install, frontmatter/validation libs with tests, CardContext
@@ -246,7 +246,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
-| 39. Card Authoring | v3.0 | 0/2 | Planned | - |
+| 39. Card Authoring | 1/2 | In Progress|  | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
 ---
