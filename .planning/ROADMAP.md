@@ -246,7 +246,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
-| 39. Card Authoring | 2/2 | Complete   | 2026-03-12 | - |
+| 39. Card Authoring | 2/2 | Complete    | 2026-03-12 | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
 ---
