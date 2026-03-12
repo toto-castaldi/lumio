@@ -161,11 +161,12 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
   3. App layout is responsive with a sidebar area and main content area that adapts to screen size
   4. User can switch between Italian and English, and the UI updates immediately
   5. User can toggle dark mode (system/light/dark) and the theme applies across all UI elements
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 36-01: TBD
-- [ ] 36-02: TBD
+- [ ] 36-01-PLAN.md — Scaffold Vite project with lib layer, contexts, router, and Wave 0 tests
+- [ ] 36-02-PLAN.md — Auth pages (login, signup, OTP, forgot/reset password, OAuth callback)
+- [ ] 36-03-PLAN.md — App shell UI (layout, header, sidebar, avatar dropdown, dashboard)
 
 ### Phase 37: Backend Pipeline
 **Goal**: Edge function can commit markdown files to the shared Lumio GitHub repo with user isolation, and Docora syncs the repo to generate AI questions
@@ -240,7 +241,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
-| 36. Scaffold & Auth | v3.0 | 0/? | Not started | - |
+| 36. Scaffold & Auth | v3.0 | 0/3 | Not started | - |
 | 37. Backend Pipeline | v3.0 | 0/? | Not started | - |
 | 38. Deck Management | v3.0 | 0/? | Not started | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
@@ -248,4 +249,4 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-11 after v3.0 roadmap creation*
+*Last updated: 2026-03-12 after Phase 36 planning*
