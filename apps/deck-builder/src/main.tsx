@@ -1,32 +1,18 @@
-import { StrictMode, useEffect } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider, Navigate, Outlet, useNavigate } from 'react-router';
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { I18nProvider } from './contexts/I18nContext';
-import { supabase } from './lib/supabase';
+import { LoginPage } from './pages/LoginPage';
+import { SignUpPage } from './pages/SignUpPage';
+import { AuthCallback } from './pages/AuthCallback';
 import './index.css';
 
 // ---------------------------------------------------------------------------
 // Placeholder page components (Plans 02 and 03 replace with real implementations)
 // ---------------------------------------------------------------------------
-
-function LoginPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
-      <div className="text-lumio-text">Login Page (placeholder)</div>
-    </div>
-  );
-}
-
-function SignUpPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
-      <div className="text-lumio-text">Sign Up Page (placeholder)</div>
-    </div>
-  );
-}
 
 function OtpVerification() {
   return (
@@ -48,27 +34,6 @@ function ResetPassword() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
       <div className="text-lumio-text">Reset Password (placeholder)</div>
-    </div>
-  );
-}
-
-function AuthCallback() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // detectSessionInUrl handles the code exchange automatically.
-    // Listen for auth state change to know when session is ready.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        navigate('/', { replace: true });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
-      <div className="text-lumio-text">Signing in...</div>
     </div>
   );
 }
