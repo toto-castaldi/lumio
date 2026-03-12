@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: executing
-stopped_at: Completed 36-02-PLAN.md
-last_updated: "2026-03-12T08:01:28Z"
-last_activity: 2026-03-12 — Plan 36-02 auth pages complete
+stopped_at: Completed 36-03-PLAN.md (Phase 36 complete)
+last_updated: "2026-03-12T11:09:13Z"
+last_activity: 2026-03-12 — Plan 36-03 app shell complete (Phase 36 done)
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 13
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -26,16 +26,16 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 36 of 40 (Scaffold & Auth) — first of 5 phases in v3.0
-Plan: 2 of 3 complete
-Status: Executing
-Last activity: 2026-03-12 — Plan 36-02 auth pages complete
+Plan: 3 of 3 complete
+Status: Phase 36 complete
+Last activity: 2026-03-12 — Plan 36-03 app shell complete
 
-Progress: [█▓░░░░░░░░] 13%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 72 (70 across v1.1-v2.3 + 2 in v3.0)
+- Total plans completed: 73 (70 across v1.1-v2.3 + 3 in v3.0)
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -51,6 +51,9 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (36-02) Used inline Google SVG icon for brand recognition without adding an icon library dependency
 - (36-02) Auto-submit OTP when 6th digit entered for faster verification UX
 - (36-02) ResetPassword uses single component with step state (1 or 2) rather than two separate routes
+- (36-03) Inline SVG icons for hamburger/sun/moon/monitor -- no icon library dependency
+- (36-03) CSS transform transition for mobile sidebar slide-in animation
+- (36-03) Sidebar auto-closes on route change via useLocation() effect
 
 ### Pending Todos
 
@@ -77,10 +80,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T08:01:28Z
-Stopped at: Completed 36-02-PLAN.md
-Resume file: .planning/phases/36-scaffold-auth/36-02-SUMMARY.md
+Last session: 2026-03-12T11:09:13Z
+Stopped at: Completed 36-03-PLAN.md (Phase 36 complete)
+Resume file: .planning/phases/36-scaffold-auth/36-03-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 36-02 complete)*
+*Last updated: 2026-03-12 (Plan 36-03 complete, Phase 36 complete)*

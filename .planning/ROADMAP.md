@@ -143,7 +143,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 
 **Milestone Goal:** Web app React SPA where authenticated users create decks and flashcards in markdown, committed via edge function to a shared Git repo, synced by Docora for AI question generation.
 
-- [ ] **Phase 36: Scaffold & Auth** - Vite/React/Tailwind project with Supabase auth, responsive layout shell, i18n, and dark mode
+- [x] **Phase 36: Scaffold & Auth** - Vite/React/Tailwind project with Supabase auth, responsive layout shell, i18n, and dark mode (completed 2026-03-12)
 - [ ] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration
 - [ ] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation
 - [ ] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback
@@ -161,7 +161,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
   3. App layout is responsive with a sidebar area and main content area that adapts to screen size
   4. User can switch between Italian and English, and the UI updates immediately
   5. User can toggle dark mode (system/light/dark) and the theme applies across all UI elements
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 36-01-PLAN.md — Scaffold Vite project with lib layer, contexts, router, and Wave 0 tests
@@ -241,7 +241,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 27-31. Email Auth | v2.1 | 10/10 | Complete | 2026-03-02 |
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
-| 36. Scaffold & Auth | 2/3 | In Progress|  | - |
+| 36. Scaffold & Auth | 3/3 | Complete   | 2026-03-12 | - |
 | 37. Backend Pipeline | v3.0 | 0/? | Not started | - |
 | 38. Deck Management | v3.0 | 0/? | Not started | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
