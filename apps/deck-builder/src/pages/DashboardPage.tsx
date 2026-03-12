@@ -1,23 +1,21 @@
-import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useDeck } from '../contexts/DeckContext';
+import DeckDetailPanel from '../components/DeckDetailPanel';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const { t } = useI18n();
+  const { selectedDeck } = useDeck();
 
-  const displayName = user?.email ?? '';
+  if (selectedDeck) {
+    return <DeckDetailPanel />;
+  }
 
+  // Empty state -- no deck selected
   return (
     <div className="mx-auto max-w-2xl py-8 text-center">
       <h1 className="text-2xl font-bold text-lumio-text">
         {t('dashboard.welcome')}
       </h1>
-
-      {displayName && (
-        <p className="mt-2 text-lumio-text-secondary">
-          {displayName}
-        </p>
-      )}
 
       <div className="mt-8 rounded-lg border border-lumio-border bg-lumio-surface p-8">
         <svg
@@ -30,7 +28,7 @@ export default function DashboardPage() {
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L12 12.75 6.429 9.75m11.142 0l4.179 2.25-9.75 5.25-9.75-5.25 4.179-2.25"
+            d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.06-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
           />
         </svg>
         <p className="text-lumio-text-secondary">
