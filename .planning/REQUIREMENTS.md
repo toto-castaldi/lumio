@@ -20,7 +20,7 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 - [x] **DECK-01**: User can create a new deck (creates directory in shared Git repo)
 - [x] **DECK-02**: User can rename an existing deck
 - [x] **DECK-03**: User can delete a deck with confirmation dialog
-- [ ] **DECK-04**: User can see list of their own decks only
+- [x] **DECK-04**: User can see list of their own decks only
 
 ### Card Management
 
@@ -88,7 +88,7 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 | DECK-01 | Phase 38 | Complete |
 | DECK-02 | Phase 38 | Complete |
 | DECK-03 | Phase 38 | Complete |
-| DECK-04 | Phase 38 | Pending |
+| DECK-04 | Phase 38 | Complete |
 | CARD-01 | Phase 39 | Pending |
 | CARD-02 | Phase 39 | Pending |
 | CARD-03 | Phase 39 | Pending |

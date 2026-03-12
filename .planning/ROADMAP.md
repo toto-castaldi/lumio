@@ -145,7 +145,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 36: Scaffold & Auth** - Vite/React/Tailwind project with Supabase auth, responsive layout shell, i18n, and dark mode (completed 2026-03-12)
 - [x] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration (completed 2026-03-12)
-- [ ] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation
+- [x] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation (completed 2026-03-12)
 - [ ] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback
 - [ ] **Phase 40: Deploy & CI/CD** - Production deploy to deck.lumio.toto-castaldi.com with automated build pipeline
 
@@ -191,7 +191,7 @@ Plans:
   2. User can rename an existing deck
   3. User can delete a deck after confirming in a dialog
   4. User sees only their own decks (not other users' content from the shared repo)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 38-01-PLAN.md — Edge function deck actions (create/rename/delete) + client API + validation utility
@@ -245,7 +245,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
-| 38. Deck Management | 1/2 | In Progress|  | - |
+| 38. Deck Management | 2/2 | Complete   | 2026-03-12 | - |
 | 39. Card Authoring | v3.0 | 0/? | Not started | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 

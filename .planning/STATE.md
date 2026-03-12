@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: in-progress
-stopped_at: Completed 38-01-PLAN.md
-last_updated: "2026-03-12T14:57:17.000Z"
-last_activity: 2026-03-12 — Plan 38-01 deck CRUD operations complete
+stopped_at: Completed 38-02-PLAN.md
+last_updated: "2026-03-12T17:32:00.000Z"
+last_activity: 2026-03-12 — Plan 38-02 deck management UI complete
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 38 - Deck Management (v3.0 Deck Builder Web)
+**Current focus:** Phase 38 - Deck Management (v3.0 Deck Builder Web) -- COMPLETE
 
 ## Current Position
 
 Phase: 38 of 40 (Deck Management) — third of 5 phases in v3.0
-Plan: 1 of 2 complete
-Status: Plan 38-01 complete, Plan 38-02 remaining
-Last activity: 2026-03-12 — Plan 38-01 deck CRUD operations complete
+Plan: 2 of 2 complete
+Status: Phase 38 complete, ready for Phase 39
+Last activity: 2026-03-12 — Plan 38-02 deck management UI complete
 
-Progress: [████████░░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 75 (70 across v1.1-v2.3 + 5 in v3.0)
+- Total plans completed: 76 (70 across v1.1-v2.3 + 6 in v3.0)
 - Total milestones shipped: 11
 - Timeline: 35 days (2026-01-29 to 2026-03-05)
 
@@ -64,6 +64,10 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (38-01) Server-side validateDeckName returns human-readable errors; client-side returns i18n keys
 - (38-01) Sequential file operations for rename_deck to avoid GitHub Contents API conflicts
 - (38-01) .gitkeep file creates empty deck directories in Git (Git does not track empty dirs)
+- (38-02) localStorage-backed timestamps as client-side proxy for deck sort order (GitHub API has no directory timestamps)
+- (38-02) localStorage-backed creation dates for DeckDetailPanel since Git directory creation is not tracked
+- (38-02) DeckProvider inside ProtectedLayout, wrapping Layout+Outlet (needs auth, serves both Sidebar and pages)
+- (38-02) Inline rename follows VS Code pattern: pencil triggers editable input, Enter/Escape/blur
 
 ### Pending Todos
 
@@ -90,13 +94,14 @@ None.
 | Phase 37 P01 | 3min | 1 tasks | 3 files |
 | Phase 37 P02 | 2min | 2 tasks | 2 files |
 | Phase 38 P01 | 4min | 2 tasks | 5 files |
+| Phase 38 P02 | 5min | 3 tasks | 8 files |
 
 ## Session Continuity
 
-Last session: 2026-03-12T14:57:17.000Z
-Stopped at: Completed 38-01-PLAN.md
-Resume file: .planning/phases/38-deck-management/38-02-PLAN.md
+Last session: 2026-03-12T17:32:00.000Z
+Stopped at: Completed 38-02-PLAN.md
+Resume file: .planning/phases/39-card-authoring/39-01-PLAN.md
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 38-01 complete)*
+*Last updated: 2026-03-12 (Plan 38-02 complete, Phase 38 done)*
