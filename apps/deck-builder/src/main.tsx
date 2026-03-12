@@ -8,37 +8,12 @@ import { I18nProvider } from './contexts/I18nContext';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { AuthCallback } from './pages/AuthCallback';
+import { OtpVerification } from './pages/OtpVerification';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
 import './index.css';
-
-// ---------------------------------------------------------------------------
-// Placeholder page components (future plans replace with real implementations)
-// ---------------------------------------------------------------------------
-
-function OtpVerification() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
-      <div className="text-lumio-text">OTP Verification (placeholder)</div>
-    </div>
-  );
-}
-
-function ForgotPassword() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
-      <div className="text-lumio-text">Forgot Password (placeholder)</div>
-    </div>
-  );
-}
-
-function ResetPassword() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-lumio-bg">
-      <div className="text-lumio-text">Reset Password (placeholder)</div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Layout wrappers
