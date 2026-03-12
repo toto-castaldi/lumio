@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { I18nProvider } from './contexts/I18nContext';
 import { DeckProvider } from './contexts/DeckContext';
+import { CardProvider } from './contexts/CardContext';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { AuthCallback } from './pages/AuthCallback';
@@ -32,9 +33,11 @@ function ProtectedLayout() {
   if (state === 'logged_out') return <Navigate to="/login" replace />;
   return (
     <DeckProvider>
-      <Layout>
-        <Outlet />
-      </Layout>
+      <CardProvider>
+        <Layout>
+          <Outlet />
+        </Layout>
+      </CardProvider>
     </DeckProvider>
   );
 }
