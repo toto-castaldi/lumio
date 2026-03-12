@@ -207,11 +207,11 @@ Plans:
   3. User can set card metadata (title, tags, difficulty, language) via a structured form that produces valid frontmatter
   4. User can delete a card after confirming in a dialog
   5. User receives toast feedback confirming successful save or showing error details
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 39-01: TBD
-- [ ] 39-02: TBD
+- [ ] 39-01-PLAN.md — Foundation: deps install, frontmatter/validation libs with tests, CardContext
+- [ ] 39-02-PLAN.md — Card authoring UI: TagInput, MetadataForm, CardListPanel, CardEditor with MDEditor, i18n
 
 ### Phase 40: Deploy & CI/CD
 **Goal**: The deck builder web app is deployed to production and automatically built/deployed on push
@@ -246,9 +246,9 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 36. Scaffold & Auth | 3/3 | Complete    | 2026-03-12 | - |
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
-| 39. Card Authoring | v3.0 | 0/? | Not started | - |
+| 39. Card Authoring | v3.0 | 0/2 | Planned | - |
 | 40. Deploy & CI/CD | v3.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-12 after Phase 38 planning complete*
+*Last updated: 2026-03-12 after Phase 39 planning complete*
