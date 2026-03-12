@@ -40,9 +40,9 @@ created: 2026-03-12
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
 | 36-01-01 | 01 | 1 | AUTH-01 | unit | `pnpm --filter @lumio/deck-builder exec vitest run src/lib/__tests__/auth.test.ts -t "google"` | ❌ W0 | ⬜ pending |
 | 36-01-02 | 01 | 1 | AUTH-02 | unit | `pnpm --filter @lumio/deck-builder exec vitest run src/lib/__tests__/auth.test.ts -t "email"` | ❌ W0 | ⬜ pending |
-| 36-02-01 | 02 | 1 | AUTH-03 | manual-only | Visual inspection at multiple breakpoints | N/A | ⬜ pending |
-| 36-02-02 | 02 | 1 | AUTH-04 | unit | `pnpm --filter @lumio/deck-builder exec vitest run src/lib/__tests__/i18n.test.ts` | ❌ W0 | ⬜ pending |
-| 36-02-03 | 02 | 1 | AUTH-05 | unit | `pnpm --filter @lumio/deck-builder exec vitest run src/lib/__tests__/theme.test.ts` | ❌ W0 | ⬜ pending |
+| 36-03-01 | 03 | 2 | AUTH-03 | manual-only | Visual inspection at multiple breakpoints | N/A | ⬜ pending |
+| 36-03-02 | 03 | 2 | AUTH-04 | unit | `pnpm --filter @lumio/deck-builder exec vitest run src/lib/__tests__/i18n.test.ts` | ❌ W0 | ⬜ pending |
+| 36-03-03 | 03 | 2 | AUTH-05 | unit | `pnpm --filter @lumio/deck-builder exec vitest run src/lib/__tests__/theme.test.ts` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
