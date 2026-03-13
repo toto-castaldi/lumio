@@ -246,7 +246,7 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
-| 42. Backend Pipeline | 2/2 | Complete   | 2026-03-13 | - |
+| 42. Backend Pipeline | 2/2 | Complete    | 2026-03-13 | - |
 | 43. Deck Builder Metadata | v3.1 | 0/? | Not started | - |
 | 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
 
