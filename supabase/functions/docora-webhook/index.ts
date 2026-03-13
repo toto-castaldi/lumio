@@ -61,6 +61,12 @@ interface DeckFrontmatter {
 }
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const LANGUAGE_WHITELIST = ["it", "en", "es", "fr", "de", "pt", "ja", "zh", "ko", "ru", "ar"];
+
+// =============================================================================
 // SUPABASE CLIENT
 // =============================================================================
 
@@ -294,6 +300,16 @@ function parseFrontmatter(content: string): {
   }
 
   return { frontmatter, body };
+}
+
+/**
+ * Parse pure YAML content (no frontmatter delimiters) by wrapping
+ * in --- delimiters and delegating to parseFrontmatter()
+ */
+function parseYaml(content: string): Record<string, unknown> {
+  const wrapped = `---\n${content}\n---\n`;
+  const { frontmatter } = parseFrontmatter(wrapped);
+  return frontmatter;
 }
 
 /**
@@ -741,6 +757,71 @@ async function handleCreate(
     return { success: true, message: ".lumioignore saved and cleanup completed" };
   }
 
+  // deck.yaml - parse and upsert deck metadata into deck_index
+  if (fileName === "deck.yaml") {
+    const yamlData = parseYaml(content);
+    const displayName = typeof yamlData.display_name === "string" ? yamlData.display_name.trim() : "";
+    const description = typeof yamlData.description === "string" ? yamlData.description.trim() : "";
+
+    // Skip silently if required fields missing (per locked decision)
+    if (!displayName || !description) {
+      console.log(`[handleCreate] deck.yaml missing required fields, skipping: ${filePath}`);
+      return { success: true, message: `deck.yaml skipped (missing required fields): ${filePath}` };
+    }
+
+    // Derive subfolder_path from file path (always has trailing /)
+    const subfolderPath = filePath.substring(0, filePath.lastIndexOf("/") + 1);
+
+    // Normalize tags: lowercase, spaces to dashes, max 5
+    const rawTags = Array.isArray(yamlData.tags) ? yamlData.tags.map(String) : [];
+    const tags = rawTags
+      .map((t: string) => t.toLowerCase().replace(/\s+/g, "-"))
+      .slice(0, 5);
+
+    // Language: whitelist with 'en' default
+    const language = typeof yamlData.language === "string" && LANGUAGE_WHITELIST.includes(yamlData.language)
+      ? yamlData.language
+      : "en";
+
+    // Author: use as-is from YAML (webhook doesn't enforce -- that's commit_yaml's job)
+    const author = typeof yamlData.author === "string" ? yamlData.author.trim() : "";
+
+    // Upsert into deck_index (handles both create and out-of-order webhook delivery)
+    const { error: upsertError } = await serviceClient
+      .from("deck_index")
+      .upsert(
+        {
+          repository_id: repo.id,
+          subfolder_path: subfolderPath,
+          display_name: displayName,
+          description,
+          tags,
+          author,
+          language,
+        },
+        { onConflict: "repository_id,subfolder_path" }
+      );
+
+    if (upsertError) {
+      console.error(`[handleCreate] deck_index upsert error:`, upsertError.message);
+      return { success: false, message: `Failed to index deck: ${upsertError.message}` };
+    }
+
+    // Clear error state (follows established pattern)
+    await serviceClient
+      .from("repositories")
+      .update({
+        sync_status: "synced",
+        sync_error_message: null,
+        sync_error_type: null,
+        is_auth_error: false,
+        sync_failed_at: null,
+      })
+      .eq("id", repo.id);
+
+    return { success: true, message: `deck.yaml indexed: ${filePath}` };
+  }
+
   // Markdown card files
   if (filePath.endsWith(".md")) {
     const { frontmatter, body } = parseFrontmatter(content);
@@ -892,6 +973,71 @@ async function handleUpdate(
     await cleanupIgnoredCardQuestions(serviceClient, repo.id, content);
 
     return { success: true, message: ".lumioignore updated and cleanup completed" };
+  }
+
+  // deck.yaml - parse and upsert deck metadata into deck_index
+  if (fileName === "deck.yaml") {
+    const yamlData = parseYaml(content);
+    const displayName = typeof yamlData.display_name === "string" ? yamlData.display_name.trim() : "";
+    const description = typeof yamlData.description === "string" ? yamlData.description.trim() : "";
+
+    // Skip silently if required fields missing (per locked decision)
+    if (!displayName || !description) {
+      console.log(`[handleUpdate] deck.yaml missing required fields, skipping: ${filePath}`);
+      return { success: true, message: `deck.yaml skipped (missing required fields): ${filePath}` };
+    }
+
+    // Derive subfolder_path from file path (always has trailing /)
+    const subfolderPath = filePath.substring(0, filePath.lastIndexOf("/") + 1);
+
+    // Normalize tags: lowercase, spaces to dashes, max 5
+    const rawTags = Array.isArray(yamlData.tags) ? yamlData.tags.map(String) : [];
+    const tags = rawTags
+      .map((t: string) => t.toLowerCase().replace(/\s+/g, "-"))
+      .slice(0, 5);
+
+    // Language: whitelist with 'en' default
+    const language = typeof yamlData.language === "string" && LANGUAGE_WHITELIST.includes(yamlData.language)
+      ? yamlData.language
+      : "en";
+
+    // Author: use as-is from YAML (webhook doesn't enforce -- that's commit_yaml's job)
+    const author = typeof yamlData.author === "string" ? yamlData.author.trim() : "";
+
+    // Upsert into deck_index (handles both update and out-of-order webhook delivery)
+    const { error: upsertError } = await serviceClient
+      .from("deck_index")
+      .upsert(
+        {
+          repository_id: repo.id,
+          subfolder_path: subfolderPath,
+          display_name: displayName,
+          description,
+          tags,
+          author,
+          language,
+        },
+        { onConflict: "repository_id,subfolder_path" }
+      );
+
+    if (upsertError) {
+      console.error(`[handleUpdate] deck_index upsert error:`, upsertError.message);
+      return { success: false, message: `Failed to index deck: ${upsertError.message}` };
+    }
+
+    // Clear error state (follows established pattern)
+    await serviceClient
+      .from("repositories")
+      .update({
+        sync_status: "synced",
+        sync_error_message: null,
+        sync_error_type: null,
+        is_auth_error: false,
+        sync_failed_at: null,
+      })
+      .eq("id", repo.id);
+
+    return { success: true, message: `deck.yaml indexed: ${filePath}` };
   }
 
   // Image files
