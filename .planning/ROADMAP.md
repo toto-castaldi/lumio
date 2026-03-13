@@ -189,10 +189,11 @@ Plans:
   1. When Docora syncs a repo containing deck.yaml files, each deck's metadata appears in deck_index with correct name, description, category, tags, and author
   2. When a deck.yaml file is deleted from the repo, the corresponding deck_index row is removed
   3. The deck-commit edge function accepts a commit_yaml action that writes deck.yaml to the correct user path with validation
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 42-01: TBD
+- [ ] 42-01-PLAN.md — docora-webhook deck.yaml handling: parseYaml wrapper, upsert into deck_index on create/update, delete on removal
+- [ ] 42-02-PLAN.md — deck-commit commit_yaml action: metadata validation, server-enforced author, YAML serialization, GitHub commit
 
 ### Phase 43: Deck Builder Metadata
 **Goal**: Deck authors can describe their decks with structured metadata that flows into the discovery pipeline
@@ -245,10 +246,10 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
-| 42. Backend Pipeline | v3.1 | 0/? | Not started | - |
+| 42. Backend Pipeline | v3.1 | 0/2 | Not started | - |
 | 43. Deck Builder Metadata | v3.1 | 0/? | Not started | - |
 | 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-13 -- Phase 41 plans created (2 plans)*
+*Last updated: 2026-03-13 -- Phase 42 plans created (2 plans)*
