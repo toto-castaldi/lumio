@@ -139,7 +139,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 
 </details>
 
-### v3.0 Deck Builder Web (In Progress)
+### v3.0 Deck Builder Web (SHIPPED 2026-03-13)
 
 **Milestone Goal:** Web app React SPA where authenticated users create decks and flashcards in markdown, committed via edge function to a shared Git repo, synced by Docora for AI question generation.
 
@@ -147,7 +147,7 @@ Full details: `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 37: Backend Pipeline** - Edge function for GitHub commits with user path isolation, shared repo Docora registration (completed 2026-03-12)
 - [x] **Phase 38: Deck Management** - CRUD operations for decks with list view, rename, and delete confirmation (completed 2026-03-12)
 - [x] **Phase 39: Card Authoring** - Card CRUD with markdown editor, live preview, toolbar, metadata form, and save feedback (completed 2026-03-12)
-- [ ] **Phase 40: Deploy & CI/CD** - Production deploy to deck.lumio.toto-castaldi.com with automated build pipeline
+- [x] **Phase 40: Deploy & CI/CD** - Production deploy to deck.lumio.toto-castaldi.com with automated build pipeline (completed 2026-03-13)
 
 ## Phase Details
 
@@ -220,10 +220,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. deck.lumio.toto-castaldi.com serves the deck builder web app with SSL
   2. Pushing to main triggers an automated build and deploy of the web app
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 40-01-PLAN.md — Nginx config, version stamp, deploy-deck-builder CI job, and production server setup
+- [x] 40-01-PLAN.md — Nginx config, version stamp, deploy-deck-builder CI job, and production server setup
 
 ## Progress
 
@@ -247,8 +247,8 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
 | 39. Card Authoring | 2/2 | Complete    | 2026-03-12 | - |
-| 40. Deploy & CI/CD | v3.0 | 0/1 | Not started | - |
+| 40. Deploy & CI/CD | 1/1 | Complete   | 2026-03-13 | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-12 after Phase 40 planned*
+*Last updated: 2026-03-13 -- v3.0 Deck Builder Web shipped*

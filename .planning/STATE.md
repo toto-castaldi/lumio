@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Deck Builder Web
 status: completed
-stopped_at: Phase 40 context gathered
-last_updated: "2026-03-12T20:54:13.506Z"
-last_activity: 2026-03-12 — Plan 39-02 card authoring UI complete
+stopped_at: Completed 40-01-PLAN.md
+last_updated: "2026-03-13T07:43:32.053Z"
+last_activity: 2026-03-13 — Plan 40-01 deploy & CI/CD complete, v3.0 shipped
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 5
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 39 - Card Authoring (v3.0 Deck Builder Web) -- COMPLETE, ready for Phase 40
+**Current focus:** v3.0 Deck Builder Web -- COMPLETE, all 5 phases shipped
 
 ## Current Position
 
-Phase: 39 of 40 (Card Authoring) — fourth of 5 phases in v3.0
-Plan: 2 of 2 complete
-Status: Phase 39 complete, ready for Phase 40
-Last activity: 2026-03-12 — Plan 39-02 card authoring UI complete
+Phase: 40 of 40 (Deploy & CI/CD) — fifth of 5 phases in v3.0
+Plan: 1 of 1 complete
+Status: v3.0 milestone COMPLETE
+Last activity: 2026-03-13 — Plan 40-01 deploy & CI/CD complete
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 78 (70 across v1.1-v2.3 + 8 in v3.0)
-- Total milestones shipped: 11
-- Timeline: 35 days (2026-01-29 to 2026-03-05)
+- Total plans completed: 79 (70 across v1.1-v2.3 + 9 in v3.0)
+- Total milestones shipped: 12 (11 through v2.3 + v3.0)
+- Timeline: 35 days (2026-01-29 to 2026-03-05) + v3.0 (2026-03-11 to 2026-03-13)
 
 ## Accumulated Context
 
@@ -75,6 +75,9 @@ All decisions logged in PROJECT.md Key Decisions table (66 entries).
 - (39-02) Card count synced in sidebar and header after CRUD operations via DeckContext totalCards state
 - (39-02) Responsive MDEditor: split-pane live preview on desktop, toggle tabs on mobile via matchMedia
 - (39-02) Custom math and image toolbar commands using MDEditor commands API
+- [Phase 40]: HTTP-only Nginx template checked into repo; Certbot adds SSL on server
+- [Phase 40]: deploy-deck-builder parallels deploy-landing (both need lint-and-typecheck, not each other)
+- [Phase 40]: No VITE_GOOGLE_WEB_CLIENT_ID env var needed -- Google OAuth uses Supabase server-side config
 
 ### Pending Todos
 
@@ -104,13 +107,14 @@ None.
 | Phase 38 P02 | 5min | 3 tasks | 8 files |
 | Phase 39 P01 | 4min | 2 tasks | 7 files |
 | Phase 39 P02 | 8min | 3 tasks | 13 files |
+| Phase 40 P01 | 3min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-12T20:54:13.499Z
-Stopped at: Phase 40 context gathered
-Resume file: .planning/phases/40-deploy-ci-cd/40-CONTEXT.md
+Last session: 2026-03-13T07:43:32.047Z
+Stopped at: Completed 40-01-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-12 (Plan 39-02 complete)*
+*Last updated: 2026-03-13 (Plan 40-01 complete -- v3.0 shipped)*

@@ -45,8 +45,8 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 ### Deploy
 
-- [ ] **DEPL-01**: Web app deployed at deck.lumio.toto-castaldi.com
-- [ ] **DEPL-02**: CI/CD pipeline builds and deploys web app automatically
+- [x] **DEPL-01**: Web app deployed at deck.lumio.toto-castaldi.com
+- [x] **DEPL-02**: CI/CD pipeline builds and deploys web app automatically
 
 ## Future Requirements
 
@@ -101,8 +101,8 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 | PIPE-01 | Phase 37 | Complete |
 | PIPE-02 | Phase 37 | Complete |
 | PIPE-03 | Phase 37 | Complete |
-| DEPL-01 | Phase 40 | Pending |
-| DEPL-02 | Phase 40 | Pending |
+| DEPL-01 | Phase 40 | Complete |
+| DEPL-02 | Phase 40 | Complete |
 
 **Coverage:**
 - v3.0 requirements: 23 total
@@ -111,4 +111,4 @@ Requirements for Deck Builder Web milestone. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-12 after Plan 36-01 complete (AUTH requirements in progress)*
+*Last updated: 2026-03-13 -- all v3.0 requirements complete (23/23)*
