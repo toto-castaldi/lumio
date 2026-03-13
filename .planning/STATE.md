@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
 status: executing
-stopped_at: Phase 42 context gathered
-last_updated: "2026-03-13T11:34:10.867Z"
-last_activity: 2026-03-13 — Plan 41-02 executed (search_decks RPC, study RPCs subfolder filtering)
+stopped_at: Completed 42-02-PLAN.md
+last_updated: "2026-03-13T11:50:44.437Z"
+last_activity: 2026-03-13 — Plan 42-02 executed (commit_yaml action in deck-commit edge function)
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 25
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 98
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 41 — Database Foundation
+**Current focus:** Phase 42 — Backend Pipeline
 
 ## Current Position
 
-Phase: 41 of 44 (Database Foundation) -- COMPLETE
+Phase: 42 of 44 (Backend Pipeline)
 Plan: 2 of 2
-Status: Executing (Phase 41 complete, all plans done)
-Last activity: 2026-03-13 — Plan 41-02 executed (search_decks RPC, study RPCs subfolder filtering)
+Status: Executing (Phase 42, Plan 02 complete)
+Last activity: 2026-03-13 — Plan 42-02 executed (commit_yaml action in deck-commit edge function)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -56,6 +56,8 @@ Recent decisions affecting current work:
 - [Phase 41]: Created deck_index_search_vector() IMMUTABLE wrapper for generated tsvector column (to_tsvector and array_to_string are STABLE)
 - [Phase 41]: Used websearch_to_tsquery (not plainto_tsquery) for Google-style search syntax in search_decks RPC
 - [Phase 41]: Subfolder filter added transparently to study RPC JOINs -- no signature changes, backward compatible with NULL subfolder_path
+- [Phase 42]: Server-enforced author from public.users.display_name with email prefix fallback, client value always ignored
+- [Phase 42]: Lightweight YAML serialization via string concatenation (no external yaml library needed for fixed structure)
 
 ### Pending Todos
 
@@ -79,12 +81,13 @@ None.
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
 | Phase 41 P01 | 5min | 2 tasks | 3 files |
 | Phase 41 P02 | 3min | 2 tasks | 2 files |
+| Phase 42 P02 | 1min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-03-13T11:34:10.862Z
-Stopped at: Phase 42 context gathered
-Resume file: .planning/phases/42-backend-pipeline/42-CONTEXT.md
+Last session: 2026-03-13T11:50:21.031Z
+Stopped at: Completed 42-02-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-01-29*

@@ -159,7 +159,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 **Milestone Goal:** Permettere agli utenti mobile di scoprire e aggiungere deck creati con il deck builder, tramite ricerca fulltext su metadata deck nel repo condiviso lumio-decks.
 
 - [x] **Phase 41: Database Foundation** - Schema, RPCs, RLS, and study pipeline updates for deck discovery and subfolder subscription (completed 2026-03-13)
-- [ ] **Phase 42: Backend Pipeline** - Edge function enhancements for deck.yaml ingestion and commit support
+- [x] **Phase 42: Backend Pipeline** - Edge function enhancements for deck.yaml ingestion and commit support (completed 2026-03-13)
 - [ ] **Phase 43: Deck Builder Metadata** - Metadata authoring UI for deck authors to publish discoverable decks
 - [ ] **Phase 44: Mobile Discovery** - Discovery tab with fulltext search, category browse, and deck subscription in the Android app
 
@@ -246,7 +246,7 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
-| 42. Backend Pipeline | v3.1 | 0/2 | Not started | - |
+| 42. Backend Pipeline | 2/2 | Complete   | 2026-03-13 | - |
 | 43. Deck Builder Metadata | v3.1 | 0/? | Not started | - |
 | 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
 
