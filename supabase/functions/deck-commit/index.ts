@@ -125,6 +125,37 @@ function validateDeckName(name: string): string | null {
 }
 
 // =============================================================================
+// LANGUAGE WHITELIST & YAML SERIALIZATION
+// =============================================================================
+
+const LANGUAGE_WHITELIST = ["it", "en", "es", "fr", "de", "pt", "ja", "zh", "ko", "ru", "ar"];
+
+interface DeckYamlMetadata {
+  display_name: string;
+  description: string;
+  author: string;
+  language: string;
+  tags: string[];
+}
+
+function serializeYaml(metadata: DeckYamlMetadata): string {
+  let yaml = '';
+  yaml += `display_name: ${metadata.display_name}\n`;
+  yaml += `description: ${metadata.description}\n`;
+  yaml += `author: ${metadata.author}\n`;
+  yaml += `language: ${metadata.language}\n`;
+  if (metadata.tags.length > 0) {
+    yaml += 'tags:\n';
+    for (const tag of metadata.tags) {
+      yaml += `  - ${tag}\n`;
+    }
+  } else {
+    yaml += 'tags:\n';
+  }
+  return yaml;
+}
+
+// =============================================================================
 // CONTENT ENCODING
 // =============================================================================
 
@@ -686,6 +717,136 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
+      // commit_yaml: Validate metadata and write deck.yaml
+      // -----------------------------------------------------------------
+      case "commit_yaml": {
+        const {
+          deck_name,
+          display_name: reqDisplayName,
+          description: reqDescription,
+          tags: reqTags,
+          language: reqLanguage,
+        } = body;
+
+        // Validate deck_name
+        if (!deck_name || typeof deck_name !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: deck_name" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+        const trimmedDeckName = deck_name.trim();
+        const deckNameError = validateDeckName(trimmedDeckName);
+        if (deckNameError) {
+          return new Response(
+            JSON.stringify({ error: deckNameError }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Validate display_name
+        if (!reqDisplayName || typeof reqDisplayName !== "string" || reqDisplayName.trim().length === 0) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: display_name" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Validate description
+        if (!reqDescription || typeof reqDescription !== "string" || reqDescription.trim().length === 0) {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: description" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Validate language (default to "en" if not provided)
+        const lang = reqLanguage && typeof reqLanguage === "string" ? reqLanguage.trim() : "en";
+        if (!LANGUAGE_WHITELIST.includes(lang)) {
+          return new Response(
+            JSON.stringify({
+              error: `Invalid language: ${lang}. Must be one of: ${LANGUAGE_WHITELIST.join(", ")}`,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Normalize tags: filter to strings, lowercase slugs, max 5
+        const normalizedTags: string[] = Array.isArray(reqTags)
+          ? reqTags
+              .filter((t: unknown): t is string => typeof t === "string")
+              .map((t: string) => t.toLowerCase().replace(/\s+/g, "-"))
+              .slice(0, 5)
+          : [];
+
+        // Resolve author from user profile (server-enforced, client value ignored)
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("display_name, email")
+          .eq("id", userId)
+          .single();
+
+        if (profileError || !profile) {
+          return new Response(
+            JSON.stringify({ error: "Could not resolve user profile" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            }
+          );
+        }
+
+        const author = profile.display_name?.trim()
+          || (profile.email || "").split("@")[0];
+
+        // Serialize YAML
+        const yamlContent = serializeYaml({
+          display_name: reqDisplayName.trim(),
+          description: reqDescription.trim(),
+          author,
+          language: lang,
+          tags: normalizedTags,
+        });
+
+        // Build file path and check for existing file
+        const yamlPath = `${userId}/${trimmedDeckName}/deck.yaml`;
+        const existing = await getFile(yamlPath);
+
+        const commitMessage = existing
+          ? `[deck-builder] Update deck.yaml for ${trimmedDeckName}`
+          : `[deck-builder] Create deck.yaml for ${trimmedDeckName}`;
+
+        const result = await commitFile(yamlPath, yamlContent, commitMessage, existing?.sha);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            sha: result.sha,
+            commit_sha: result.commit_sha,
+          }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
