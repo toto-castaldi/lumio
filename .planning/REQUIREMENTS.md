@@ -9,11 +9,11 @@ Requirements for Deck Discovery milestone. Each maps to roadmap phases.
 
 ### Database & Search
 
-- [ ] **DBSR-01**: Platform has a deck_index table with fulltext search via tsvector/GIN using 'simple' config
+- [x] **DBSR-01**: Platform has a deck_index table with fulltext search via tsvector/GIN using 'simple' config
 - [ ] **DBSR-02**: Platform has a search_decks RPC with weighted ranking (name > tags > description) and optional category filter
-- [ ] **DBSR-03**: User can subscribe to a specific deck subfolder in the shared repo (subfolder_path on user_repositories)
+- [x] **DBSR-03**: User can subscribe to a specific deck subfolder in the shared repo (subfolder_path on user_repositories)
 - [ ] **DBSR-04**: Study RPCs filter cards by subfolder_path when set, so subscribed users see only their chosen deck's cards
-- [ ] **DBSR-05**: Platform has lumio-decks repo registered at platform level, always synced by Docora
+- [x] **DBSR-05**: Platform has lumio-decks repo registered at platform level, always synced by Docora
 
 ### Backend Pipeline
 
@@ -68,11 +68,11 @@ Deferred to v3.2 or later.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DBSR-01 | Phase 41 | Pending |
+| DBSR-01 | Phase 41 | Complete |
 | DBSR-02 | Phase 41 | Pending |
-| DBSR-03 | Phase 41 | Pending |
+| DBSR-03 | Phase 41 | Complete |
 | DBSR-04 | Phase 41 | Pending |
-| DBSR-05 | Phase 41 | Pending |
+| DBSR-05 | Phase 41 | Complete |
 | PIPE-01 | Phase 42 | Pending |
 | PIPE-02 | Phase 42 | Pending |
 | PIPE-03 | Phase 42 | Pending |

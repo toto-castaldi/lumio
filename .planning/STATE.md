@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
-status: planning
-stopped_at: Phase 41 context gathered
-last_updated: "2026-03-13T10:28:44.374Z"
-last_activity: 2026-03-13 — Roadmap created (4 phases, 20 requirements)
+status: executing
+stopped_at: Completed 41-01-PLAN.md
+last_updated: "2026-03-13T10:51:56.527Z"
+last_activity: 2026-03-13 — Plan 41-01 executed (deck_index, subfolder subscriptions, platform repo seed)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 12
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 ## Current Position
 
 Phase: 41 of 44 (Database Foundation)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-13 — Roadmap created (4 phases, 20 requirements)
+Plan: 1 of 2
+Status: Executing (Plan 01 complete)
+Last activity: 2026-03-13 — Plan 41-01 executed (deck_index, subfolder subscriptions, platform repo seed)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 12%
 
 ## Performance Metrics
 
@@ -50,6 +50,10 @@ Recent decisions affecting current work:
 - Research recommends `'simple'` tsvector config everywhere (avoids stemming for multilingual deck names)
 - Card count computed at query time via correlated subquery, not stored in deck_index
 - Standardize on `display_name` field (not `name`) to distinguish from filesystem directory name
+- Created `deck_index_search_vector()` IMMUTABLE wrapper function for generated tsvector column (to_tsvector and array_to_string are STABLE, not IMMUTABLE)
+- Used `is_platform BOOLEAN` column to identify platform repos (explicit over implicit NULL pattern)
+- Used COALESCE-based unique index for subfolder_path NULL handling in user_repositories
+- [Phase 41]: Created deck_index_search_vector() IMMUTABLE wrapper for generated tsvector column (to_tsvector and array_to_string are STABLE)
 
 ### Pending Todos
 
@@ -71,13 +75,14 @@ None.
 | 6 | Fix i18n countdown interpolation bug on OTP verification screens | 2026-03-03 | d771d4b | [6-fix-i18n-countdown-bug-on-email-verifica](./quick/6-fix-i18n-countdown-bug-on-email-verifica/) |
 | 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
+| Phase 41 P01 | 5min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-13T10:28:44.369Z
-Stopped at: Phase 41 context gathered
-Resume file: .planning/phases/41-database-foundation/41-CONTEXT.md
+Last session: 2026-03-13T10:51:52.046Z
+Stopped at: Completed 41-01-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-13 (v3.1 roadmap created)*
+*Last updated: 2026-03-13 (Plan 41-01 complete)*
