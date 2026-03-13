@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
 status: executing
-stopped_at: Completed 43-01-PLAN.md
-last_updated: "2026-03-13T12:42:40Z"
-last_activity: 2026-03-13 — Plan 43-01 executed (get_yaml action + getDeckYaml/commitYaml client API)
+stopped_at: Completed 43-02-PLAN.md
+last_updated: "2026-03-13T12:57:54.372Z"
+last_activity: 2026-03-13 — Plan 43-02 executed (DeckMetadataForm component with i18n, integrated into DeckDetailPanel)
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 98
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 ## Current Position
 
 Phase: 43 of 44 (Deck Builder Metadata)
-Plan: 1 of 2
-Status: Executing (Phase 43, Plan 01 complete)
-Last activity: 2026-03-13 — Plan 43-01 executed (get_yaml action + getDeckYaml/commitYaml client API)
+Plan: 2 of 2
+Status: Executing (Phase 43, Plan 02 complete)
+Last activity: 2026-03-13 — Plan 43-02 executed (DeckMetadataForm component with i18n, integrated into DeckDetailPanel)
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -62,6 +62,8 @@ Recent decisions affecting current work:
 - [Phase 42]: Both handleCreate and handleUpdate use UPSERT for idempotent out-of-order webhook delivery
 - [Phase 43]: get_yaml bypasses validateUserPath (.md-only restriction) using deck_name-based path construction
 - [Phase 43]: getDeckYaml maps data-level "File not found" error to null return, rethrows all other errors
+- [Phase 43]: Form starts collapsed by default, dirty tracking via JSON.stringify comparison against loadedRef snapshot
+- [Phase 43]: Race condition guard via cancelled flag in useEffect for rapid deck switching
 
 ### Pending Todos
 
@@ -88,12 +90,13 @@ None.
 | Phase 42 P02 | 1min | 1 tasks | 1 files |
 | Phase 42 P01 | 2min | 2 tasks | 1 files |
 | Phase 43 P01 | 2min | 1 tasks | 3 files |
+| Phase 43 P02 | 5min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-03-13T12:42:40Z
-Stopped at: Completed 43-01-PLAN.md
-Resume file: .planning/phases/43-deck-builder-metadata/43-01-SUMMARY.md
+Last session: 2026-03-13T12:57:52.749Z
+Stopped at: Completed 43-02-PLAN.md
+Resume file: .planning/phases/43-deck-builder-metadata/43-02-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
