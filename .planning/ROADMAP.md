@@ -247,7 +247,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 37. Backend Pipeline | 2/2 | Complete    | 2026-03-12 | - |
 | 38. Deck Management | 2/2 | Complete    | 2026-03-12 | - |
 | 39. Card Authoring | 2/2 | Complete    | 2026-03-12 | - |
-| 40. Deploy & CI/CD | 1/1 | Complete   | 2026-03-13 | - |
+| 40. Deploy & CI/CD | 1/1 | Complete    | 2026-03-13 | - |
 
 ---
 *Roadmap created: 2026-01-29*
