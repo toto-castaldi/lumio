@@ -6,6 +6,7 @@ import { validateDeckName } from '../lib/validation';
 import ConfirmDialog from './ConfirmDialog';
 import CardListPanel from './CardListPanel';
 import CardEditor from './CardEditor';
+import DeckMetadataForm from './DeckMetadataForm';
 
 // ---------------------------------------------------------------------------
 // Responsive hook
@@ -219,6 +220,11 @@ export default function DeckDetailPanel() {
             </button>
           </span>
         </div>
+      </div>
+
+      {/* Deck metadata */}
+      <div className="shrink-0 border-b border-lumio-border px-4 py-3">
+        <DeckMetadataForm deckName={selectedDeck.name} />
       </div>
 
       {/* Mail-client layout: card list + editor */}
