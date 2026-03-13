@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Deck Builder Web
-status: completed
-stopped_at: Completed 40-01-PLAN.md
-last_updated: "2026-03-13T08:55:35.825Z"
-last_activity: 2026-03-13 — Plan 40-01 deploy & CI/CD complete
+milestone: v3.1
+milestone_name: Deck Discovery
+status: active
+stopped_at: null
+last_updated: "2026-03-13T12:00:00.000Z"
+last_activity: 2026-03-13 — Milestone v3.1 started
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,8 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 
 ## Current Position
 
-Status: Between milestones (v3.0 shipped 2026-03-13)
-Last activity: 2026-03-13 — v3.0 Deck Builder Web milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-13 — Milestone v3.1 started
 
 ## Performance Metrics
 

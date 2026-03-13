@@ -104,10 +104,19 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(Defining requirements for next milestone)
+## Current Milestone: v3.1 Deck Discovery
+
+**Goal:** Permettere agli utenti mobile di scoprire e aggiungere deck creati con il deck builder, tramite ricerca fulltext su metadata deck nel repo condiviso lumio-decks.
+
+**Target features:**
+- Metadata a livello deck nel deck builder (nome, descrizione, categoria, tag) salvati in file deck.yaml
+- Indice deck in Supabase con fulltext search Postgres, popolato dal sync Docora di lumio-decks
+- Sincronizzazione lumio-decks a livello piattaforma (sempre presente)
+- Schermata discovery nell'app mobile con search bar fulltext su nome, categoria, tag, autore
+- Iscrizione utente a sottocartella specifica del repo condiviso (non intero repo)
+- Visualizzazione carte filtrate per deck scelto
 
 **Future milestones:**
-- v3.1: Deck Discovery — ricerca fulltext repo/deck pubblici nell'app mobile
 - v3.2: TBD
 
 ### Out of Scope
@@ -255,4 +264,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | deploy-deck-builder parallels deploy-landing in CI | Independent apps, no build dependency between them | ✓ Good — v3.0 |
 
 ---
-*Last updated: 2026-03-13 after v3.0 milestone*
+*Last updated: 2026-03-13 after v3.1 milestone start*
