@@ -1,307 +1,320 @@
-# Technology Stack
+# Technology Stack: v3.1 Deck Discovery
 
-**Project:** Lumio Deck Builder Web App (v3.0)
-**Researched:** 2026-03-11
+**Project:** Lumio - Deck Discovery with Fulltext Search
+**Researched:** 2026-03-13
+**Overall confidence:** HIGH
 
-## Recommended Stack
+## Context
 
-### Core Framework
+This research focuses exclusively on what is NEW for v3.1 Deck Discovery. The existing stack (Supabase, React Native/Expo, Vite/React, pnpm monorepo) is validated and NOT re-researched. The new capabilities needed are:
+
+1. **Postgres fulltext search** -- tsvector columns, GIN indexes, weighted search on deck metadata
+2. **Deck metadata file format** -- YAML deck.yaml in the shared repo, parsed by docora-webhook
+3. **Deck index table** -- new Supabase table populated during Docora sync
+4. **Mobile discovery UI** -- search bar, result list, deck detail, subscribe action
+5. **Deck-builder metadata editor** -- form in web app for deck name, description, category, tags
+
+## Recommended Stack Additions
+
+### Database: Postgres Fulltext Search (tsvector + GIN)
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Vite | ^7.3.1 | Build tool & dev server | Industry standard for React SPAs in 2026. Instant HMR, native ESM, zero-config TypeScript. CRA is dead, Webpack is legacy -- no alternative worth considering for a new project. |
-| React | 19.1.0 | UI framework | Must match existing monorepo `pnpm.overrides.react` pin. Shared with `@lumio/core` and `@lumio/shared`. |
-| React DOM | 19.1.0 | Browser rendering | Matches React version. Required for web (Android app uses react-native instead). |
-| @vitejs/plugin-react | ^4.5.0 | React fast-refresh for Vite | Standard Vite plugin for React. Handles JSX transform and HMR. |
-| react-router | ^7.13.1 | Client-side routing | v7 unifies react-router and react-router-dom into single `react-router` import. Use Library Mode with `createBrowserRouter` -- no need for Framework Mode since this is a simple SPA with no SSR. |
-| TypeScript | ~5.9.2 | Type safety | Match version from `apps/android` for monorepo consistency. |
+| PostgreSQL tsvector | Built-in (PG 15+) | Fulltext search tokenization | Already available in Supabase, zero additional cost, battle-tested for this exact use case |
+| GIN index | Built-in (PG 15+) | Fast fulltext lookup | Preferred index type for tsvector per Postgres docs -- inverted index with compressed posting lists |
+| `websearch_to_tsquery()` | Built-in (PG 11+) | User-friendly query parsing | Handles quoted phrases, OR, negation without requiring manual `&`/`|` operators -- ideal for mobile search bar input |
+| `setweight()` | Built-in | Weighted search ranking | Allows deck name (weight A) to rank higher than tags (weight B) and description (weight C) |
+| `ts_rank()` | Built-in | Relevance sorting | Ranks results by match quality, critical for meaningful search results |
 
-### Supabase (Web Client)
+**Rationale:** Postgres FTS is the right choice because: (a) Supabase already runs PG 15+ with full FTS support, (b) the data volume is small (hundreds to low thousands of decks, not millions), (c) no external service dependency (no Elasticsearch, Algolia, Meilisearch), (d) `websearch_to_tsquery` provides natural search syntax users expect, (e) supabase-js has built-in `.textSearch()` method.
+
+**Confidence:** HIGH -- verified via Supabase official docs and PostgreSQL 18 documentation.
+
+### Database: Deck Index Table Design
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| @supabase/supabase-js | ^2.45.0 | Auth + DB client for browser | Already a dependency in `@lumio/core`. Web app creates its own Supabase client instance -- not through `@lumio/core`'s singleton. Same Supabase project = shared auth, shared tables, shared RLS policies. |
+| New `deck_index` table | N/A (migration) | Stores deck metadata for discovery | Separate from `repositories` because decks are subdirectories within the shared repo, not standalone repos |
+| Generated tsvector column | Built-in PG | Auto-updating search vector | `GENERATED ALWAYS AS (...)` pattern ensures FTS column stays in sync with source columns without triggers |
+| `simple` text search config | Built-in PG | Language-agnostic tokenization | Deck names, tags, and categories are proper nouns and keywords, not natural language prose -- `simple` avoids stemming that would mangle them |
 
-**Why a separate Supabase client (not via @lumio/core):**
-The `createSupabaseClient()` in `@lumio/core` is configured for mobile: `detectSessionInUrl: false`, `flowType: 'pkce'`. The web app needs `detectSessionInUrl: true` to handle OAuth redirects in the browser. Creating the client directly with `@supabase/supabase-js` is 6 lines of code and avoids coupling to mobile-specific configuration. The web client uses browser `localStorage` by default -- no custom `StorageAdapter` needed.
+**Recommended schema:**
 
-```typescript
-// apps/deck-builder/src/lib/supabase.ts
-import { createClient } from '@supabase/supabase-js';
+```sql
+CREATE TABLE public.deck_index (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- Identity
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    deck_path TEXT NOT NULL,          -- e.g., "{user_id}/{deck_name}"
+    author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,  // Required for OAuth redirect handling
-      flowType: 'pkce',
-    },
-  }
+    -- Metadata from deck.yaml
+    display_name TEXT NOT NULL,       -- Human-friendly deck name
+    description TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '',
+    tags TEXT[] NOT NULL DEFAULT '{}',
+    card_count INTEGER NOT NULL DEFAULT 0,
+
+    -- FTS column (weighted: name A, category B, tags B, description C)
+    fts tsvector GENERATED ALWAYS AS (
+        setweight(to_tsvector('simple', coalesce(display_name, '')), 'A') ||
+        setweight(to_tsvector('simple', coalesce(category, '')), 'B') ||
+        setweight(to_tsvector('simple', coalesce(array_to_string(tags, ' '), '')), 'B') ||
+        setweight(to_tsvector('simple', coalesce(description, '')), 'C')
+    ) STORED,
+
+    -- Metadata
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(repository_id, deck_path)
 );
+
+CREATE INDEX idx_deck_index_fts ON deck_index USING GIN (fts);
+CREATE INDEX idx_deck_index_category ON deck_index(category);
+CREATE INDEX idx_deck_index_author_id ON deck_index(author_id);
 ```
 
-### Markdown Editor
+**Key decisions:**
+- Use `simple` config, not `english` -- deck names like "JavaScript Basics" should match "JavaScript", not be stemmed. `simple` tokenizes and lowercases without stemming, so "JavaScript" becomes token "javascript" and searching for "javascript" matches it exactly.
+- Weighted FTS: name is most important (A=1.0), category and tags equally important (B=0.4), description least (C=0.2)
+- `author_id` enables "show my decks" and "decks by author X" filters
+- `card_count` is denormalized for display without JOIN -- updated by docora-webhook on card create/delete
+- Separate from `repositories` table because the shared lumio-decks repo contains many decks from many users; each deck directory is one row in `deck_index`
+
+**Confidence:** HIGH -- standard Postgres patterns, verified with Supabase docs.
+
+### Database: Search RPC Function
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| @uiw/react-md-editor | ^4.0.11 | Markdown editing with live preview | ~4.6 kB gzipped -- smallest full-featured option. Split-pane edit/preview mode. GitHub Flavored Markdown built-in. TypeScript definitions. Active maintenance (last release Dec 2025). Uses native textarea, no CodeMirror/Monaco dependency. Perfect for flashcard content where users need to see and control the raw markdown. |
+| `search_decks` RPC | plpgsql | Fulltext search with ranking | supabase-js `.textSearch()` cannot do `ts_rank` ordering natively -- an RPC gives full control over ranking and pagination |
 
-**Alternatives considered:**
+**Recommended RPC:**
 
-| Option | Bundle Size | Why Not |
-|--------|-------------|---------|
-| MDXEditor | ~851 kB gzip | 185x larger for WYSIWYG features not needed. Flashcard content is raw markdown. |
-| Monaco Editor | ~2 MB | Overkill code editor. Wrong tool for content authoring. |
-| CodeMirror (@uiw/react-codemirror) | ~150 kB | Good but heavier for the same task. Only choose if custom language modes are needed. |
-| Plain textarea + react-markdown | ~5 kB | Too bare. No toolbar, no split preview. Would need to build editor UI from scratch. |
+```sql
+CREATE OR REPLACE FUNCTION search_decks(
+    search_query TEXT DEFAULT NULL,
+    p_category TEXT DEFAULT NULL,
+    p_limit INTEGER DEFAULT 20,
+    p_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE(
+    id UUID, display_name TEXT, description TEXT, category TEXT,
+    tags TEXT[], card_count INTEGER, author_display_name TEXT,
+    author_avatar_url TEXT, deck_path TEXT, rank REAL
+)
+LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        di.id, di.display_name, di.description, di.category,
+        di.tags, di.card_count,
+        u.display_name AS author_display_name,
+        u.avatar_url AS author_avatar_url,
+        di.deck_path,
+        CASE
+            WHEN search_query IS NULL OR search_query = '' THEN 0.0::REAL
+            ELSE ts_rank(di.fts, websearch_to_tsquery('simple', search_query))
+        END AS rank
+    FROM deck_index di
+    LEFT JOIN users u ON u.id = di.author_id
+    WHERE
+        (search_query IS NULL OR search_query = '' OR di.fts @@ websearch_to_tsquery('simple', search_query))
+        AND (p_category IS NULL OR di.category = p_category)
+    ORDER BY
+        CASE WHEN search_query IS NULL OR search_query = '' THEN di.card_count ELSE 0 END DESC,
+        rank DESC,
+        di.display_name ASC
+    LIMIT p_limit OFFSET p_offset;
+END;
+$$;
+```
 
-### GitHub API (Edge Function)
+**Why RPC instead of `.textSearch()`:** The supabase-js `.textSearch()` method works for simple queries but cannot combine `ts_rank` ordering, JOIN with users table for author info, and optional category filtering in a single call. An RPC encapsulates this cleanly and runs server-side. This follows the established pattern in the codebase (e.g., `upsert_card_review`, `get_study_session_cards`).
+
+**Confidence:** HIGH -- follows existing RPC patterns in the codebase.
+
+### Deck Metadata File Format
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| GitHub REST API (direct fetch) | v2022-11-28 | Commit files to shared repo | Use `PUT /repos/{owner}/{repo}/contents/{path}` directly via `fetch()` in the Deno edge function. One endpoint takes path + base64 content + commit message and creates/updates a file in one call. Avoids the multi-step git tree/blob/commit dance. Existing edge functions (git-sync, docora-webhook) already use raw `fetch()` for external APIs -- this is a consistent pattern. |
+| `yaml` package | ^2.8.2 | YAML parsing in deck-builder web | Already a dependency in deck-builder (`apps/deck-builder/package.json`), proven with card frontmatter serialization |
+| Simple YAML parser in docora-webhook | N/A (edge function) | Parse deck.yaml during sync | Reuse existing `parseFrontmatter()` YAML-parsing logic already in the webhook |
 
-**Why NOT Octokit:**
-- The edge function needs one endpoint: create/update file contents
-- Octokit adds ~200KB+ dependency surface for a single `fetch()` call
-- Existing edge functions already use raw `fetch()` for Docora API calls
-- `npm:octokit` in Deno edge functions adds cold start latency
-- A wrapper function around `fetch()` with proper headers is ~20 lines
+**Recommended deck.yaml format:**
 
-**API endpoint:**
-```
-PUT /repos/{owner}/{repo}/contents/{path}
-Headers: Authorization: Bearer {GITHUB_PAT}, Accept: application/vnd.github+json
-Body: { message, content (base64), sha (for updates -- omit for create) }
-```
-
-The edge function stores a GitHub PAT (fine-grained, scoped to the shared Lumio deck repo only) as a Supabase secret. Users never see or handle the token.
-
-**For deleting files (deck/card deletion):**
-```
-DELETE /repos/{owner}/{repo}/contents/{path}
-Headers: Authorization: Bearer {GITHUB_PAT}, Accept: application/vnd.github+json
-Body: { message, sha (required -- get from GET endpoint first) }
+```yaml
+display_name: "JavaScript Fundamentals"
+description: "Core concepts of JavaScript for beginners"
+category: "programming"
+tags:
+  - javascript
+  - beginner
+  - web-development
 ```
 
-### Styling
+**Key decisions:**
+- Use `deck.yaml` (not `README.md` frontmatter, not `_deck.yaml`) -- explicit, discoverable, does not conflict with existing README.md handling in docora-webhook which already parses `lumio_format_version` and `description`
+- Category is a free-text string, not an enum -- allows organic category emergence; the mobile app can later surface popular categories as filter chips via `SELECT DISTINCT category FROM deck_index`
+- Tags are lowercase strings, same convention as card tags
+- `display_name` (not `name`) to distinguish from the filesystem deck directory name which has naming constraints (alphanumeric+hyphens only)
+- No `lumio_format_version` in deck.yaml -- that belongs in the repo-level README.md (already handled)
+
+**Confidence:** HIGH -- `yaml` package already in use, format mirrors existing card frontmatter conventions.
+
+### Mobile App: Search UI Components
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Tailwind CSS | ^4.2.1 | Utility-first CSS | v4 eliminates `tailwind.config.js` -- works with just `@import "tailwindcss"` in CSS. Automatic content detection + tree-shaking = tiny production CSS. Fast solo-developer velocity: compose directly in JSX instead of naming CSS classes. |
-| @tailwindcss/vite | ^4.2.1 | Vite integration plugin | Required for Tailwind v4 + Vite. Replaces the old PostCSS approach. Zero config. |
+| React Native `TextInput` | Built-in (RN 0.81) | Search bar input | No need for external search bar component -- TextInput + Ionicons search icon is consistent with existing app design patterns |
+| React Native `FlatList` | Built-in (RN 0.81) | Search results list | Provides virtualized scrolling for potentially hundreds of deck results with `keyExtractor` |
+| `useCallback` + debounce | Built-in React | Debounced search | Prevent excessive RPC calls as user types; 300ms debounce is standard |
+| `@expo/vector-icons` (Ionicons) | ^15.0.3 (existing) | Search/filter icons | Already in deps, provides search-outline, filter-outline, compass-outline icons |
 
-**Monorepo note:** Tailwind v4's automatic content detection scans the app directory tree. Since the deck builder only imports types/constants from `@lumio/shared` (no UI components), all Tailwind classes are in `apps/deck-builder/src/` -- no `@source` directive needed. If shared UI components are ever introduced, add `@source "../../packages/ui/src";` to the CSS file.
+**No new npm dependencies needed for mobile search UI.** The existing component patterns (TextInput, FlatList, Ionicons, useTheme, useI18n) cover everything.
 
-**Why not CSS Modules:** Tailwind is faster for solo development. CSS Modules require naming every class. The deck builder is a small focused SPA, not a shared design system.
+**New screens needed:**
+1. `DiscoveryScreen` -- search bar + results FlatList (new bottom tab)
+2. `DeckDetailScreen` -- deck metadata + card list preview + subscribe button (stack screen)
 
-### Deploy
+**Navigation integration -- new bottom tab "Discover":**
+- Add a 4th bottom tab with compass-outline icon alongside Dashboard, Repos, Settings
+- Discovery is a primary user action, not buried behind navigation -- it deserves a tab
+- Four tabs is standard for mobile apps (Instagram, Spotify, etc.)
+- New type addition to `MainTabParamList`: `Discover: undefined`
+
+**Confidence:** HIGH -- uses only existing RN built-ins and established app patterns.
+
+### Deck Builder: Metadata Editor
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Vite build (static) | -- | Production build | `vite build` outputs `dist/` with static HTML/JS/CSS. SPA with client-side routing. |
-| DigitalOcean + nginx | existing | Hosting | Same VPS already hosts `lumio.toto-castaldi.com` (landing page). Add nginx server block for `deck.lumio.toto-castaldi.com`. Same infra = no new vendor, no new DNS provider. |
-| SCP + SSH (GitHub Actions) | existing | CI/CD deployment | Same `appleboy/scp-action` + `appleboy/ssh-action` pattern from landing page deploy. Copy `dist/` to `/var/www/deck-builder`, reload nginx. |
+| Standard React form inputs | React 19 (existing) | Deck metadata form fields | Name, description, category, tags inputs -- standard Tailwind-styled form components already used in the deck builder |
+| `yaml` package | ^2.8.2 (existing) | Serialize deck.yaml | Already used in `frontmatter.ts` for card YAML serialization |
 
-**SPA routing on nginx:** Add `try_files $uri $uri/ /index.html;` to the server block. This serves `index.html` for all paths, letting react-router handle routing client-side.
+**No new dependencies needed for deck builder metadata editing.** The form for editing display_name, description, category, and tags uses existing React + Tailwind patterns. The `deck-commit` edge function needs a `commit_file` action with path validation relaxed for `.yaml` files.
 
-**Why not Vercel/Netlify/GitHub Pages:** The project already has a DigitalOcean VPS with nginx. Adding another hosting provider increases complexity (DNS split, different deploy processes, another vendor). A static SPA deploy via SCP is 5 lines of CI config -- consistent with the existing landing page deploy pattern.
+**Key change needed:** The `deck-commit` edge function's `validateUserPath()` currently requires `.md` extension. It needs to also allow `deck.yaml` files. This is a targeted condition change.
 
-### Supporting Libraries
+**Confidence:** HIGH -- minimal additions to existing patterns.
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| @lumio/shared | workspace:* | Types, constants, version | Always -- shared between all apps. Already exports VERSION, types, constants. |
-| react-hot-toast | ^2.5.2 | Toast notifications | Success/error feedback on save/delete operations. Lightweight (~5kB), Tailwind-friendly. Analogous to `react-native-toast-message` in the Android app. |
-| i18n-js | ^4.5.2 | Internationalization | Same library as Android app. Share translation keys for consistent IT/EN support. |
+### Edge Function: Docora Webhook Enhancement
 
-## What NOT to Add (Already Available via Workspace)
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Existing YAML parser in webhook | N/A | Parse deck.yaml during sync | The `parseFrontmatter()` function already handles YAML parsing; for standalone YAML files, parse the entire content as YAML (not frontmatter-delimited) |
 
-| Package | Available Via | Notes |
-|---------|--------------|-------|
-| @supabase/supabase-js | Directly (already in dependency tree via @lumio/core) | Web app installs its own copy but shares the same semver range |
-| Types (Repository, Card, etc.) | @lumio/shared | Reuse all shared TypeScript types |
-| VERSION, BUILD_INFO | @lumio/shared | Same version system |
-| Constants | @lumio/shared | All shared constants |
+**Webhook changes needed:**
+1. In `handleCreate` and `handleUpdate`: detect `deck.yaml` files (same pattern as README.md and .lumioignore detection)
+2. Parse YAML content to extract display_name, description, category, tags
+3. UPSERT into `deck_index` table
+4. Update `card_count` in `deck_index` when `.md` cards are created/deleted -- derive deck_path from card file_path by extracting the directory
 
-**Do NOT import from `@lumio/core` in the web app.** The core package has React Native-specific transitive dependencies (rehype-highlight, rehype-katex, remark-gfm, remark-math, supermemo, `ignore`). These are unnecessary for the deck builder and may cause bundler issues. Import only from `@lumio/shared` for types/constants. Use `@supabase/supabase-js` directly for the web Supabase client.
+**No new npm dependencies** -- the existing simple YAML parser in the webhook handles the flat key-value + array structure of deck.yaml.
 
-## Monorepo Integration
+**Confidence:** HIGH -- follows exact same pattern as README.md handling already in the webhook.
 
-### New Package Structure
+## Zero New Dependencies
 
-```
-apps/deck-builder/
-  package.json        # @lumio/deck-builder
-  vite.config.ts
-  tsconfig.json
-  index.html          # SPA entry point
-  public/
-  src/
-    main.tsx           # React root
-    App.tsx            # Router setup with createBrowserRouter
-    index.css          # @import "tailwindcss"
-    lib/
-      supabase.ts      # Web-specific Supabase client
-    pages/             # Route components (Login, DeckList, DeckEdit, CardEdit)
-    components/        # Reusable UI components
-    hooks/             # Custom React hooks
-```
+| Layer | New npm/Deno deps | Explanation |
+|-------|-------------------|-------------|
+| Database (Postgres) | None | tsvector, GIN, websearch_to_tsquery are all built-in |
+| Edge Functions | None | Existing YAML parser handles deck.yaml |
+| Deck Builder (Web) | None | `yaml` already in deps, React forms use existing patterns |
+| Mobile App (Android) | None | TextInput, FlatList, Ionicons already available |
+| Shared packages | None | New types added to `@lumio/shared` |
 
-### package.json
+**This is a zero-new-dependency milestone.** All capabilities are achieved with existing stack + Postgres built-ins + new database tables/RPCs + new screens using existing component patterns.
 
-```json
-{
-  "name": "@lumio/deck-builder",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@lumio/shared": "workspace:*",
-    "@supabase/supabase-js": "^2.45.0",
-    "@uiw/react-md-editor": "^4.0.11",
-    "i18n-js": "^4.5.2",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "react-router": "^7.13.1",
-    "react-hot-toast": "^2.5.2"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.2.1",
-    "@types/react": "~19.1.0",
-    "@types/react-dom": "~19.1.0",
-    "tailwindcss": "^4.2.1",
-    "typescript": "~5.9.2",
-    "vite": "^7.3.1",
-    "@vitejs/plugin-react": "^4.5.0"
-  }
-}
-```
+## Alternatives Considered
 
-### vite.config.ts
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Search engine | Postgres FTS (tsvector + GIN) | Algolia / Meilisearch / Typesense | Massive overkill for hundreds of decks. Adds external service dependency, API keys, cost. Postgres FTS handles this scale trivially. |
+| Search engine | Postgres FTS | Supabase pg_trgm (trigram similarity) | Trigram is for fuzzy/typo-tolerant matching, not structured fulltext search. FTS with `websearch_to_tsquery` is the right tool for keyword-based deck discovery. Trigram could complement FTS later if typo tolerance is needed. |
+| FTS config | `simple` | `english` | `english` stems words -- "JavaScript" could lose precision. `simple` tokenizes and lowercases without stemming, preserving exact keyword matching for technical terms and proper nouns. |
+| Deck metadata | deck.yaml (standalone file) | README.md frontmatter (extend existing) | README.md already has `lumio_format_version` and `description` in docora-webhook. Adding more fields creates coupling. deck.yaml is clean separation of deck-level metadata from repo-level metadata. |
+| Deck metadata | deck.yaml per deck directory | Single index file at repo root | Per-deck files allow Docora to detect changes per-deck independently. A single index file creates update conflicts when multiple users edit simultaneously via deck-builder. |
+| Search UI lib | Built-in TextInput + FlatList | react-native-search-bar / react-native-elements SearchBar | External search bar components add dependency for something trivially built with TextInput + Ionicons. The app already uses custom styled components consistently. |
+| New navigation | Bottom tab "Discover" | Floating action button / drawer menu | Discovery is a primary feature. Bottom tab is immediately visible and accessible. |
+| RPC vs client query | `search_decks` RPC | supabase-js `.textSearch()` + `.order()` | `.textSearch()` cannot do `ts_rank` ordering, JOIN with users for author info, or optional category filtering in a single call. RPC encapsulates the full query. |
+| FTS ranking | `ts_rank()` | `ts_rank_cd()` (cover density) | Cover density ranking is for long documents where word proximity matters. Deck metadata is short text -- standard `ts_rank` is sufficient and simpler. |
 
-```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
+## Integration Points
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    port: 5173,
-  },
-});
-```
+### Existing Components Affected
 
-## Installation
+| Component | Change Needed | Complexity |
+|-----------|---------------|------------|
+| `deck-commit` edge function | Allow `.yaml` extension in `validateUserPath()` | Low |
+| `docora-webhook` edge function | Add `deck.yaml` handler alongside README.md and .lumioignore | Medium |
+| `@lumio/shared` types | Add `DeckIndexEntry`, `SearchDecksResult`, `DeckMetadata` types | Low |
+| `@lumio/core` repositories.ts or new discovery.ts | Add `searchDecks()` and `subscribeToDeck()` functions | Low |
+| `apps/android` MainNavigator | Add Discover tab (4th bottom tab) | Low |
+| `apps/android` AppNavigator | Add DeckDetail stack screen | Low |
+| `apps/android` i18n | Add ~25-30 new translation keys for discovery UI | Low |
+| `apps/deck-builder` DeckProvider/page | Add deck metadata form with deck.yaml commit | Medium |
 
-```bash
-# From monorepo root -- create the app directory and initialize
-mkdir -p apps/deck-builder
+### New Components
 
-# From apps/deck-builder
-cd apps/deck-builder
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `deck_index` table + migration | `supabase/migrations/` | Stores searchable deck metadata |
+| `search_decks` RPC | `supabase/migrations/` | Fulltext search with ranking |
+| `subscribe_to_deck` RPC | `supabase/migrations/` | Creates user_repositories link scoped to deck path |
+| `DiscoveryScreen` | `apps/android/screens/` | Search bar + results list |
+| `DeckDetailScreen` | `apps/android/screens/` | Deck info + card preview + subscribe |
+| `DeckSearchItem` component | `apps/android/components/` | Result card in discovery list |
+| Deck metadata form | `apps/deck-builder/src/components/` | Edit display_name, description, category, tags |
 
-# Core dependencies
-pnpm add react@19.1.0 react-dom@19.1.0 react-router@^7.13.1 \
-  @supabase/supabase-js@^2.45.0 @uiw/react-md-editor@^4.0.11 \
-  react-hot-toast@^2.5.2 i18n-js@^4.5.2
+## Configuration
 
-# Workspace dependency
-pnpm add @lumio/shared@workspace:*
+### New Environment Variables
 
-# Dev dependencies
-pnpm add -D vite@^7.3.1 @vitejs/plugin-react@^4.5.0 \
-  tailwindcss@^4.2.1 @tailwindcss/vite@^4.2.1 \
-  typescript@~5.9.2 @types/react@~19.1.0 @types/react-dom@~19.1.0
-```
+None required. All new functionality uses existing Supabase connection and Docora webhook infrastructure.
 
-## Edge Function Dependencies (Deno)
+### Database Migration
 
-The new `deck-commit` edge function needs no npm dependencies beyond the Supabase client:
+One new migration file covering:
+1. `deck_index` table with tsvector generated column and GIN index
+2. RLS policies for deck_index (public read for all authenticated users, service role write)
+3. `search_decks` RPC function
+4. `subscribe_to_deck` RPC function
+5. updated_at trigger on deck_index
 
-```typescript
-// supabase/functions/deck-commit/index.ts
-import { createClient } from "npm:@supabase/supabase-js@2";
+### Supabase Config
 
-// GitHub API calls use native Deno fetch() -- no Octokit needed
-```
+No changes to `supabase/config.toml`. No new extensions needed -- tsvector/GIN are core Postgres.
 
-No additional packages. Follows the `npm:` specifier pattern recommended by Supabase docs (not the old `esm.sh` CDN imports used in existing functions like git-sync).
+## Version Compatibility
 
-## CI/CD Changes
-
-Add to the existing `ci-deploy.yml` workflow:
-
-1. **Build step:** `pnpm --filter @lumio/deck-builder build` after `build:packages`
-2. **Deploy step:** SCP `apps/deck-builder/dist/` to `/var/www/deck-builder` on the DO server
-3. **Nginx config:** New server block for `deck.lumio.toto-castaldi.com` with SSL (Let's Encrypt)
-4. **Environment:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub secrets (same values as existing `SUPABASE_URL` and `SUPABASE_ANON_KEY`)
-
-The typecheck job already runs `pnpm typecheck` which will pick up the new `@lumio/deck-builder` package via pnpm workspace.
-
-## Supabase Configuration Changes
-
-### config.toml (Local Development)
-
-Add the deck builder URL to allowed redirects:
-
-```toml
-[auth]
-additional_redirect_urls = [
-  "http://localhost:5173/auth/callback",    # deck-builder local dev
-  "http://localhost:5174/auth/callback",
-  "https://m-lumio.toto-castaldi.com/auth/callback",
-  "https://deck.lumio.toto-castaldi.com/auth/callback",  # NEW: production
-  "lumio://auth/callback"
-]
-```
-
-### Production Supabase Dashboard
-
-- Add `https://deck.lumio.toto-castaldi.com` to Site URL or Additional Redirect URLs
-- Add `https://deck.lumio.toto-castaldi.com/auth/callback` to Redirect URL allow list
-- Google OAuth: Add `deck.lumio.toto-castaldi.com` to authorized JavaScript origins in Google Cloud Console
-
-## Confidence Assessment
-
-| Technology | Confidence | Reason |
-|------------|------------|--------|
-| Vite 7 | HIGH | npm verified v7.3.1, industry standard, production proven |
-| React 19.1.0 | HIGH | Already pinned in monorepo, no change needed |
-| react-router 7 | HIGH | npm verified v7.13.1, Library Mode well documented |
-| @uiw/react-md-editor 4 | MEDIUM | npm verified v4.0.11, active maintenance, less widely adopted than CodeMirror. Fallback: swap to @uiw/react-codemirror if editor limitations surface |
-| GitHub REST API (direct fetch) | HIGH | Official GitHub docs, stable endpoint, well-documented PUT contents API |
-| Tailwind CSS 4 | HIGH | npm verified v4.2.1, Vite plugin documented, v4 widely adopted |
-| @supabase/supabase-js 2 | HIGH | Already in project, web browser support confirmed, v2.99.0 latest |
-| DigitalOcean + nginx deploy | HIGH | Existing infrastructure, proven pattern with landing page |
-| react-hot-toast | HIGH | Widely used, small footprint, straightforward API |
-| i18n-js | HIGH | Already used in Android app, same library for consistency |
+| Technology | Current Version | Required for v3.1 | Compatible |
+|------------|----------------|-------------------|------------|
+| PostgreSQL | 15+ (Supabase) | 11+ (for websearch_to_tsquery) | YES |
+| @supabase/supabase-js | ^2.45.0 | ^2.0.0 (rpc method) | YES |
+| React Native | 0.81.5 | 0.60+ (FlatList, TextInput) | YES |
+| Expo | ~54.0.33 | Any | YES |
+| yaml (npm) | ^2.8.2 | ^2.0.0 | YES |
+| react-navigation | ^7.12.0 | ^6.0.0 | YES |
+| Vite | ^7.3.1 | Any | YES |
+| React | 19.1.0 | 16.8+ (hooks) | YES |
 
 ## Sources
 
-- [Vite npm](https://www.npmjs.com/package/vite) - v7.3.1 verified
-- [React Router docs - Picking a Mode](https://reactrouter.com/start/modes) - Library Mode vs Framework Mode
-- [React Router docs - SPA](https://reactrouter.com/how-to/spa) - SPA configuration
-- [react-router npm](https://www.npmjs.com/package/react-router) - v7.13.1 verified
-- [@uiw/react-md-editor npm](https://www.npmjs.com/package/@uiw/react-md-editor) - v4.0.11 verified
-- [@uiw/react-md-editor GitHub](https://github.com/uiwjs/react-md-editor) - features and API docs
-- [GitHub REST API - Repository Contents](https://docs.github.com/en/rest/repos/contents) - PUT endpoint for file create/update
-- [@supabase/supabase-js npm](https://www.npmjs.com/package/@supabase/supabase-js) - v2.99.0 latest
-- [Supabase Auth Architecture](https://supabase.com/docs/guides/auth/architecture) - shared auth across apps
-- [Supabase Sessions - Subdomain Discussion](https://github.com/orgs/supabase/discussions/5742) - cross-domain auth considerations
-- [Tailwind CSS npm](https://www.npmjs.com/package/tailwindcss) - v4.2.1 verified
-- [Tailwind CSS v4 + Vite setup](https://tailwindcss.com/docs) - Official installation guide
-- [Tailwind v4 monorepo issue #13136](https://github.com/tailwindlabs/tailwindcss/issues/13136) - @source directive for workspace content detection
-- [Nx blog - Tailwind 4 npm workspace](https://nx.dev/blog/setup-tailwind-4-npm-workspace) - Monorepo configuration guide
-- [Supabase Edge Functions - Dependencies](https://supabase.com/docs/guides/functions/dependencies) - npm: specifier preferred over esm.sh
-- [Vite Static Deploy Guide](https://vite.dev/guide/static-deploy) - Deployment options
-- [Octokit GitHub](https://github.com/octokit/octokit.js/) - Evaluated and rejected for simplicity
+- [Supabase Full Text Search Docs](https://supabase.com/docs/guides/database/full-text-search) -- tsvector, GIN index, generated columns, weighted search
+- [Supabase JS textSearch API Reference](https://supabase.com/docs/reference/javascript/textsearch) -- client-side `.textSearch()` method signature and options
+- [PostgreSQL 18: Text Search Indexes](https://www.postgresql.org/docs/current/textsearch-indexes.html) -- GIN vs GiST index comparison, GIN as preferred type
+- [PostgreSQL 18: Tables and Indexes for Text Search](https://www.postgresql.org/docs/current/textsearch-tables.html) -- tsvector column strategies, generated columns
+- [Skip Elasticsearch: Full-Text Search in Supabase (DEV Community)](https://dev.to/reclusivecoder/skip-elasticsearch-build-blazing-fast-full-text-search-right-in-supabase-58pf) -- real-world Supabase FTS implementation patterns
+- [Supabase Fuzzy Full Text Search (code.build)](https://code.build/p/supabase-fuzzy-full-text-search-BS0SWP) -- pg_trgm comparison with tsvector
+- Lumio codebase: `supabase/functions/docora-webhook/index.ts` -- existing webhook patterns for README.md, .lumioignore, YAML parsing
+- Lumio codebase: `supabase/functions/deck-commit/index.ts` -- path validation, GitHub API patterns, deck operations
+- Lumio codebase: `apps/deck-builder/src/lib/frontmatter.ts` -- YAML parsing with `yaml` package
+- Lumio codebase: `packages/shared/src/types/index.ts` -- existing type definitions, Repository, Card, UserRepository
+- Lumio codebase: `apps/android/navigation/AppNavigator.tsx` -- screen navigation patterns, RootStackParamList
+- Lumio codebase: `apps/android/navigation/MainNavigator.tsx` -- bottom tab navigator, 3 tabs currently
+- Lumio codebase: `supabase/migrations/20260115000001_shared_repositories.sql` -- user_repositories pattern, RLS policies

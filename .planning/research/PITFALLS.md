@@ -1,457 +1,450 @@
-# Pitfalls Research
+# Domain Pitfalls
 
-**Domain:** Adding a React SPA deck builder web app with GitHub API commits, shared repo with Docora integration, cross-origin auth, and per-user data isolation to existing Lumio flashcard platform
-**Researched:** 2026-03-11
-**Confidence:** HIGH
-
----
+**Domain:** Adding fulltext search, deck metadata, subfolder subscription, and discovery screen to existing Lumio flashcard platform (v3.1 Deck Discovery)
+**Researched:** 2026-03-13
 
 ## Critical Pitfalls
 
-### Pitfall 1: GitHub Contents API 409 Conflict When Two Users Edit Simultaneously
+Mistakes that cause rewrites or major issues.
 
-**What goes wrong:**
-The GitHub Contents API (`PUT /repos/{owner}/{repo}/contents/{path}`) requires providing the current file's SHA blob hash when updating an existing file. If User A and User B both read a file at SHA `abc123`, then User A commits and the file SHA changes to `def456`, User B's commit fails with a `409 Conflict` because their SHA is stale. In a shared repo architecture where all users write to `/{user_id}/{deck_name}/`, this does not directly cause cross-user conflicts (different file paths). HOWEVER, the `409` still occurs when:
+### Pitfall 1: Subfolder Subscription Breaks Existing Study Pipeline
 
-1. The same user makes two rapid saves (e.g., double-click "Save" or auto-save + manual save) -- the second request has a stale SHA from before the first commit completed.
-2. The edge function creates multiple files in a single deck operation (README.md + card1.md + card2.md) using sequential commits -- each commit changes the tree SHA, and if any parallel request reads the old SHA, it fails.
-3. Docora processes the webhook for commit N and triggers question generation while commit N+1 is being created by the edge function -- not a direct API conflict, but can cause Docora to process partially-committed deck state.
+**What goes wrong:** The existing system links users to whole repositories via `user_repositories`. ALL study RPCs (`get_study_cards_for_session`, `get_due_card_count`, `upsert_card_review`) join through `user_repositories` to filter cards. Introducing subfolder-level subscription (user subscribes to `/{author_id}/{deck_name}/` within the shared repo) without updating these RPCs means either: (a) subscribing gives access to ALL cards in the entire shared repo (every author's decks), or (b) subfolder subscriptions are invisible to the study pipeline and users can never study discovered decks.
 
-Real-world evidence: [GitHub Community Discussion #62198](https://github.com/orgs/community/discussions/62198) documents `409 Conflict` errors appearing after 5-10 sequential commits via the Contents API, caused by GitHub's eventual consistency in SHA propagation.
+**Why it happens:** `user_repositories` is a repo-level concept. The v3.0 architecture deliberately uses one shared repo (`lumio-decks`) for all user content. When a user "subscribes" to a specific deck, there is no table to represent "user subscribed to THIS subfolder within this repo." Adding a `user_repositories` row for the whole shared repo gives access to ALL decks from ALL authors, not just the selected one.
 
-**Why it happens:**
-The Contents API uses optimistic concurrency control. Each file has a SHA that must match the server state. Unlike the lower-level Git Database API (which allows creating blobs, trees, and commits atomically), the Contents API performs one file per commit. Developers assume sequential API calls are safe, but GitHub's backend has propagation delays where the new SHA is not immediately visible after a successful PUT response.
+**Consequences:**
+- Option (a): User subscribes to one deck but sees hundreds of cards from all authors in their study sessions. Study is completely polluted with irrelevant content.
+- Option (b): User subscribes but cannot study. The feature appears broken.
+- Changing the join structure of 4+ SECURITY DEFINER RPCs (`get_study_cards_for_session`, `get_due_card_count`, `upsert_card_review`, `get_study_cards_with_questions`) is a high-risk migration that can break SM-2 scheduling for existing users.
 
-**How to avoid:**
-- Use the Git Database API (blobs + trees + commits) instead of the Contents API for multi-file operations. This creates a single atomic commit for all files in a deck, avoiding the sequential-SHA problem entirely.
-- For single-file updates (editing one card), always fetch the current SHA immediately before the PUT, never cache it.
-- Add retry logic with exponential backoff specifically for `409` responses: re-fetch SHA, then retry the commit.
-- Implement client-side debouncing on the "Save" button (disable for 2 seconds after click) to prevent double-submit.
-- In the edge function, use a mutex pattern (database advisory lock keyed on user_id) to serialize commits per user.
+**Prevention:**
+- Introduce a `user_deck_subscriptions` table with `(user_id, deck_id UUID REFERENCES decks(id) ON DELETE CASCADE)` and a `decks` table with `(id, repository_id, path_prefix TEXT, ...)`.
+- Update ALL study RPCs to UNION cards from both `user_repositories` (existing personal repos) and `user_deck_subscriptions` (discovered decks). This maintains backward compatibility.
+- The RPCs should filter cards from `user_deck_subscriptions` joins by `file_path LIKE decks.path_prefix || '/%'`.
+- Test the study flow end-to-end after migration: subscribe to one deck, verify only that deck's cards appear in sessions.
 
-**Warning signs:**
-- Intermittent save failures that succeed on retry
-- Users reporting "save failed" after rapid edits
-- Console logs showing `409 Conflict` responses from GitHub API
+**Detection:** After subscribing to one deck via discovery, check if `get_study_cards_for_session` returns ONLY cards from that deck, not all cards in the shared repo.
 
-**Phase to address:**
-Edge function implementation phase (GitHub API commit logic). The choice between Contents API and Git Database API is an architectural decision that must be made before any commit code is written.
+**Phase:** Must be designed in the database schema phase and propagated through every RPC. This is the single highest-risk architectural change in v3.1.
 
 ---
 
-### Pitfall 2: GitHub API Rate Limits Silently Block Commits Under Load
+### Pitfall 2: Discovery Queries Return Zero Results Due to Wrong RLS Scope
 
-**What goes wrong:**
-GitHub enforces two types of rate limits that affect the deck builder:
+**What goes wrong:** The discovery screen shows decks the user has NOT yet subscribed to. But the entire existing data access pattern uses `user_repositories` as the RLS gate -- every SELECT policy on `cards`, `repositories`, `card_assets`, and `webhook_chunks` checks that the user has a `user_repositories` row. If the new `decks` or deck index table copies this pattern, no user will see any discoverable decks until they subscribe -- a chicken-and-egg problem.
 
-1. **Primary rate limit:** 5,000 requests/hour for authenticated requests (PAT or GitHub App). Each file commit via Contents API costs at minimum 2 requests (GET current SHA + PUT new content). A user creating a 20-card deck burns 40+ requests. With 10 active users creating decks simultaneously, the shared PAT hits the limit in under 2 hours.
+**Why it happens:** Muscle memory from 12 shipped milestones. Every table's RLS policy follows the same template: `USING (id IN (SELECT repository_id FROM user_repositories WHERE user_id = auth.uid()))`. Copying this pattern to the deck index table makes it invisible to non-subscribers.
 
-2. **Secondary rate limit:** No more than 80 content-creating requests per minute and 500 per hour. Content-creating means POST/PUT/PATCH. Creating a 20-card deck means 20+ content-creating requests in quick succession, which can trigger the per-minute secondary limit even when the primary limit is fine.
+**Consequences:** Discovery screen shows zero results for all users. The entire feature is broken at the data layer. Debugging is confusing because the query returns data when using service_role.
 
-3. **Concurrent request limit:** No more than 100 concurrent requests. If the edge function uses `Promise.all()` to create multiple files in parallel, this is easily hit.
+**Prevention:**
+- The deck index / `decks` table must have a SELECT policy that allows ALL authenticated users to read: `USING (auth.uid() IS NOT NULL)`.
+- Keep write policies restrictive (service_role only -- populated by Docora webhook).
+- The "already subscribed" filtering happens in the application query (`LEFT JOIN user_deck_subscriptions ... WHERE subscription IS NULL`), NOT in the RLS policy.
+- Test with a fresh user who has zero subscriptions. They should see all available decks.
 
-The failure mode is silent: GitHub returns `403 Forbidden` with a `Retry-After` header, but if the edge function does not handle this specific response, it surfaces as a generic "save failed" error to the user. The `X-RateLimit-Remaining` header drops to 0 but the edge function never checks it.
+**Detection:** Log in as a brand-new user with no repos and no subscriptions. Navigate to discovery. If zero results appear, RLS is wrong.
 
-Source: [GitHub Rate Limits Documentation](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) -- 80 content-generating requests/minute confirmed.
-
-**Why it happens:**
-Developers build and test with a single user making occasional commits. Rate limits are invisible at low volume. The shared PAT token means ALL users share the same rate limit budget. A burst of activity from one user can lock out everyone.
-
-**How to avoid:**
-- Use a GitHub App instead of a PAT. GitHub Apps get rate limits per installation (5,000-15,000/hour depending on plan), and each installation token is scoped to the specific repo. This also avoids the PAT expiration problem.
-- Use the Git Database API to batch all files in a deck into a single commit (1 create-tree + 1 create-commit + 1 update-ref = 3-5 API calls instead of 2N for N files).
-- Implement rate limit tracking in the edge function: read `X-RateLimit-Remaining` from every response, and if below a threshold (e.g., 100), queue the operation instead of executing immediately.
-- Add a `Retry-After` handler: when GitHub returns 403 with `Retry-After`, delay and retry automatically.
-- Never use `Promise.all()` for GitHub API calls. Process files sequentially with at least 100ms delay between requests.
-- Log rate limit headers in the edge function for monitoring.
-
-**Warning signs:**
-- Edge function logs showing `403` responses from GitHub
-- Users reporting intermittent "save failed" errors during peak usage
-- `X-RateLimit-Remaining` header dropping rapidly in logs
-
-**Phase to address:**
-Edge function implementation phase. Rate limit handling must be built into the GitHub API client from the start, not retrofitted.
+**Phase:** Must be addressed in the DB schema/migration phase. First migration to write and test.
 
 ---
 
-### Pitfall 3: Docora Webhook Storm When Edge Function Creates Multi-File Commits
+### Pitfall 3: Docora Webhook Has No Handler for deck.yaml -- Metadata Never Reaches the Database
 
-**What goes wrong:**
-When the edge function commits a deck with 20 cards (20 .md files + 1 README.md), Docora detects 21 file changes and fires 21 webhook calls to the `docora-webhook` edge function. Each webhook call processes one file: parses frontmatter, inserts into `cards` table, triggers question generation. This creates:
+**What goes wrong:** The v3.1 plan introduces a `deck.yaml` metadata file per deck directory. When the deck builder user saves deck metadata, `deck.yaml` is committed to the shared repo. Docora detects the change and sends a webhook. But the existing `docora-webhook` handler (reviewed in `supabase/functions/docora-webhook/index.ts`, lines 707-797) only processes:
+- `README.md` (deck metadata at repo root level)
+- `.lumioignore` (card filtering rules)
+- `.md` files (cards)
+- Image files (`.png`, `.jpg`, etc.)
 
-1. **Burst load:** 21 near-simultaneous webhook invocations on the Supabase edge function infrastructure. Supabase edge functions have concurrency limits (varies by plan, typically 25-100 concurrent invocations).
-2. **Race condition with .lumioignore:** If the commit includes a `.lumioignore` file, it might be processed AFTER some cards are already inserted. The existing `cleanupIgnoredCardQuestions` logic handles this, but the window between card insertion and .lumioignore processing means temporary inconsistency.
-3. **Duplicate question generation:** If Docora retries (network timeout, slow response from edge function), the same card may be processed twice, creating duplicate questions in `card_questions`.
-4. **Wasted AI generation:** All 20 cards trigger AI question generation. But if the user immediately edits and recommits, Docora fires 20 more webhooks and generates 20 more question sets. The first set was wasted.
+A `.yaml` file hits the catch-all "Other files - ignore" branch and is silently discarded. The deck index is never populated.
 
-The existing docora-webhook handler (reviewed in `supabase/functions/docora-webhook/index.ts`) handles idempotency for card inserts via the `UNIQUE(repository_id, file_path)` constraint and `23505` duplicate-key detection. But question generation is NOT idempotent -- duplicate webhook calls create duplicate questions.
+**Why it happens:** The webhook handler was designed for the original card format spec where deck metadata lived in the root `README.md`. YAML metadata files are a new file type that did not exist when the handler was written.
 
-**Why it happens:**
-Docora is designed for per-file webhook delivery from existing Git repositories where commits happen occasionally (manual pushes). The deck builder creates programmatic commits with many files at once, which is a usage pattern Docora was not designed to optimize for.
+**Consequences:** Deck metadata (name, description, category, tags, author) committed to Git never reaches the database. The deck index table stays empty. Discovery search returns no results. The entire feature chain is broken.
 
-**How to avoid:**
-- Commit all files atomically in a single Git commit (the Git Database API enables this). Docora will still fire per-file webhooks, but the commit_sha will be the same for all files, enabling server-side deduplication.
-- Add a processing delay/debounce in the docora-webhook handler: when receiving a file from a commit_sha, store it in a queue table and process the batch after a 5-second window of no new files from the same commit.
-- Alternatively, accept the webhook storm but make question generation idempotent: check if questions already exist for a card before generating new ones.
-- Consider whether Docora should even process the shared repo at all, or whether the edge function should directly insert cards into the database (bypassing the webhook round-trip).
+**Prevention:**
+- Add a `deck.yaml` handler in the `docora-webhook` that:
+  1. Detects files named `deck.yaml` (case-insensitive check on filename)
+  2. Parses the YAML content using `npm:yaml@2` (NOT the hand-rolled parser -- see Pitfall 7)
+  3. Extracts the deck path from `file_path` (e.g., `{author_id}/{deck_name}/deck.yaml` -> `{author_id}/{deck_name}`)
+  4. Upserts a row in the `decks` table with the extracted metadata
+  5. Handles CREATE, UPDATE, and DELETE webhook actions
 
-**Warning signs:**
-- Edge function timeout errors during multi-file commits
-- Duplicate entries in `card_questions` table
-- Supabase edge function concurrency limit warnings in logs
-- AI API costs higher than expected (duplicate generation)
+**Detection:** Commit a `deck.yaml` file via the deck builder, wait for Docora sync, then query the `decks` table. If no row exists, the handler is missing.
 
-**Phase to address:**
-Architecture/design phase. The Docora integration strategy must be decided before implementing the commit edge function. The key decision is: should the edge function commit to GitHub and let Docora sync back, or should it write to both GitHub AND the database directly?
+**Phase:** Backend implementation phase -- webhook handler enhancement alongside deck index table migration.
 
 ---
 
-### Pitfall 4: Cross-Origin Auth Between deck.lumio Subdomain and Supabase Fails
+### Pitfall 4: Generated tsvector Column with Wrong Language Configuration
 
-**What goes wrong:**
-The deck builder SPA at `deck.lumio.toto-castaldi.com` uses the same Supabase project as the Android app. The Supabase JS client (`@supabase/supabase-js`) stores auth tokens in `localStorage` by default in browser SPAs. This creates several problems:
+**What goes wrong:** You create a generated column like `fts tsvector GENERATED ALWAYS AS (to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))) STORED` and then query with `to_tsquery('simple', ...)` or `to_tsquery('italian', ...)`. Postgres will NOT use the GIN index because the text search configuration at query time does not match the one used to build the stored column. The query silently falls back to a sequential scan.
 
-1. **Session not shared with mobile app:** The Android app uses SecureStore, the web app uses localStorage. These are completely separate storage mechanisms on separate domains. A user logged in on mobile must log in again on the web app. This is expected but must be communicated clearly in the UX.
+**Why it happens:** Lumio is bilingual (IT/EN). Deck names and descriptions can be in either language. Using `'english'` configuration will stem Italian words incorrectly (e.g., "programmazione" might not match "programma"). Using `'italian'` will break English stemming. The developer picks one and forgets the other.
 
-2. **OAuth redirect URL mismatch:** The Supabase project's `site_url` is currently `http://localhost:5173` (local dev) and presumably the landing page URL in production. Google OAuth redirects go to the configured redirect URLs. If `deck.lumio.toto-castaldi.com/auth/callback` is not in the allowed redirect URLs list (both in Supabase Dashboard AND in Google Cloud Console's OAuth 2.0 Client), the OAuth flow fails silently or redirects to the wrong domain.
+**Consequences:** Either the GIN index is not used (performance regression) or search misses valid matches in one language (functional regression). Both are invisible without `EXPLAIN ANALYZE`.
 
-3. **PKCE code verifier lost on redirect:** The current Supabase client uses `flowType: 'pkce'`. PKCE stores a code verifier in the browser's sessionStorage during the OAuth redirect. If the user starts OAuth on `deck.lumio.toto-castaldi.com` but the callback redirects to a different origin (e.g., `lumio.toto-castaldi.com`), the code verifier is not present, and the session exchange fails with "both auth code and code verifier should be non-empty." This is documented in [supabase/auth-js#1026](https://github.com/supabase/auth-js/issues/1026).
+**Prevention:**
+- Use `'simple'` text search configuration for BOTH the generated column AND all queries. The `simple` configuration does no language-specific stemming -- it lowercases and tokenizes. This is correct for multilingual content.
+- At Lumio's scale (hundreds to low thousands of decks), `simple` is more than adequate. Stemming provides marginal benefit that does not justify the bilingual complexity.
+- Always verify with `EXPLAIN ANALYZE` that the GIN index is used.
 
-4. **CORS on Supabase edge functions:** The existing edge functions set `Access-Control-Allow-Origin: *` (wildcard CORS). This works but is overly permissive. For a production web app, this should be restricted to the specific origins. More critically: if the CORS header is changed to specific origins but `deck.lumio.toto-castaldi.com` is forgotten, the web app cannot call any edge functions.
+**Detection:** Run `EXPLAIN ANALYZE SELECT * FROM decks WHERE fts @@ to_tsquery('simple', 'math')`. If you see `Seq Scan` instead of `Bitmap Index Scan`, the configurations are mismatched.
 
-**Why it happens:**
-The Supabase project was configured for a mobile app. Web-specific auth concerns (cookie domain, redirect URLs, PKCE in browser, CORS) were not relevant until now. Adding a web client to an existing mobile-only project requires auth configuration changes that are easy to overlook.
-
-**How to avoid:**
-- Add `https://deck.lumio.toto-castaldi.com/auth/callback` to Supabase's `additional_redirect_urls` in both config.toml (local) and Supabase Dashboard (production).
-- Add `https://deck.lumio.toto-castaldi.com` as an authorized redirect URI in Google Cloud Console's OAuth 2.0 Client configuration.
-- For the web app's Supabase client, use `flowType: 'pkce'` and ensure `detectSessionInUrl: true` (the opposite of the mobile config where it is `false`). The web app needs a separate client initialization from the mobile app.
-- Do NOT reuse the `@lumio/core` `createSupabaseClient()` singleton directly -- the web app needs different `auth` options (e.g., `detectSessionInUrl: true`, no custom storage adapter, potentially `localStorage` or `cookieStorage`).
-- Test the full OAuth flow on the deployed subdomain, not just localhost.
-
-**Warning signs:**
-- "Redirect URI mismatch" error during Google OAuth on the web app
-- "both auth code and code verifier should be non-empty" error in console
-- Users can log in on localhost but not on the deployed subdomain
-- Edge function calls fail with CORS errors from the web app
-
-**Phase to address:**
-Foundation phase. Auth configuration must be the first thing set up and tested for the web app. Building any UI before auth works is wasted effort.
+**Phase:** Must be correct at migration time. Changing a generated column requires `ALTER TABLE DROP COLUMN` then `ALTER TABLE ADD COLUMN` -- cannot be altered in place.
 
 ---
 
-### Pitfall 5: RLS Policies Do Not Cover Web App Deck Builder Write Operations
+### Pitfall 5: File Path Inconsistency Between Deck Builder and Webhook Breaks Deck-to-Card Mapping
 
-**What goes wrong:**
-The current RLS policies are designed for a read-only client (the Android app reads cards from shared repositories). The deck builder introduces write operations from the browser client:
+**What goes wrong:** The deck builder constructs paths as `{user_id}/{deck_name}/{card_slug}.md` via `validateUserPath()`. The `docora-webhook` receives `file_path` from Docora and must extract the deck identifier. If the deck index stores `path_prefix = '{user_id}/{deck_name}'` and the subscription uses `cards.file_path LIKE path_prefix || '/%'`, any inconsistency in path format (trailing slashes, URL encoding of spaces, case differences) breaks the LIKE match. The user subscribes to a deck but sees zero cards.
 
-1. **Cards table has no INSERT/UPDATE RLS for regular users:** Current policies allow INSERT/UPDATE only for `service_role` or via the old repository-owner check (which was dropped in the shared repo migration). The web app's authenticated user cannot directly insert cards via the Supabase JS client.
+**Why it happens:** Two independent codepaths construct and parse the same path format. The deck builder constructs paths client-side (via `deck-commit` edge function), and the webhook parses them server-side. There is no shared path-parsing module. Spaces in deck names are particularly dangerous: the deck builder uses them as-is, but URL encoding might transform `My Deck` to `My%20Deck`.
 
-2. **Repository ownership model changes:** The deck builder creates a "Lumio shared repo" where all users store their decks. The repo is registered in Docora once, and all users commit to `/{user_id}/{deck_name}/` paths. But the `repositories` table currently has a single row per repo URL. All users' cards are in the same repository. The `user_repositories` join table links users to the repo, but there is no column indicating which user "owns" which cards within the repo. The `cards.file_path` encodes the user_id (e.g., `{user_id}/my-deck/card1.md`), but there is NO RLS policy that enforces "user can only modify cards where file_path starts with their user_id."
+**Consequences:** Deck subscriptions silently fail to match any cards. The user subscribes but sees an empty deck in their library. Study sessions for discovered decks are always empty.
 
-3. **Service role bypass:** The existing docora-webhook uses service role to insert cards (bypasses RLS). If the web app also bypasses RLS by routing writes through an edge function with service role, the data isolation depends entirely on application logic in the edge function, not on database-level enforcement. This is a security design choice with different tradeoff profiles.
+**Prevention:**
+- Define a canonical path format: `{uuid}/{deck_name}` (no trailing slash in DB, no leading slash)
+- Create a shared utility function `parseDeckPath(filePath: string): { authorId: string, deckName: string } | null` that is used by BOTH:
+  1. The `deck-commit` edge function (to verify path structure)
+  2. The `docora-webhook` handler (to extract deck identity from file_path)
+- Since edge functions share the `supabase/functions/` directory, create a `_shared/path-utils.ts` module
+- Add explicit test cases: spaces in names, hyphens, single-card decks, nested subdirectories
 
-**Why it happens:**
-The current system was designed for content flowing one way: GitHub repo -> Docora webhook -> database. Users never write to the database directly. The deck builder reverses this flow: user writes content -> edge function commits to GitHub -> Docora syncs back to database. The RLS policies were never designed for user-initiated writes to the cards table.
+**Detection:** Commit a card to a deck with spaces in the name (e.g., "My Math Deck"), let Docora sync, then verify `SELECT * FROM cards WHERE file_path LIKE '{user_id}/My Math Deck/%'` returns results.
 
-**How to avoid:**
-- **Option A (Recommended): Edge function mediates all writes.** The web app never writes directly to `cards` or `repositories`. All mutations go through edge functions that validate user ownership before committing to GitHub. The edge function uses service role for DB writes. This keeps the existing RLS model intact.
-- **Option B: Add write RLS policies.** Create policies like `CREATE POLICY "Users can manage own deck cards" ON cards FOR ALL USING (file_path LIKE auth.uid()::text || '/%')`. This is elegant but couples the RLS policy to the file path naming convention, which is fragile.
-- Regardless of choice: add a `deck_owner_id` column to a new `decks` table (separate from `repositories`) that explicitly tracks deck ownership. Do not rely on parsing user_id from file paths.
-- Create a new `decks` table: `id, repository_id, owner_id, name, description, created_at` with RLS policies: `USING (owner_id = auth.uid())`. Cards in decks link via repository_id + file_path prefix.
-
-**Warning signs:**
-- Users able to see or modify other users' deck cards
-- RLS violation errors when the web app tries to write data
-- Edge function service role bypassing all isolation checks
-
-**Phase to address:**
-Database schema and architecture phase. Must be designed before any CRUD operations are implemented. This affects the entire data model.
-
----
-
-### Pitfall 6: Shared GitHub Repo Single Point of Failure -- PAT Expiration Locks Out All Users
-
-**What goes wrong:**
-The deck builder architecture uses a single shared GitHub repository for all user decks. This repo is accessed via a GitHub Personal Access Token (PAT) or GitHub App installation token stored as an environment variable in the edge function. If this token:
-
-1. **Expires:** GitHub fine-grained PATs have mandatory expiration (max 1 year for organization repos, customizable for personal repos). Classic PATs can be set to never expire but are being deprecated. When the token expires, ALL users lose the ability to save decks.
-
-2. **Gets revoked:** If the token owner's GitHub account is compromised and they rotate credentials, or if GitHub detects abuse (rate limit violations), the token is revoked.
-
-3. **Lacks permissions:** The token needs `contents: write` scope on the specific repo. If the repo is transferred to a different owner or the token's fine-grained permissions are modified, writes fail.
-
-4. **Docora also needs the token:** Docora monitors the shared repo using its own access (registered via the `docoraAddRepository` call with `github_token`). If the edge function's token and Docora's token are different, they can become out of sync.
-
-**Why it happens:**
-Per-user repos have per-user tokens (the existing model). A shared repo concentrates all access through a single credential, creating a single point of failure that did not exist before.
-
-**How to avoid:**
-- Use a GitHub App instead of a PAT. GitHub Apps have installation tokens that are auto-renewed (valid for 1 hour, refreshed via API). They do not expire or require manual rotation.
-- If using a PAT: set a calendar reminder for rotation, implement a health check that validates the token weekly (call `GET /user` and check the response).
-- Store the token in Supabase secrets (edge function env vars) and build a rotation procedure: update the secret, re-deploy edge functions.
-- Implement a "canary" check: before committing, verify the token works by calling `GET /repos/{owner}/{repo}` and checking the response. If it fails, surface a "maintenance" message to users instead of a cryptic error.
-- Monitor Docora sync_failed webhooks -- auth failures from Docora indicate the shared token may be compromised.
-
-**Warning signs:**
-- All users simultaneously unable to save decks
-- `401 Unauthorized` responses from GitHub API in edge function logs
-- Docora sending `sync_failed` webhooks with auth error type for the shared repo
-
-**Phase to address:**
-Infrastructure/foundation phase. Token management strategy must be decided before the edge function is built.
-
----
+**Phase:** Backend implementation phase -- shared utility before webhook handler or deck-commit changes.
 
 ## Moderate Pitfalls
 
-### Pitfall 7: Edge Function Timeout on Large Deck Commits
+### Pitfall 6: Search Index Staleness -- Card Counts Drift From Reality
 
-**What goes wrong:**
-Supabase edge functions have a default timeout of 150 seconds (2.5 minutes). Creating a deck with 20+ cards via the GitHub API requires:
-- 1 GET for current tree SHA
-- 20+ blob creation requests (sequential, ~200ms each = 4 seconds)
-- 1 tree creation request
-- 1 commit creation request
-- 1 ref update request
+**What goes wrong:** The deck index stores a `card_count` column that is set when `deck.yaml` is processed. But Docora processes files individually in arbitrary order. A user commits 10 cards and a `deck.yaml` simultaneously. The `deck.yaml` webhook might arrive before any cards, showing "0 cards" in discovery. Cards arrive later but the deck index is not updated because card webhooks do not touch the deck index.
 
-Total: ~25+ API calls taking 5-10 seconds optimistically. But if GitHub's API is slow (500ms per request) or if the edge function needs to generate README.md content and frontmatter for each card, the total can exceed 30 seconds. Add network latency between Supabase's edge function infrastructure and GitHub's API, and timeouts become realistic for large decks.
+**Why it happens:** Docora's file-by-file webhook model has no "batch complete" signal. Each file triggers an independent webhook. There is no mechanism to know when all files from a commit have been processed.
 
-**How to avoid:**
-- Limit deck size at the UI level (max 50 cards per deck).
-- Use the Git Database API for atomic multi-file commits (fewer total requests).
-- If the operation may be slow, use an async pattern: edge function starts the commit, returns a "processing" status immediately, and the client polls for completion.
-- Consider batching: save individual card edits to a staging table, then commit the entire deck on explicit "Publish" action.
+**Consequences:**
+- Discovery screen shows "0 cards" for decks that actually have cards
+- Card counts drift as cards are added/removed without deck.yaml changes
+- Users see stale metadata that creates false impressions about deck quality
 
-**Warning signs:**
-- Edge function timeout errors for large decks
-- Users reporting "save failed" only for decks with many cards
-- Edge function logs showing long execution times
+**Prevention:**
+- Do NOT store `card_count` in the deck index table. Compute it at query time:
+  ```sql
+  SELECT d.*, (
+    SELECT COUNT(*) FROM cards c
+    WHERE c.repository_id = d.repository_id
+      AND c.file_path LIKE d.path_prefix || '/%'
+      AND c.is_active = TRUE
+  ) as card_count
+  FROM decks d
+  ```
+- This adds a correlated subquery cost per deck, but at Lumio's scale (hundreds of decks) it is negligible and always accurate.
+- For deck metadata (name, description, tags, category), accept eventual consistency -- metadata will be correct after the `deck.yaml` webhook processes.
 
-**Phase to address:**
-Edge function implementation phase.
-
----
-
-### Pitfall 8: Card Content Hash Changes Break SRS Schedule on Docora Re-sync
-
-**What goes wrong:**
-The existing SM-2 spaced repetition system resets a card's review schedule when `content_hash` changes (migration `20260226000001_card_review_schedule.sql`). When the deck builder commits a card edit, Docora detects the file change and fires an UPDATE webhook. The docora-webhook handler computes a new `content_hash` and updates the card. This triggers the SRS reset logic: the card's ease factor, interval, and next review date are all wiped.
-
-The problem: even trivial edits (fixing a typo, adding a tag) reset the SRS schedule. A user who has studied a card 50 times and has a 30-day interval loses all progress because they fixed a comma.
-
-**How to avoid:**
-- Separate content hash from SRS-relevant content hash. Compute a "study content hash" that only includes the card body (not frontmatter metadata like tags, title). SRS reset triggers only on study content changes.
-- Alternatively: make SRS reset opt-in. When content_hash changes, set a `content_changed` flag but do not reset the schedule. Let the user decide to reset via a UI action.
-- At minimum: document this behavior prominently in the deck builder UI ("Editing card content will reset study progress for this card").
-
-**Warning signs:**
-- Users complaining that study progress is lost after minor edits
-- SRS schedule table showing mass resets after a deck update
-
-**Phase to address:**
-Architecture phase (SRS interaction design). Must be decided before the deck builder writes to GitHub.
+**Phase:** Query design phase. Avoid baking volatile counts into the deck index table.
 
 ---
 
-### Pitfall 9: Web App Supabase Client Initialization Differs From Mobile
+### Pitfall 7: YAML Parsing Inconsistency Between Deck Builder and Webhook
 
-**What goes wrong:**
-The existing `@lumio/core` package creates the Supabase client with mobile-specific options:
-- `detectSessionInUrl: false` -- mobile app handles URL manually
-- `flowType: 'pkce'` -- required for mobile
-- Custom `StorageAdapter` for SecureStore
+**What goes wrong:** The deck builder uses the `yaml` npm package (full YAML 1.2 spec) to serialize metadata. The `docora-webhook` uses a hand-rolled `parseFrontmatter()` function (lines 228-297 in `docora-webhook/index.ts`) that only handles simple key-value pairs and YAML arrays in block style. This hand-rolled parser cannot handle:
+- Multi-line strings (descriptions with newlines)
+- Flow-style arrays: `tags: [math, science]`
+- Quoted strings with special YAML characters (colons, brackets)
+- Nested objects
 
-The web app needs different options:
-- `detectSessionInUrl: true` -- browser must detect OAuth callback tokens in the URL
-- `flowType: 'pkce'` -- also correct for web (Supabase recommends PKCE for SPAs)
-- Default `localStorage` storage (no custom adapter)
+If `deck.yaml` uses any of these features (and it will -- descriptions naturally contain colons and newlines), the hand-rolled parser silently produces wrong data.
 
-If the web app naively imports `createSupabaseClient` from `@lumio/core` and passes different options, the singleton pattern rejects them (first caller wins). If the web app is the first caller in a shared module context, it could set options that break the mobile app.
+**Why it happens:** The hand-rolled parser was sufficient for card frontmatter (simple title, tags list, difficulty number). Deck metadata is richer. The deck builder serializes using `yaml` package which can produce any valid YAML.
 
-**How to avoid:**
-- The web app should NOT import from `@lumio/core` for client initialization. Create a separate `createWebSupabaseClient()` function in the `apps/deck-builder` app that configures the Supabase client with web-specific options.
-- The web app CAN import from `@lumio/shared` for types and constants (it has zero dependencies).
-- If shared business logic is needed (e.g., frontmatter parsing, markdown processing), extract it into `@lumio/shared` or create a new `@lumio/common` package that does not depend on the Supabase client.
+**Consequences:** Deck descriptions are truncated or missing. Tags are not parsed. Category field is dropped. Deck appears in discovery with incomplete metadata.
 
-**Warning signs:**
-- Auth flow not working on web despite same credentials working on mobile
-- OAuth callback URL not being detected after redirect
-- Session not persisting between page refreshes on web
+**Prevention:**
+- Use `npm:yaml@2` in the `docora-webhook` for `deck.yaml` files. Deno supports npm packages via the `npm:` prefix (already used for `npm:ignore@5.3.1`).
+- For `deck.yaml` files, parse the ENTIRE file as YAML (it is pure YAML, not markdown-with-frontmatter). Do NOT route through `parseFrontmatter()`.
+- Keep the existing hand-rolled `parseFrontmatter()` for `.md` card files -- it works fine for the simple card frontmatter format.
 
-**Phase to address:**
-Foundation/scaffold phase. The web app's Supabase client setup must be independent of the mobile app's from the start.
+**Phase:** Webhook handler implementation phase.
 
 ---
 
-### Pitfall 10: Markdown Editor Loses Unsaved Content on Navigation or Session Expiry
+### Pitfall 8: Debounce Race Conditions on Mobile Search
 
-**What goes wrong:**
-The user is editing a card's markdown content in the browser. They:
-1. Accidentally navigate away (click browser back, close tab, click a link)
-2. Their Supabase session expires (JWT has 1-hour expiry per config.toml `jwt_expiry = 3600`)
-3. Their browser tab is killed by the OS (mobile browser background tab cleanup)
+**What goes wrong:** Implementing search-as-you-type on the discovery screen with a naive `setTimeout` in `useEffect` without cleanup. Each keystroke creates a new timeout, but old ones are not cancelled. The user types "math" and gets results for "m", "ma", "mat", and "math" flashing in sequence. Worse: on slow connections, the response for "m" (which returns many results) arrives AFTER the response for "math" (which returns few), so the UI shows results for "m" after the user typed "math."
 
-In all cases, unsaved content is lost. There is no auto-save, no "unsaved changes" warning, and no local persistence.
+**Why it happens:** Missing `clearTimeout` in the `useEffect` cleanup function. Not cancelling or ignoring stale in-flight requests. This is the most common React anti-pattern for search.
 
-**How to avoid:**
-- Implement `beforeunload` event handler to warn users about unsaved changes.
-- Auto-save drafts to `localStorage` every 10-30 seconds. On page load, check for a draft and offer to restore it.
-- For session expiry: intercept the 401 error from the edge function, show a re-login modal (not a full redirect), and retry the save after re-authentication.
-- Consider a "save" vs "publish" model: edits are auto-saved locally, commits to GitHub happen only on explicit "Publish".
+**Consequences:**
+- UI flickers as results update rapidly
+- Race condition shows stale results (results for an older query override results for the current query)
+- Excessive Supabase queries (one per keystroke at ~300ms intervals)
 
-**Warning signs:**
-- Users reporting lost work
-- No `beforeunload` handler in the codebase
-- No localStorage draft persistence
+**Prevention:**
+```typescript
+// Correct pattern:
+const [query, setQuery] = useState('');
+const [debouncedQuery, setDebouncedQuery] = useState('');
 
-**Phase to address:**
-Editor implementation phase. Auto-save should be built alongside the editor, not added later.
+useEffect(() => {
+  if (query.length < 2) { setDebouncedQuery(''); return; }
+  const timer = setTimeout(() => setDebouncedQuery(query), 300);
+  return () => clearTimeout(timer); // CRITICAL: cleanup
+}, [query]);
 
----
+useEffect(() => {
+  if (!debouncedQuery) return;
+  let cancelled = false;
+  searchDecks(debouncedQuery).then(results => {
+    if (!cancelled) setResults(results); // Ignore stale results
+  });
+  return () => { cancelled = true; };
+}, [debouncedQuery]);
+```
+- 300ms debounce window (responsive but prevents excessive queries)
+- Minimum query length of 2 characters before triggering search
+- Show a loading indicator during the debounce window
 
-### Pitfall 11: Deck Builder Web App CORS Issues With Existing Edge Functions
-
-**What goes wrong:**
-The existing edge functions (`git-sync`, `docora-webhook`, etc.) set `Access-Control-Allow-Origin: *`. The new deck builder web app at `deck.lumio.toto-castaldi.com` needs to call new edge functions (e.g., `deck-commit`). If the new edge functions copy the wildcard CORS pattern, it works but is insecure. If they are configured with specific origins but miss the deck builder's domain, the browser blocks the requests.
-
-More subtly: the web app sends `Authorization: Bearer <token>` headers, which makes the request "non-simple" and triggers a CORS preflight (`OPTIONS` request). The existing edge functions handle `OPTIONS` with `corsHeaders`, but if a new edge function forgets the `OPTIONS` handler, the browser blocks the actual request without any API call being made, and the error message is a confusing CORS error, not a meaningful API error.
-
-**How to avoid:**
-- Create a shared CORS helper module (`supabase/functions/_shared/cors.ts`) that all edge functions import. Do not copy-paste CORS headers into each function.
-- Include `deck.lumio.toto-castaldi.com` in the allowed origins list.
-- Always handle `OPTIONS` preflight in every edge function.
-- Test from the actual deployed domain, not just `localhost`.
-
-**Warning signs:**
-- "Access to fetch at ... has been blocked by CORS policy" errors in browser console
-- Edge function works from Postman/curl but not from the browser
-- `OPTIONS` requests returning 4xx status codes
-
-**Phase to address:**
-Edge function implementation phase. CORS handling should be standardized before creating new functions.
+**Phase:** Mobile discovery screen implementation phase.
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 9: Discovery Tab Navigation Confusion After Subscription
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Using Contents API instead of Git Database API | Simpler code, fewer API calls for single files | Cannot do atomic multi-file commits, 409 conflicts on rapid saves | Never for multi-file deck operations; acceptable for single card edits |
-| Wildcard CORS `*` on edge functions | Works immediately, no origin management | Security risk, no credential-bearing request support with `credentials: include` | MVP only; must be restricted before production |
-| Storing deck metadata in file path convention (`/{user_id}/...`) | No DB schema changes needed | Fragile; renaming user_id format breaks everything; no index support | Never -- use a proper `decks` table |
-| Bypassing Docora for deck builder (write directly to DB) | Eliminates webhook storm, faster saves, simpler architecture | Two code paths for card ingestion (Docora for external repos, direct for deck builder); divergence risk | Acceptable if the two paths are explicitly maintained and tested |
-| Single shared PAT for GitHub API | Simple credential management | Single point of failure, manual rotation, shared rate limits | MVP only; switch to GitHub App before scaling |
-| localStorage for web app auth tokens | Zero setup, default Supabase behavior | XSS vulnerable, not shared with mobile, lost on clear browser data | Acceptable for SPA -- this is Supabase's recommended approach for browser clients |
+**What goes wrong:** Adding a "Discovery" tab alongside Dashboard, Repos, Settings. User finds a deck, subscribes, then wonders: "Where did it go? How do I study it?" The subscribed deck now lives in the Repos tab context, but the user is still in the Discovery tab. Cross-tab navigation (auto-switching to Repos after subscribe) creates disjointed UX and loses the discovery screen's scroll position and search state.
 
-## Integration Gotchas
+**Why it happens:** react-navigation's bottom tabs maintain independent stack navigators. Navigating from Discovery to a screen in the Repos tab stack requires explicit tab switching, which resets the Discovery tab's state.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| GitHub Contents API | Using stale SHA for file updates, causing 409 Conflict | Always fetch current SHA immediately before PUT; or use Git Database API for multi-file |
-| GitHub Contents API | Using `Promise.all()` for parallel file creation | Sequential requests with 100ms delay; or single atomic commit via Git Database API |
-| GitHub Rate Limits | Not reading `X-RateLimit-Remaining` header | Check remaining budget before operations; implement `Retry-After` handler for 403 responses |
-| Docora webhook | Assuming webhooks arrive in commit order | Webhooks fire per-file in arbitrary order; .lumioignore may arrive after cards |
-| Docora webhook | Not handling duplicate webhook deliveries | Idempotent handlers; `UNIQUE` constraints on card inserts; dedup on question generation |
-| Supabase OAuth (web) | Forgetting to add subdomain redirect URL to Dashboard AND Google Console | Must be in BOTH Supabase `additional_redirect_urls` AND Google OAuth authorized redirect URIs |
-| Supabase PKCE (web) | Setting `detectSessionInUrl: false` (copied from mobile config) | Web SPA must use `detectSessionInUrl: true` to capture OAuth callback tokens |
-| Supabase edge functions | Forgetting `OPTIONS` preflight handler in new edge functions | Always include `OPTIONS` handler; extract into shared module |
+**Consequences:**
+- User subscribes and sees no immediate feedback about where the deck went
+- Auto-navigating to Repos tab loses discovery search state
+- Back button behavior becomes unpredictable after cross-tab navigation
 
-## Performance Traps
+**Prevention:**
+- Add Discovery as a 4th tab (icon: `compass` / `compass-outline`)
+- Keep the subscription flow ENTIRELY within the Discovery tab stack:
+  - Discovery list -> Deck detail (shows card count, description, subscribe button) -> subscribe -> show success toast -> update the deck card in the list to show "Subscribed" badge
+- Do NOT attempt to navigate to the Repos tab after subscribing
+- The subscribed deck will appear in study sessions automatically (via the `user_deck_subscriptions` join) -- no navigation needed
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| One commit per card save | Slow deck creation; 20-card deck takes 40+ API calls | Batch saves into single Git commit; "Save Draft" + "Publish" pattern | More than 10 cards per save operation |
-| Loading all cards for markdown preview | Slow editor; large decks stall the browser | Lazy-load card list; only fetch full content for the card being edited | Decks with 50+ cards |
-| Re-generating AI questions on every content_hash change | Wasted AI API calls; slow Docora processing | Content-significant hash (body only, not metadata); debounce question generation | Any deck with frequent edits |
-| Wildcard Supabase realtime subscriptions | Excessive bandwidth; all card changes for all users broadcast | Filter subscriptions by repository_id or user_id | More than 10 concurrent users editing decks |
-| Single shared GitHub repo grows very large | Git clone/tree operations slow down; GitHub API pagination kicks in for directories with 1000+ files | Per-user directory structure is fine initially; monitor repo size; consider sharding at extreme scale | Thousands of users (unlikely for MVP) |
+**Phase:** Navigation design, early in the mobile implementation phase.
 
-## Security Mistakes
+---
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Storing GitHub PAT in client-side code or localStorage | Token exposed to XSS; anyone can commit to the shared repo | PAT lives only in edge function env vars; client never sees it |
-| Not validating user_id in file path before committing | User A could commit to User B's directory by crafting a malicious deck name | Edge function extracts user_id from auth token and constructs file path server-side; never trust client-provided paths |
-| Not filtering cards by ownership in deck list queries | User sees all cards in the shared repo, including other users' decks | RLS policy or edge function filters by `file_path LIKE user_id || '/%'`; or dedicated `decks` table with `owner_id` |
-| Using Supabase anon key as GitHub API credential | Confusion between Supabase auth and GitHub auth; anon key has no GitHub access | Keep GitHub credentials strictly in edge function env; Supabase anon key is only for Supabase client |
-| Allowing arbitrary markdown that enables XSS in preview | Script injection via markdown preview (e.g., `<script>` tags, `javascript:` URLs) | Sanitize HTML output from markdown renderer; use a library that strips dangerous elements by default (react-markdown does this) |
-| Not validating deck/card names for path traversal | User creates deck named `../../other-user/` to write outside their directory | Sanitize deck names: allow only alphanumeric, hyphens, underscores; reject paths containing `..`, `/`, or special characters |
+### Pitfall 10: deck.yaml Schema Without Versioning Blocks Future Evolution
 
-## UX Pitfalls
+**What goes wrong:** The initial `deck.yaml` format is defined without a `schema_version` field. Six months later, you need to add `license` or change `category` (string) to `categories` (array). Old `deck.yaml` files in Git persist indefinitely. The webhook parser either crashes on unknown structures, silently drops new fields, or cannot distinguish "field missing because old version" from "field missing because user chose not to fill it."
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Side-by-side editor on mobile screens | Editor and preview squished to half-width; unusable on phones | Tab-based toggle (Edit/Preview) on small screens; side-by-side only on desktop |
-| No confirmation before publishing deck | User accidentally publishes incomplete deck; cards appear in study immediately | Explicit "Publish" step separate from "Save Draft"; confirmation dialog |
-| No progress indicator during GitHub commit | User clicks save, nothing happens for 3-5 seconds, clicks again (double commit) | Show loading spinner immediately; disable save button during commit; toast on success/failure |
-| Requiring login before showing any content | User bounces before seeing what the deck builder does | Show landing/demo page for unauthenticated users; require login only for create/edit |
-| No way to delete a deck once published | User stuck with unwanted decks in their study rotation | Implement deck deletion: edge function removes files from GitHub; Docora processes deletions via webhook |
-| Markdown frontmatter exposed to non-technical users | Confusion about YAML syntax; broken cards from invalid frontmatter | Hide frontmatter behind a form UI (title input, tags selector, difficulty slider); generate frontmatter in the edge function |
+**Why it happens:** Schema versioning feels like over-engineering for v1. But Git content is immutable until explicitly updated.
 
-## "Looks Done But Isn't" Checklist
+**Consequences:** Adding required fields breaks parsing of all existing decks. Changing field types requires backfilling Git content across all users.
 
-- [ ] **OAuth login on deployed subdomain:** Test Google OAuth on `deck.lumio.toto-castaldi.com`, not just localhost -- redirect URL must be configured in both Supabase Dashboard and Google Console
-- [ ] **Multi-file commit atomicity:** Verify that creating a 10-card deck results in ONE Git commit, not 10 separate commits
-- [ ] **GitHub API rate limit handling:** Simulate hitting rate limit (or check `X-RateLimit-Remaining` after a burst) -- edge function should retry gracefully
-- [ ] **User data isolation:** Log in as User A, create a deck; log in as User B -- User B should NOT see User A's decks
-- [ ] **Concurrent save safety:** Open two browser tabs, edit the same card, save both -- second save should not corrupt data
-- [ ] **SRS impact of card edits:** Edit a card that has study history -- verify SRS schedule is not silently reset (or is intentionally reset with user notification)
-- [ ] **Docora processes deck builder commits:** After the edge function commits, verify Docora fires webhooks and cards appear in the mobile app's study rotation
-- [ ] **Session expiry during editing:** Wait 1 hour while editing, then save -- should re-authenticate and save, not lose content
-- [ ] **Path traversal blocked:** Try creating a deck with name `../other-user-id/stolen-deck` -- edge function should reject it
-- [ ] **Edge function timeout on large decks:** Create a deck with 30 cards -- should not timeout
+**Prevention:**
+- Include `schema_version: 1` from day one
+- Make ALL metadata fields optional in the parser (with sensible defaults)
+- When `schema_version` is missing, treat as version 1
+- Log warnings for unknown schema versions rather than crash
 
-## Recovery Strategies
+```yaml
+# deck.yaml v1 schema
+schema_version: 1
+name: "My Math Deck"
+description: "Fundamentals of calculus"
+category: "mathematics"
+tags:
+  - calculus
+  - derivatives
+author_display_name: "Jane Doe"
+```
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| GitHub API 409 Conflict on save | LOW | Re-fetch current SHA, retry commit; user sees "save failed, retrying" |
-| Rate limit exceeded | LOW | Wait for `Retry-After` period; queue pending operations; user sees temporary "service busy" |
-| Docora webhook storm causes duplicate questions | MEDIUM | Deduplicate `card_questions` by card_id; add unique constraint on (card_id, question_hash) |
-| PAT expired, all saves blocked | HIGH | Generate new PAT; update edge function env var; redeploy; 10-30 minute outage for all users |
-| RLS allows cross-user data access | HIGH | Emergency migration to add ownership column/policy; audit all affected data; notify users |
-| SRS progress lost from content hash change | MEDIUM | Restore from `card_review_schedule` backup; change hash to body-only hash; re-run affected schedules |
-| CORS blocks web app from edge functions | LOW | Update CORS headers; redeploy edge functions; immediate fix, no data loss |
-| User content lost due to missing auto-save | HIGH | Content is permanently lost; implement auto-save; apologize to affected users |
+**Phase:** Metadata format design -- very first thing to nail down.
 
-## Pitfall-to-Phase Mapping
+---
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| GitHub API 409 Conflict (P1) | Edge function implementation | Test: rapid double-save returns success for both |
-| Rate limit handling (P2) | Edge function implementation | Test: create 50-card deck; check X-RateLimit-Remaining in logs |
-| Docora webhook storm (P3) | Architecture/design | Verify: multi-file commit results in correct card count in DB |
-| Cross-origin auth (P4) | Foundation/scaffold | Test: full OAuth flow on deployed subdomain |
-| RLS for write operations (P5) | Database schema | Test: User B cannot see/modify User A's decks via Supabase client |
-| Shared PAT management (P6) | Infrastructure/foundation | Verify: canary health check endpoint exists; rotation procedure documented |
-| Edge function timeout (P7) | Edge function implementation | Test: 30-card deck commits within 30 seconds |
-| SRS hash reset (P8) | Architecture/design | Test: typo fix in card does not reset SRS schedule |
-| Web Supabase client config (P9) | Foundation/scaffold | Test: OAuth + session persistence work on web without affecting mobile |
-| Unsaved content loss (P10) | Editor implementation | Test: close tab during editing; reopen; draft is restored |
-| CORS issues (P11) | Edge function implementation | Test: web app can call all edge functions from deployed domain |
+### Pitfall 11: GIN Index Update Cost When Deck Index Updated on Every Card Change
+
+**What goes wrong:** If the deck index table recalculates metadata (card count, last_updated) on every card webhook AND has a GIN index on the tsvector column, each card CREATE/UPDATE/DELETE triggers a deck index row update, which triggers a GIN index update. GIN indexes store inverted lexeme lists and are slower to update than B-tree indexes.
+
+**Why it happens:** Premature denormalization. Storing card_count in the deck index feels efficient for reads but creates write amplification. Every card change requires: card INSERT/UPDATE + deck index UPDATE + GIN index rebuild.
+
+**Consequences:** Webhook processing slows down. Card sync latency increases. Under heavy deck builder usage, webhooks queue up.
+
+**Prevention:**
+- Only update the deck index when `deck.yaml` changes, NOT on card changes
+- Compute card counts at query time (see Pitfall 6)
+- The tsvector column only changes when searchable metadata changes (name, description, tags) -- which is rare
+- This keeps GIN index updates to a minimum
+
+**Phase:** Database schema design phase.
+
+---
+
+### Pitfall 12: Orphaned Subscriptions When a Deck Is Deleted
+
+**What goes wrong:** A deck author deletes their deck via the deck builder. Docora sends DELETE webhooks for each file. Cards are removed from the DB. But `user_deck_subscriptions` rows for that deck remain. Users now have subscriptions pointing to a ghost deck with zero cards.
+
+**Why it happens:** If subscriptions reference a path prefix (TEXT) rather than a FK to a `decks` table, there is no CASCADE delete. The deck deletion is a series of file-level events, not a single "deck deleted" database event.
+
+**Consequences:**
+- Users see phantom decks in their library with zero cards
+- Study RPCs waste time joining against non-existent card paths
+- Manual cleanup is required
+
+**Prevention:**
+- Use a `decks` table with a UUID primary key. `user_deck_subscriptions.deck_id` is a FK with `ON DELETE CASCADE`.
+- When the `deck.yaml` DELETE webhook fires, delete the `decks` row. CASCADE cleans up all subscriptions.
+- This is strongly preferred over path-prefix-based subscriptions for data integrity.
+
+**Phase:** Database schema phase.
+
+---
+
+### Pitfall 13: Supabase textSearch Client API Syntax Gotcha
+
+**What goes wrong:** Supabase JS client's `.textSearch('fts', query)` expects `tsquery` format, not plain text. Passing `"math science"` directly does not search for both words -- the tokenizer treats it as a single lexeme `"math science"` which matches nothing in the tsvector index.
+
+**Why it happens:** The API documentation shows raw tsquery strings in examples. Developers assume plain text works.
+
+**Consequences:** Search returns zero results for multi-word queries. Users think the search is broken.
+
+**Prevention:**
+- Convert user input to proper tsquery format before passing to Supabase:
+  - Split on whitespace
+  - Append `:*` to each term for prefix matching (user types "mat", expects "mathematics")
+  - Join with ` & ` for AND semantics
+  - Example: `"math calc"` -> `"math:* & calc:*"`
+- Better: create a server-side RPC that accepts plain text and handles conversion:
+  ```sql
+  CREATE FUNCTION search_decks(p_query TEXT)
+  RETURNS SETOF decks AS $$
+    SELECT * FROM decks
+    WHERE fts @@ to_tsquery('simple',
+      array_to_string(
+        array(SELECT unnest(string_to_array(p_query, ' ')) || ':*'),
+        ' & '
+      )
+    )
+  $$ LANGUAGE sql STABLE;
+  ```
+- This keeps the tsquery construction on the server, away from client-side string manipulation.
+
+**Phase:** Query implementation phase.
+
+## Minor Pitfalls
+
+### Pitfall 14: Empty State Confusion on Discovery Screen
+
+**What goes wrong:** When discovery loads, zero results could mean: (a) no decks published yet, (b) user already subscribed to everything, or (c) search query matches nothing. The user cannot distinguish these.
+
+**Prevention:**
+- Three distinct empty states with different messages and icons:
+  - No search, no decks: "No decks available yet. Create one in the Deck Builder!"
+  - Search with no results: "No decks match '{query}'. Try different keywords."
+  - All decks subscribed (no search): "You've subscribed to all available decks!"
+- Show all unsubscribed decks on initial load (before typing in search bar)
+
+**Phase:** Mobile UI implementation phase.
+
+---
+
+### Pitfall 15: Author Display Name Is a UUID
+
+**What goes wrong:** The deck index needs to show who created a deck. But `author_id` is a UUID like `f47ac10b-58cc-4372-a567-0e02b2c3d479`. Displaying this as the author name is unusable.
+
+**Prevention:**
+- Store `author_display_name` in `deck.yaml` and persist to the deck index at sync time
+- Auto-populate from `users.display_name` if `deck.yaml` doesn't specify it (webhook handler can look up the user)
+- Denormalize the author name into the deck index table to avoid joins at query time
+
+**Phase:** Metadata format design and database schema phase.
+
+---
+
+### Pitfall 16: tsvector Does Not Support Prefix Matching by Default
+
+**What goes wrong:** User types "calc" expecting to find "calculus." The tsquery `'calc'` does exact lexeme matching and will NOT match `'calculus'`. Search feels broken because partial words never match.
+
+**Prevention:**
+- Always append `:*` to each search term in the tsquery: `to_tsquery('simple', 'calc:*')` matches any lexeme starting with "calc"
+- This is the standard Postgres prefix search pattern for tsvector
+
+**Phase:** Query implementation phase.
+
+---
+
+### Pitfall 17: i18n Keys Missing for Discovery Screen
+
+**What goes wrong:** ~20-40 new i18n keys needed (search placeholder, empty states, subscribe button, deck detail labels, error messages). Forgetting Italian translations causes English fallbacks or raw key names for Italian users.
+
+**Prevention:**
+- Follow existing pattern: add keys to both `apps/android/i18n/en.ts` and `apps/android/i18n/it.ts` simultaneously
+- The existing `DeepStringify` compile-time validation will catch missing keys at build time
+- Write both languages BEFORE implementing the screen
+
+**Phase:** Throughout mobile implementation.
+
+---
+
+### Pitfall 18: Concurrent deck.yaml Saves in Deck Builder
+
+**What goes wrong:** User clicks "Save metadata" rapidly. Multiple GitHub API commits fire for the same file. The second commit fails because the SHA changed after the first commit succeeded.
+
+**Prevention:**
+- Disable the save button while a save is in-flight (same pattern used for card saves)
+- Track SHA from the last successful save, send it with the next save
+- On SHA conflict (409), re-fetch current SHA and retry once
+
+**Phase:** Deck builder UI implementation phase.
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Database schema / migrations | **Pitfall 1** (subfolder subscription breaks study RPCs) -- HIGHEST RISK | Design `decks` + `user_deck_subscriptions` tables. Update ALL study RPCs to UNION with new join. Test study flow end-to-end. |
+| Database schema / migrations | **Pitfall 2** (wrong RLS on deck index) | Use `auth.uid() IS NOT NULL` for SELECT on `decks` table. Test with fresh unsubscribed user. |
+| Database schema / migrations | **Pitfall 4** (tsvector config mismatch) | Use `'simple'` for both column and queries. Verify with `EXPLAIN ANALYZE`. |
+| Database schema / migrations | **Pitfall 12** (orphaned subscriptions) | FK with CASCADE from `user_deck_subscriptions` to `decks`. |
+| Database schema / migrations | **Pitfall 11** (GIN update cost) | No card_count in deck index. Compute at query time. |
+| Metadata format design | **Pitfall 10** (no schema versioning) | Add `schema_version: 1` from day one. All fields optional. |
+| Metadata format design | **Pitfall 15** (author UUID display) | Include `author_display_name` in deck.yaml. Denormalize to deck index. |
+| Webhook handler (docora-webhook) | **Pitfall 3** (no handler for deck.yaml) -- CRITICAL | Add deck.yaml handler for CREATE/UPDATE/DELETE. Without this, nothing works. |
+| Webhook handler (docora-webhook) | **Pitfall 7** (YAML parsing inconsistency) | Use `npm:yaml@2` for deck.yaml. Keep hand-rolled parser for .md frontmatter only. |
+| Webhook handler (docora-webhook) | **Pitfall 5** (path mapping inconsistency) | Shared `parseDeckPath()` utility in `_shared/path-utils.ts`. |
+| Deck builder UI | **Pitfall 18** (concurrent metadata saves) | Disable save button during in-flight. SHA tracking. |
+| Mobile discovery screen | **Pitfall 8** (debounce race conditions) | Memoized debounce, cleanup in useEffect, cancel stale requests. |
+| Mobile discovery screen | **Pitfall 9** (navigation confusion) | Discovery as 4th tab. Subscription stays within Discovery stack. Toast feedback. |
+| Mobile discovery screen | **Pitfall 14** (empty state confusion) | Three distinct empty states for three scenarios. |
+| Mobile discovery screen | **Pitfall 17** (missing Italian translations) | Write both en.ts and it.ts before screen implementation. |
+| Query / search implementation | **Pitfall 13** (tsquery syntax) | Server-side RPC that converts plain text to tsquery with prefix matching. |
+| Query / search implementation | **Pitfall 6** (stale card counts) | Compute card counts at query time, not stored in deck index. |
+| Query / search implementation | **Pitfall 16** (no prefix matching) | Always use `:*` suffix on each search term. |
 
 ## Sources
 
-- Direct inspection: `supabase/functions/docora-webhook/index.ts` -- webhook handler, CORS headers, chunk handling, card insert with duplicate detection (PRIMARY)
-- Direct inspection: `supabase/functions/git-sync/index.ts` -- Docora API client, repository CRUD, PAT handling (PRIMARY)
-- Direct inspection: `supabase/migrations/20260115000001_shared_repositories.sql` -- RLS policies for shared repos, SECURITY DEFINER functions (PRIMARY)
-- Direct inspection: `packages/core/src/supabase/client.ts` -- singleton pattern, mobile-specific auth options (PRIMARY)
-- Direct inspection: `supabase/config.toml` -- site_url, redirect URLs, JWT expiry, auth configuration (PRIMARY)
-- [GitHub REST API Rate Limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) -- 5,000/hour primary, 80/minute content-generating secondary -- HIGH confidence
-- [GitHub REST API Best Practices](https://docs.github.com/rest/guides/best-practices-for-using-the-rest-api) -- sequential requests, Retry-After, conditional requests -- HIGH confidence
-- [Retool: Gotchas with Git and the GitHub API](https://retool.com/blog/gotchas-git-github-api) -- tree size limits, base_tree pattern, sequential vs parallel API calls -- HIGH confidence
-- [GitHub Community Discussion #62198](https://github.com/orgs/community/discussions/62198) -- 409 Conflict after sequential commits via Contents API -- MEDIUM confidence
-- [Supabase Discussion #5742](https://github.com/orgs/supabase/discussions/5742) -- cross-subdomain session sharing, cookie domain configuration -- HIGH confidence
-- [Share Sessions Across Subdomains with Supabase](https://micheleong.com/blog/share-sessions-subdomains-supabase) -- cookieOptions domain configuration -- MEDIUM confidence
-- [Supabase auth-js Issue #1026](https://github.com/supabase/auth-js/issues/1026) -- PKCE code verifier lost on cross-origin redirect -- HIGH confidence
-- [Supabase PKCE Flow docs](https://supabase.com/docs/guides/auth/sessions/pkce-flow) -- PKCE recommended for SPAs -- HIGH confidence
-- [Webhook Chaos: Delays, Duplicates, and How to Tame Them](https://medium.com/@techo.square.in/webhook-chaos-delays-duplicates-and-how-to-tame-them-a359d285cc89) -- deduplication, idempotency, rate limiting -- MEDIUM confidence
-- [Hookdeck Deduplication Guide](https://hookdeck.com/docs/guides/deduplication-guide) -- event ID based deduplication, time windows -- MEDIUM confidence
-- [GitHub API Contents API docs](https://docs.github.com/en/rest/repos/contents) -- SHA requirement for updates, 100MB file limit, 1000 file directory limit -- HIGH confidence
-- [Markdown editor UX considerations](https://adamlynch.com/markdown/) -- dual mode complexity, preview UX patterns -- MEDIUM confidence
+### Official Documentation
+- [PostgreSQL 18: Tables and Indexes for Text Search](https://www.postgresql.org/docs/current/textsearch-tables.html) -- tsvector generated columns, configuration matching requirement
+- [PostgreSQL 18: Preferred Index Types for Text Search](https://www.postgresql.org/docs/current/textsearch-indexes.html) -- GIN write performance characteristics
+- [PostgreSQL 18: Controlling Text Search](https://www.postgresql.org/docs/current/textsearch-controls.html) -- tsquery syntax, prefix matching with `:*`
+- [Supabase: Full Text Search](https://supabase.com/docs/guides/database/full-text-search) -- generated columns with GIN index, textSearch client API
+- [Supabase: RLS Performance and Best Practices](https://supabase.com/docs/guides/troubleshooting/rls-performance-and-best-practices-Z5Jjwv) -- IN vs EXISTS, security definer functions
+
+### Community / Analysis
+- [pganalyze: Understanding Postgres GIN Indexes](https://pganalyze.com/blog/gin-index) -- GIN write vs read tradeoffs, update cost
+- [Thoughtbot: Optimizing Full Text Search with Postgres tsvector](https://thoughtbot.com/blog/optimizing-full-text-search-with-postgres-tsvector-columns-and-triggers) -- stored tsvector vs functional index
+
+### Codebase Analysis (PRIMARY -- HIGH confidence)
+- `supabase/functions/docora-webhook/index.ts` -- file type routing (lines 707-797 show README/lumioignore/md/image handling, no YAML), hand-rolled YAML parser (lines 228-297), deck metadata extraction (lines 302-315)
+- `supabase/functions/deck-commit/index.ts` -- path validation (`validateUserPath` lines 58-75, `validateUserDirectoryPath` lines 81-98), deck name validation (lines 104-125)
+- `supabase/functions/git-sync/index.ts` -- `user_repositories` joins in all query functions (lines 434-571), shared repo architecture
+- `supabase/migrations/20260115000001_shared_repositories.sql` -- `user_repositories` table, RLS policies using subscription-based access
+- `supabase/migrations/20260226000001_card_review_schedule.sql` -- study RPCs joining through `user_repositories` (lines 88-89, 146-147, 175-176)
+- `supabase/migrations/20260305000001_session_aware_due_count.sql` -- due count RPC
+- `packages/shared/src/types/index.ts` -- current type definitions, no deck-level types exist yet
+- `apps/android/navigation/MainNavigator.tsx` -- current 3-tab layout (Dashboard, Repos, Settings)
+- `apps/deck-builder/src/lib/frontmatter.ts` -- uses `yaml` npm package for card frontmatter
 
 ---
-*Pitfalls research for: Lumio v3.0 -- Deck Builder Web App with GitHub API Commits*
-*Researched: 2026-03-11*
+*Pitfalls research for: Lumio v3.1 -- Deck Discovery (fulltext search, deck metadata, subfolder subscription)*
+*Researched: 2026-03-13*
