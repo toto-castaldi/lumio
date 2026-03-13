@@ -1,5 +1,33 @@
 # Milestones: Lumio
 
+## v3.0 Deck Builder Web (Shipped: 2026-03-13)
+
+**Delivered:** React SPA deck builder at deck.lumio.toto-castaldi.com where authenticated users create decks and flashcards in markdown, committed via edge function to a shared Git repo, synced by Docora for AI question generation.
+
+**Phases completed:** 36-40 (10 plans total)
+
+**Key accomplishments:**
+
+- Vite 7 + React 19 + Tailwind 4 SPA with Supabase dual-auth (Google OAuth + email/password), i18n IT/EN, and dark mode
+- deck-commit edge function with 8 GitHub API actions and UUID-prefix user path isolation
+- Deck management UI: sidebar list with inline create/rename, delete confirmation, localStorage-backed sort
+- Card authoring: markdown editor with live preview, 8-button toolbar, metadata form, frontmatter parse/serialize
+- Typed client API module for all edge function operations with centralized error handling
+- Production deploy at deck.lumio.toto-castaldi.com with SSL, Nginx SPA config, and CI/CD pipeline
+
+**Stats:**
+
+- 105 files changed (+17,984 / -1,722 lines)
+- ~28,600 lines of TypeScript/CSS in apps/deck-builder
+- 5 phases, 10 plans
+- 3 days (2026-03-11 to 2026-03-13)
+
+**Git range:** `defb602` → `22d03ab` (66 commits)
+
+**What's next:** v3.1 Deck Discovery (fulltext search for public repos/decks in mobile app)
+
+---
+
 ## v2.3 Dashboard Polish (Shipped: 2026-03-05)
 
 **Delivered:** Compact, visually coherent dashboard with 2x2 stat card grid, verbose localized relative time, and circular icon-only study button.

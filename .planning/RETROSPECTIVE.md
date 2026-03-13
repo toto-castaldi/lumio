@@ -164,6 +164,55 @@
 
 ---
 
+## Milestone: v3.0 — Deck Builder Web
+
+**Shipped:** 2026-03-13
+**Phases:** 5 | **Plans:** 10 | **Sessions:** ~5
+
+### What Was Built
+- React SPA deck builder at deck.lumio.toto-castaldi.com (Vite 7 + React 19 + Tailwind 4)
+- Supabase dual-auth (Google OAuth + email/password) with responsive layout, i18n IT/EN, dark mode
+- deck-commit edge function with 8 GitHub API actions and UUID-prefix user path isolation
+- Deck management UI: sidebar list with inline create/rename, delete confirmation, localStorage-backed sort
+- Card authoring: markdown editor with live preview, 8-button toolbar, metadata form, frontmatter parse/serialize
+- Production deploy with SSL, Nginx SPA config, and CI/CD pipeline
+
+### What Worked
+- Shared Supabase project between web and mobile eliminated auth/user sync complexity
+- Phase structure (scaffold → backend → deck CRUD → card CRUD → deploy) was clean sequential dependency chain with no rework
+- Edge function consolidation: single `deck-commit` function handles all 8 actions — simpler deployment than multiple functions
+- Typed client API module (`invoke<T>` helper) centralized error handling — zero per-call boilerplate
+- Research-first phase approach caught gray-matter browser incompatibility before it became a blocker
+- 3-day execution for 5 phases — fastest multi-phase milestone per plan count
+
+### What Was Inefficient
+- gray-matter initially used in Phase 39-01 had to be replaced with yaml package in 39-02 (Buffer not available in browser) — could have been caught in research
+- localStorage as proxy for deck timestamps is a workaround for GitHub API not tracking directory timestamps — works but adds client-side state management
+- Traceability table in REQUIREMENTS.md had stale "In Progress" status for AUTH-01 through AUTH-05 even after Phase 36 was complete
+
+### Patterns Established
+- Edge function action pattern: single function with `action` field dispatching to handlers (vs. separate functions per operation)
+- `invoke<T>` typed helper for Supabase edge function calls with centralized error handling
+- Provider nesting order for web: ThemeProvider > I18nProvider > AuthProvider > RouterProvider > DeckProvider > CardProvider
+- VS Code-style inline rename pattern: pencil icon → editable input → Enter/Escape/blur to confirm/cancel
+- Responsive MDEditor: split-pane desktop / toggle-tab mobile via matchMedia
+- .gitkeep files for empty Git directories (Git doesn't track empty dirs)
+- HTTP-only Nginx template in repo; Certbot adds SSL on production server
+
+### Key Lessons
+1. Shared backend (same Supabase project) across web and mobile dramatically simplifies auth and data sharing — one project, no sync
+2. Single edge function with action routing is cleaner than multiple functions when actions share auth/validation logic
+3. Browser compatibility for npm packages must be verified during research — gray-matter's Buffer dependency was a mid-phase surprise
+4. localStorage-backed metadata (timestamps, sort order) works well enough as a client-side proxy when the API doesn't provide metadata
+5. 5-phase sequential dependency chain executed in 3 days with zero deviations — clean scope definition is the biggest velocity multiplier
+
+### Cost Observations
+- Model mix: 80% opus, 20% sonnet (quality profile)
+- Sessions: ~5 (3 days of development)
+- Notable: 5 phases, 10 plans, ~28,600 LOC — second-largest milestone after v1.1, cleanest execution of any multi-phase milestone
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -174,6 +223,7 @@
 | v2.1 | ~5 | 5 | Largest since v1.1; post-ship quick fixes revealed UAT gaps |
 | v2.2 | ~2 | 2 | Cleanest milestone — zero deviations, zero issues |
 | v2.3 | ~1 | 2 | Fastest milestone — pure UI polish, same-day ship |
+| v3.0 | ~5 | 5 | First web app milestone; new platform (Vite/React SPA); clean sequential chain |
 
 ### Cumulative Quality
 
@@ -183,12 +233,15 @@
 | v2.1 | — | Auth flows (manual) | — |
 | v2.2 | — | Session limit (manual) | — |
 | v2.3 | — | UI polish (UAT) | — |
+| v3.0 | 38+ (auth/theme/i18n/validation) | Lib layer | Vite 7, React 19, Tailwind 4, @uiw/react-md-editor, katex, yaml |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Research-first planning pays off — prevents mid-milestone pivots (validated v1.1 through v2.0)
-2. Server-side computation for stateful operations avoids race conditions and simplifies client code (v2.0, v2.2)
+1. Research-first planning pays off — prevents mid-milestone pivots (validated v1.1 through v3.0)
+2. Server-side computation for stateful operations avoids race conditions and simplifies client code (v2.0, v2.2, v3.0)
 3. Small gap closure plans are more efficient than trying to get everything right in the first pass (v2.0)
 4. Small, focused milestones execute cleanly with near-zero overhead (v2.2)
-5. Reusing patterns across phases in the same milestone accelerates development (v2.2)
+5. Reusing patterns across phases in the same milestone accelerates development (v2.2, v3.0)
 6. Pure UI polish milestones are fast, low-risk, and benefit most from UAT (v2.3)
+7. Shared backend across multiple frontends is a massive complexity reducer — one auth, one DB, no sync (v3.0)
+8. Browser compatibility for npm packages must be verified during research, not mid-implementation (v3.0)

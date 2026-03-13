@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. App nativa Android (React Native/Expo) bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2 (carte scadute prima, nuove dopo), sessioni di studio configurabili con cap RPC, dashboard compatta con griglia 2x2 stat cards e tempo relativo, pulsante studio circolare icon-only, navigazione carte nei repository, storico sessioni con conteggio carte, gestione errori sync con aggiornamento token in-app, autenticazione dual-mode (Google OAuth + email/password con verifica OTP), account linking bidirezionale (Google ↔ email), password reset via OTP, e landing page con versione dinamica per il download dell'APK. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Il versioning è derivato da STATE.md (GSD milestone) tramite CI pipeline.
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. Due frontend: app nativa Android (React Native/Expo) per lo studio e web app React SPA (deck.lumio.toto-castaldi.com) per la creazione di deck e carte. L'app Android è bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, dashboard compatta 2x2, card browse, storico sessioni, gestione errori sync, autenticazione dual-mode (Google OAuth + email/password), account linking bidirezionale, e password reset via OTP. Il deck builder web permette di creare/modificare deck e carte in markdown con editor live preview, committate via edge function su un repo Git condiviso. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Docora sincronizza e genera domande AI per entrambi i flussi (repo utente e repo condiviso).
 
 ## Core Value
 
@@ -93,22 +93,18 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Tempo relativo localizzato IT/EN su "Ultimo studio" ("ieri", "2 giorni fa", "yesterday", "2 days ago") — v2.3
 - ✓ "Ultimo studio" non navigabile (rimosso tap → storico sessioni) — v2.3
 - ✓ Pulsante studio circolare centrato con sola icona play (60px, nessun testo) — v2.3
+- ✓ Web app React SPA con auth Supabase condivisa (Google OAuth + email/password) — v3.0
+- ✓ Layout responsive con sidebar deck list e area editor principale — v3.0
+- ✓ Dark mode e i18n IT/EN nel deck builder web — v3.0
+- ✓ CRUD deck (crea, rinomina, elimina con conferma) — v3.0
+- ✓ CRUD carte con editor markdown, live preview, toolbar, metadata form — v3.0
+- ✓ Edge function deck-commit con 8 azioni GitHub API e isolamento path utente — v3.0
+- ✓ Docora sync repo condiviso per generazione AI — v3.0
+- ✓ Deploy produzione deck.lumio.toto-castaldi.com con SSL e CI/CD — v3.0
 
 ### Active
 
-(Defining requirements for v3.0)
-
-## Current Milestone: v3.0 Deck Builder Web
-
-**Goal:** Web app React SPA su deck.lumio.toto-castaldi.com dove utenti autenticati creano deck e carte in markdown, committate via edge function su un repo Git Lumio condiviso, sincronizzate da Docora per generazione AI.
-
-**Target features:**
-- React SPA con auth Supabase condivisa (Google OAuth + email/password)
-- CRUD deck e carte con editor markdown nel browser
-- Salvataggio via edge function → GitHub API commit su repo condiviso Lumio
-- Struttura repo: `/{user_id}/{deck_name}/` — ogni utente gestisce solo i suoi contenuti
-- Docora sincronizza e genera domande AI come per i repo normali
-- Deploy su deck.lumio.toto-castaldi.com
+(Defining requirements for next milestone)
 
 **Future milestones:**
 - v3.1: Deck Discovery — ricerca fulltext repo/deck pubblici nell'app mobile
@@ -140,33 +136,36 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - Custom password policy (oltre default Supabase) — 6 char minimo sufficiente per app studio personale
 - Bilingual email templates — Supabase invia un template per tipo; EN singola lingua accettabile
 - SMTP configuration — config dashboard produzione, non codice
+- Studio/quiz nel browser — l'app mobile è l'esperienza di studio, nessuna duplicazione
+- Editor WYSIWYG — conflitto con code blocks e math; markdown + preview è consolidato
+- Collaborazione real-time — singolo sviluppatore, uso personale
+- Upload immagini nelle carte — complessità Git binari; URL esterni supportati
+- UI versioning carte — Git fornisce lo storico; costruire UI è complesso e raramente necessario
+- Autosave — save manuale prima; autosave aggiunge complessità commit
+- Ricerca fulltext carte — scala non lo richiede; navigazione gerarchica sufficiente
 
 ## Context
 
-**Stato attuale (post v2.3):**
-- Monorepo pnpm: apps/android (Expo/React Native), apps/landing (static HTML), packages/core, packages/shared
-- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions, Docora webhook + study_sessions + card_review_schedule tables
-- Tech stack: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23, vitest@4.0.18
-- CI/CD: lint → build-apk → deploy-landing → deploy-migrations → deploy-functions (version from STATE.md)
+**Stato attuale (post v3.0):**
+- Monorepo pnpm: apps/android (Expo/React Native), apps/deck-builder (Vite/React SPA), apps/landing (static HTML), packages/core, packages/shared
+- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 8 azioni GitHub API), Docora webhook + study_sessions + card_review_schedule tables
+- Tech stack Android: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23
+- Tech stack Deck Builder: Vite 7, React 19, react-router 7, Tailwind 4, @uiw/react-md-editor 4, vitest
+- CI/CD: lint-and-typecheck → build-apk → deploy-landing → deploy-deck-builder → deploy-migrations → deploy-functions
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
-- Auth: dual-mode Google OAuth + email/password con OTP verification, password reset, account linking bidirezionale
-- App bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, dashboard compatta 2x2 con tempo relativo e pulsante circolare, card browse, study history con conteggio carte, studio forward-only, sync error handling con token update in-app
-- ~20,600 LOC (TS/TSX/SQL)
-- 11 milestones shipped: v1.1 (native app), v1.2 (polish & i18n), v1.3 (bugfix & UX), v1.4 (card browse & stats), v1.5 (study UX fixes), v1.6 (sync error handling), v1.7 (GSD versioning), v2.0 (spaced repetition), v2.1 (email auth), v2.2 (session limits), v2.3 (dashboard polish)
-
-**v3.0 planning context:**
-- Nuova app web React SPA in `apps/deck-builder` nel monorepo
-- Stesso progetto Supabase (auth condivisa, stesse tabelle)
-- Edge function per commit su repo GitHub condiviso tramite GitHub API
-- Docora gestisce sync/generazione AI anche per il repo condiviso
-- Deploy separato su deck.lumio.toto-castaldi.com
+- Auth condivisa: dual-mode Google OAuth + email/password, OTP verification, password reset, account linking bidirezionale
+- App Android bilingue IT/EN con branding Lumio, SM-2, sessioni configurabili, dashboard 2x2, card browse, study history, sync error handling
+- Deck builder web bilingue IT/EN con dark mode, deck CRUD, card authoring con markdown editor, live preview, toolbar
+- ~49,200 LOC (TS/TSX/CSS/SQL) — ~20,600 Android + ~28,600 deck-builder
+- 12 milestones shipped: v1.1 → v2.3 (mobile), v3.0 (deck builder web)
 
 ## Constraints
 
-- **Platform**: Solo Android
-- **Distribution**: APK diretto via GitHub Releases
+- **Platform**: Android (studio) + Web (deck authoring)
+- **Distribution**: APK diretto via GitHub Releases, web app via CI/CD SCP
 - **Backend**: Supabase (auth, DB, storage, edge functions)
-- **Build**: Expo prebuild + Gradle (no EAS Build)
+- **Build Android**: Expo prebuild + Gradle (no EAS Build)
+- **Build Web**: Vite 7 production build
 - **Auth**: Google OAuth + email/password (no social login beyond Google)
 
 ## Key Decisions
@@ -244,6 +243,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Always relative time (no absolute date fallback) | Simpler code, consistent UX — even "years ago" is relative | ✓ Good — v2.3 |
 | 60px circular play button (borderRadius 30) | Middle of 56-64 range, visually prominent centered CTA | ✓ Good — v2.3 |
 | Removed unused i18n keys after button text removal | Clean codebase, no orphaned translations | ✓ Good — v2.3 |
+| Vite 7 + React 19 + Tailwind 4 for deck builder | Modern stack, fast builds, Tailwind utility-first CSS | ✓ Good — v3.0 |
+| Shared Supabase project for web and mobile | Single auth, single DB, no user sync complexity | ✓ Good — v3.0 |
+| Edge function for GitHub commits (not direct API) | Server-side path isolation, API key protection | ✓ Good — v3.0 |
+| UUID prefix path isolation in shared repo | User can only write to `/{user_id}/` directory | ✓ Good — v3.0 |
+| .gitkeep for empty deck directories | Git doesn't track empty dirs; .gitkeep creates presence | ✓ Good — v3.0 |
+| localStorage-backed timestamps for deck sort | GitHub API has no directory timestamps; client-side proxy | ✓ Good — v3.0 |
+| yaml package over gray-matter for browser | gray-matter requires Buffer polyfill in browser | ✓ Good — v3.0 |
+| Responsive MDEditor: split desktop, toggle mobile | Optimal UX per viewport via matchMedia | ✓ Good — v3.0 |
+| HTTP-only Nginx template, Certbot adds SSL on server | SSL config is server-specific, not repo-portable | ✓ Good — v3.0 |
+| deploy-deck-builder parallels deploy-landing in CI | Independent apps, no build dependency between them | ✓ Good — v3.0 |
 
 ---
-*Last updated: 2026-03-11 after v3.0 milestone start*
+*Last updated: 2026-03-13 after v3.0 milestone*
