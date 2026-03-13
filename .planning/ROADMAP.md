@@ -248,7 +248,7 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
 | 42. Backend Pipeline | 2/2 | Complete    | 2026-03-13 | - |
-| 43. Deck Builder Metadata | 2/2 | Complete   | 2026-03-13 | - |
+| 43. Deck Builder Metadata | 2/2 | Complete    | 2026-03-13 | - |
 | 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
 
 ---
