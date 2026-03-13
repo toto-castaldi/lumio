@@ -14,7 +14,7 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 // Import after mock setup
-import { commitFile, deleteFile, getFile, listFiles, listDecks, createDeck, renameDeck, deleteDeck } from '../api';
+import { commitFile, deleteFile, getFile, listFiles, listDecks, createDeck, renameDeck, deleteDeck, getDeckYaml, commitYaml } from '../api';
 
 describe('api module', () => {
   beforeEach(() => {
@@ -299,6 +299,88 @@ describe('api module', () => {
       });
 
       await expect(deleteDeck('missing')).rejects.toThrow('Deck not found');
+    });
+  });
+
+  describe('getDeckYaml', () => {
+    it('calls invoke with action get_yaml and deck_name, returns { content, sha } on success', async () => {
+      mockInvoke.mockResolvedValue({
+        data: { success: true, content: 'display_name: My Deck\n', sha: 'yaml-sha-123' },
+        error: null,
+      });
+
+      const result = await getDeckYaml('my-deck');
+
+      expect(mockInvoke).toHaveBeenCalledWith('deck-commit', {
+        body: { action: 'get_yaml', deck_name: 'my-deck' },
+      });
+      expect(result).toEqual({ content: 'display_name: My Deck\n', sha: 'yaml-sha-123' });
+    });
+
+    it('returns null when invoke returns data-level error "File not found"', async () => {
+      mockInvoke.mockResolvedValue({
+        data: { error: 'File not found' },
+        error: null,
+      });
+
+      const result = await getDeckYaml('no-yaml-deck');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws on non-404 errors', async () => {
+      mockInvoke.mockResolvedValue({
+        data: { error: 'Unauthorized' },
+        error: null,
+      });
+
+      await expect(getDeckYaml('my-deck')).rejects.toThrow('Unauthorized');
+    });
+  });
+
+  describe('commitYaml', () => {
+    it('calls invoke with action commit_yaml and metadata, returns CommitResult', async () => {
+      mockInvoke.mockResolvedValue({
+        data: { success: true, sha: 'new-sha', commit_sha: 'commit-sha' },
+        error: null,
+      });
+
+      const metadata = {
+        display_name: 'My Deck',
+        description: 'A test deck',
+        tags: ['math', 'science'],
+        language: 'en',
+      };
+
+      const result = await commitYaml('my-deck', metadata);
+
+      expect(mockInvoke).toHaveBeenCalledWith('deck-commit', {
+        body: {
+          action: 'commit_yaml',
+          deck_name: 'my-deck',
+          display_name: 'My Deck',
+          description: 'A test deck',
+          tags: ['math', 'science'],
+          language: 'en',
+        },
+      });
+      expect(result).toEqual({ sha: 'new-sha', commit_sha: 'commit-sha' });
+    });
+
+    it('throws on error response', async () => {
+      mockInvoke.mockResolvedValue({
+        data: null,
+        error: { message: 'Validation failed' },
+      });
+
+      const metadata = {
+        display_name: 'My Deck',
+        description: 'A test deck',
+        tags: [],
+        language: 'en',
+      };
+
+      await expect(commitYaml('my-deck', metadata)).rejects.toThrow('Validation failed');
     });
   });
 });
