@@ -17,8 +17,8 @@ Requirements for Deck Discovery milestone. Each maps to roadmap phases.
 
 ### Backend Pipeline
 
-- [ ] **PIPE-01**: docora-webhook detects and parses deck.yaml files, upserting metadata into deck_index
-- [ ] **PIPE-02**: docora-webhook deletes deck_index row when deck.yaml is removed
+- [x] **PIPE-01**: docora-webhook detects and parses deck.yaml files, upserting metadata into deck_index
+- [x] **PIPE-02**: docora-webhook deletes deck_index row when deck.yaml is removed
 - [x] **PIPE-03**: deck-commit edge function has a commit_yaml action for writing deck.yaml with path validation
 
 ### Deck Builder
@@ -73,8 +73,8 @@ Deferred to v3.2 or later.
 | DBSR-03 | Phase 41 | Complete |
 | DBSR-04 | Phase 41 | Complete |
 | DBSR-05 | Phase 41 | Complete |
-| PIPE-01 | Phase 42 | Pending |
-| PIPE-02 | Phase 42 | Pending |
+| PIPE-01 | Phase 42 | Complete |
+| PIPE-02 | Phase 42 | Complete |
 | PIPE-03 | Phase 42 | Complete |
 | DKBL-01 | Phase 43 | Pending |
 | DKBL-02 | Phase 43 | Pending |

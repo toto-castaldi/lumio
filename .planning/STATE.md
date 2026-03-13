@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
 status: executing
-stopped_at: Completed 42-02-PLAN.md
-last_updated: "2026-03-13T11:50:44.437Z"
+stopped_at: Completed 42-01-PLAN.md
+last_updated: "2026-03-13T11:51:13.797Z"
 last_activity: 2026-03-13 — Plan 42-02 executed (commit_yaml action in deck-commit edge function)
 progress:
   total_phases: 4
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [Phase 41]: Subfolder filter added transparently to study RPC JOINs -- no signature changes, backward compatible with NULL subfolder_path
 - [Phase 42]: Server-enforced author from public.users.display_name with email prefix fallback, client value always ignored
 - [Phase 42]: Lightweight YAML serialization via string concatenation (no external yaml library needed for fixed structure)
+- [Phase 42]: Reused parseFrontmatter() via parseYaml() wrapper for pure YAML parsing -- no new YAML library needed
+- [Phase 42]: Both handleCreate and handleUpdate use UPSERT for idempotent out-of-order webhook delivery
 
 ### Pending Todos
 
@@ -82,11 +84,12 @@ None.
 | Phase 41 P01 | 5min | 2 tasks | 3 files |
 | Phase 41 P02 | 3min | 2 tasks | 2 files |
 | Phase 42 P02 | 1min | 1 tasks | 1 files |
+| Phase 42 P01 | 2min | 2 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-03-13T11:50:21.031Z
-Stopped at: Completed 42-02-PLAN.md
+Last session: 2026-03-13T11:51:13.790Z
+Stopped at: Completed 42-01-PLAN.md
 Resume file: None
 
 ---
