@@ -1201,6 +1201,24 @@ async function handleDelete(
     return { success: true, message: ".lumioignore deleted" };
   }
 
+  // deck.yaml - remove deck_index row when deck.yaml is deleted
+  if (fileName === "deck.yaml") {
+    const subfolderPath = filePath.substring(0, filePath.lastIndexOf("/") + 1);
+
+    const { error: deleteError } = await serviceClient
+      .from("deck_index")
+      .delete()
+      .eq("repository_id", repo.id)
+      .eq("subfolder_path", subfolderPath);
+
+    if (deleteError) {
+      console.error(`[handleDelete] deck_index delete error:`, deleteError.message);
+      return { success: false, message: `Failed to remove deck index: ${deleteError.message}` };
+    }
+
+    return { success: true, message: `deck.yaml removed from index: ${filePath}` };
+  }
+
   // Markdown card files
   if (filePath.endsWith(".md")) {
     const { data: deletedCard } = await serviceClient
