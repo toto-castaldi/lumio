@@ -68,32 +68,32 @@ Deferred to v3.2 or later.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DBSR-01 | — | Pending |
-| DBSR-02 | — | Pending |
-| DBSR-03 | — | Pending |
-| DBSR-04 | — | Pending |
-| DBSR-05 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| DKBL-01 | — | Pending |
-| DKBL-02 | — | Pending |
-| DKBL-03 | — | Pending |
-| DISC-01 | — | Pending |
-| DISC-02 | — | Pending |
-| DISC-03 | — | Pending |
-| DISC-04 | — | Pending |
-| DISC-05 | — | Pending |
-| DISC-06 | — | Pending |
-| DISC-07 | — | Pending |
-| DISC-08 | — | Pending |
-| STDY-01 | — | Pending |
+| DBSR-01 | Phase 41 | Pending |
+| DBSR-02 | Phase 41 | Pending |
+| DBSR-03 | Phase 41 | Pending |
+| DBSR-04 | Phase 41 | Pending |
+| DBSR-05 | Phase 41 | Pending |
+| PIPE-01 | Phase 42 | Pending |
+| PIPE-02 | Phase 42 | Pending |
+| PIPE-03 | Phase 42 | Pending |
+| DKBL-01 | Phase 43 | Pending |
+| DKBL-02 | Phase 43 | Pending |
+| DKBL-03 | Phase 43 | Pending |
+| DISC-01 | Phase 44 | Pending |
+| DISC-02 | Phase 44 | Pending |
+| DISC-03 | Phase 44 | Pending |
+| DISC-04 | Phase 44 | Pending |
+| DISC-05 | Phase 44 | Pending |
+| DISC-06 | Phase 44 | Pending |
+| DISC-07 | Phase 44 | Pending |
+| DISC-08 | Phase 44 | Pending |
+| STDY-01 | Phase 41 | Pending |
 
 **Coverage:**
 - v3.1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 (pending roadmap creation)
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-13*
-*Last updated: 2026-03-13 after initial definition*
+*Last updated: 2026-03-13 -- traceability updated with phase mappings*

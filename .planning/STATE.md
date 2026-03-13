@@ -4,10 +4,10 @@ milestone: v3.1
 milestone_name: Deck Discovery
 status: active
 stopped_at: null
-last_updated: "2026-03-13T12:00:00.000Z"
-last_activity: 2026-03-13 — Milestone v3.1 started
+last_updated: "2026-03-13T14:00:00.000Z"
+last_activity: 2026-03-13 — Roadmap created (4 phases, 20 requirements)
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 41 — Database Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 41 of 44 (Database Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-13 — Milestone v3.1 started
+Status: Ready to plan
+Last activity: 2026-03-13 — Roadmap created (4 phases, 20 requirements)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -42,6 +44,12 @@ Last activity: 2026-03-13 — Milestone v3.1 started
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (77 entries).
+
+Recent decisions affecting current work:
+- Research recommends `subfolder_path` column on `user_repositories` over separate subscription table
+- Research recommends `'simple'` tsvector config everywhere (avoids stemming for multilingual deck names)
+- Card count computed at query time via correlated subquery, not stored in deck_index
+- Standardize on `display_name` field (not `name`) to distinguish from filesystem directory name
 
 ### Pending Todos
 
@@ -67,9 +75,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-13
-Stopped at: v3.0 milestone archived
+Stopped at: Roadmap created for v3.1 Deck Discovery
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-13 (v3.0 milestone archived)*
+*Last updated: 2026-03-13 (v3.1 roadmap created)*
