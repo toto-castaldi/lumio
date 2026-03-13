@@ -203,10 +203,11 @@ Plans:
   1. User can fill in deck display name, description, category (from predefined list), and tags via a form in the deck builder
   2. Saving metadata writes a deck.yaml file to the deck folder in the shared repo via deck-commit
   3. When selecting a deck that already has a deck.yaml, the metadata form loads with existing values
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 43-01: TBD
+- [ ] 43-01-PLAN.md — API layer: get_yaml server action, getDeckYaml/commitYaml client functions, unit tests
+- [ ] 43-02-PLAN.md — UI: DeckMetadataForm component, DeckDetailPanel integration, i18n keys (EN+IT)
 
 ### Phase 44: Mobile Discovery
 **Goal**: Mobile users can discover shared decks via search, browse by category, and subscribe to study them
@@ -247,9 +248,9 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
 | 42. Backend Pipeline | 2/2 | Complete    | 2026-03-13 | - |
-| 43. Deck Builder Metadata | v3.1 | 0/? | Not started | - |
+| 43. Deck Builder Metadata | v3.1 | 0/2 | Not started | - |
 | 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-13 -- Phase 42 plans created (2 plans)*
+*Last updated: 2026-03-13 -- Phase 43 plans created (2 plans)*
