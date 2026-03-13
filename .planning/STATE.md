@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
 status: executing
-stopped_at: Phase 43 context gathered
-last_updated: "2026-03-13T12:21:43.173Z"
-last_activity: 2026-03-13 — Plan 42-02 executed (commit_yaml action in deck-commit edge function)
+stopped_at: Completed 43-01-PLAN.md
+last_updated: "2026-03-13T12:42:40Z"
+last_activity: 2026-03-13 — Plan 43-01 executed (get_yaml action + getDeckYaml/commitYaml client API)
 progress:
   total_phases: 4
   completed_phases: 2
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 42 — Backend Pipeline
+**Current focus:** Phase 43 — Deck Builder Metadata
 
 ## Current Position
 
-Phase: 42 of 44 (Backend Pipeline)
-Plan: 2 of 2
-Status: Executing (Phase 42, Plan 02 complete)
-Last activity: 2026-03-13 — Plan 42-02 executed (commit_yaml action in deck-commit edge function)
+Phase: 43 of 44 (Deck Builder Metadata)
+Plan: 1 of 2
+Status: Executing (Phase 43, Plan 01 complete)
+Last activity: 2026-03-13 — Plan 43-01 executed (get_yaml action + getDeckYaml/commitYaml client API)
 
 Progress: [██████████] 98%
 
@@ -60,6 +60,8 @@ Recent decisions affecting current work:
 - [Phase 42]: Lightweight YAML serialization via string concatenation (no external yaml library needed for fixed structure)
 - [Phase 42]: Reused parseFrontmatter() via parseYaml() wrapper for pure YAML parsing -- no new YAML library needed
 - [Phase 42]: Both handleCreate and handleUpdate use UPSERT for idempotent out-of-order webhook delivery
+- [Phase 43]: get_yaml bypasses validateUserPath (.md-only restriction) using deck_name-based path construction
+- [Phase 43]: getDeckYaml maps data-level "File not found" error to null return, rethrows all other errors
 
 ### Pending Todos
 
@@ -85,12 +87,13 @@ None.
 | Phase 41 P02 | 3min | 2 tasks | 2 files |
 | Phase 42 P02 | 1min | 1 tasks | 1 files |
 | Phase 42 P01 | 2min | 2 tasks | 1 files |
+| Phase 43 P01 | 2min | 1 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-13T12:21:43.167Z
-Stopped at: Phase 43 context gathered
-Resume file: .planning/phases/43-deck-builder-metadata/43-CONTEXT.md
+Last session: 2026-03-13T12:42:40Z
+Stopped at: Completed 43-01-PLAN.md
+Resume file: .planning/phases/43-deck-builder-metadata/43-01-SUMMARY.md
 
 ---
 *State initialized: 2026-01-29*
