@@ -23,7 +23,7 @@ Requirements for Deck Discovery milestone. Each maps to roadmap phases.
 
 ### Deck Builder
 
-- [x] **DKBL-01**: User can set deck metadata (display name, description, category, tags) via a form in the deck builder
+- [x] **DKBL-01**: User can set deck metadata (display name, description, language, tags) via a form in the deck builder
 - [x] **DKBL-02**: User can save deck metadata as deck.yaml in the deck folder
 - [x] **DKBL-03**: Deck builder loads existing deck.yaml when selecting a deck
 
