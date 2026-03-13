@@ -855,6 +855,59 @@ serve(async (req) => {
       }
 
       // -----------------------------------------------------------------
+      // get_yaml: Retrieve deck.yaml content by deck name
+      // -----------------------------------------------------------------
+      case "get_yaml": {
+        const { deck_name } = body;
+        if (!deck_name || typeof deck_name !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Missing required field: deck_name" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const trimmedDeckName = deck_name.trim();
+        const deckNameError = validateDeckName(trimmedDeckName);
+        if (deckNameError) {
+          return new Response(
+            JSON.stringify({ error: deckNameError }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        const yamlPath = `${userId}/${trimmedDeckName}/deck.yaml`;
+        const file = await getFile(yamlPath);
+
+        if (!file) {
+          return new Response(
+            JSON.stringify({ error: "File not found" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 404,
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            content: file.content,
+            sha: file.sha,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
+      // -----------------------------------------------------------------
       // Unknown action
       // -----------------------------------------------------------------
       default:

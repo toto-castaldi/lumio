@@ -19,6 +19,13 @@ export interface CommitResult {
   commit_sha: string;
 }
 
+export interface DeckMetadata {
+  display_name: string;
+  description: string;
+  tags: string[];
+  language: string;
+}
+
 export interface FileContent {
   content: string;
   sha: string;
@@ -87,4 +94,27 @@ export async function renameDeck(oldName: string, newName: string): Promise<Deck
 /** Delete a deck and all its contents */
 export async function deleteDeck(name: string): Promise<void> {
   await invoke<{ success: true }>({ action: 'delete_deck', name });
+}
+
+/** Get the deck.yaml content for a deck. Returns null if deck.yaml does not exist. */
+export async function getDeckYaml(deckName: string): Promise<{ content: string; sha: string } | null> {
+  try {
+    const data = await invoke<{ content: string; sha: string }>({
+      action: 'get_yaml', deck_name: deckName,
+    });
+    return { content: data.content, sha: data.sha };
+  } catch (err) {
+    if (err instanceof Error && err.message === 'File not found') return null;
+    throw err;
+  }
+}
+
+/** Commit deck metadata as deck.yaml */
+export async function commitYaml(deckName: string, metadata: DeckMetadata): Promise<CommitResult> {
+  const data = await invoke<{ sha: string; commit_sha: string }>({
+    action: 'commit_yaml',
+    deck_name: deckName,
+    ...metadata,
+  });
+  return { sha: data.sha, commit_sha: data.commit_sha };
 }
