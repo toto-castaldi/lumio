@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
 status: executing
-stopped_at: Completed 41-01-PLAN.md
-last_updated: "2026-03-13T10:51:56.527Z"
-last_activity: 2026-03-13 — Plan 41-01 executed (deck_index, subfolder subscriptions, platform repo seed)
+stopped_at: Completed 41-02-PLAN.md
+last_updated: "2026-03-13T10:57:46.176Z"
+last_activity: 2026-03-13 — Plan 41-02 executed (search_decks RPC, study RPCs subfolder filtering)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 12
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 
 ## Current Position
 
-Phase: 41 of 44 (Database Foundation)
-Plan: 1 of 2
-Status: Executing (Plan 01 complete)
-Last activity: 2026-03-13 — Plan 41-01 executed (deck_index, subfolder subscriptions, platform repo seed)
+Phase: 41 of 44 (Database Foundation) -- COMPLETE
+Plan: 2 of 2
+Status: Executing (Phase 41 complete, all plans done)
+Last activity: 2026-03-13 — Plan 41-02 executed (search_decks RPC, study RPCs subfolder filtering)
 
-Progress: [█░░░░░░░░░] 12%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 - Used `is_platform BOOLEAN` column to identify platform repos (explicit over implicit NULL pattern)
 - Used COALESCE-based unique index for subfolder_path NULL handling in user_repositories
 - [Phase 41]: Created deck_index_search_vector() IMMUTABLE wrapper for generated tsvector column (to_tsvector and array_to_string are STABLE)
+- [Phase 41]: Used websearch_to_tsquery (not plainto_tsquery) for Google-style search syntax in search_decks RPC
+- [Phase 41]: Subfolder filter added transparently to study RPC JOINs -- no signature changes, backward compatible with NULL subfolder_path
 
 ### Pending Todos
 
@@ -76,11 +78,12 @@ None.
 | 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
 | Phase 41 P01 | 5min | 2 tasks | 3 files |
+| Phase 41 P02 | 3min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-13T10:51:52.046Z
-Stopped at: Completed 41-01-PLAN.md
+Last session: 2026-03-13T10:57:46.171Z
+Stopped at: Completed 41-02-PLAN.md
 Resume file: None
 
 ---
