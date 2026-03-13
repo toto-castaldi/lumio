@@ -154,7 +154,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 
 </details>
 
-### 🚧 v3.1 Deck Discovery (In Progress)
+### v3.1 Deck Discovery (In Progress)
 
 **Milestone Goal:** Permettere agli utenti mobile di scoprire e aggiungere deck creati con il deck builder, tramite ricerca fulltext su metadata deck nel repo condiviso lumio-decks.
 
@@ -175,11 +175,11 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
   3. Study RPCs return only cards from the subscribed subfolder (not the entire shared repo) when subfolder_path is set
   4. The lumio-decks shared repo exists at platform level and is always available for Docora sync
   5. A user with zero subscriptions sees zero results from study RPCs for the shared repo (no data leakage)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 41-01: TBD
-- [ ] 41-02: TBD
+- [ ] 41-01-PLAN.md — Schema foundation: deck_index table with tsvector/GIN, subfolder_path on user_repositories, platform repo seed
+- [ ] 41-02-PLAN.md — RPCs: search_decks fulltext search function, study RPCs subfolder filtering
 
 ### Phase 42: Backend Pipeline
 **Goal**: Edge functions can ingest deck.yaml metadata into the deck index and authors can commit deck.yaml from the deck builder
@@ -244,11 +244,11 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 32-33. Session Limits | v2.2 | 2/2 | Complete | 2026-03-05 |
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
-| 41. Database Foundation | v3.1 | 0/? | Not started | - |
+| 41. Database Foundation | v3.1 | 0/2 | Not started | - |
 | 42. Backend Pipeline | v3.1 | 0/? | Not started | - |
 | 43. Deck Builder Metadata | v3.1 | 0/? | Not started | - |
 | 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-13 -- v3.1 Deck Discovery roadmap created*
+*Last updated: 2026-03-13 -- Phase 41 plans created (2 plans)*
