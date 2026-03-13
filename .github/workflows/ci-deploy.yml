@@ -202,6 +202,69 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           script: sudo systemctl reload nginx
 
+  deploy-deck-builder:
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name == 'push' && needs.lint-and-typecheck.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract version from STATE.md
+        id: version
+        run: |
+          VERSION=$(node scripts/extract-version.cjs)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        env:
+          GIT_TAG: ${{ github.ref_name }}
+
+      - name: Build packages
+        run: pnpm build:packages
+
+      - name: Run deck-builder tests
+        run: pnpm --filter @lumio/deck-builder test
+
+      - name: Build deck-builder
+        run: pnpm --filter @lumio/deck-builder build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Inject version into index.html
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          DISPLAY_VERSION="${{ steps.version.outputs.version }}+${{ github.run_number }}.${SHORT_SHA}"
+          sed -i "s/__LUMIO_VERSION__/${DISPLAY_VERSION}/g" apps/deck-builder/dist/index.html
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: 'apps/deck-builder/dist/*'
+          target: '/var/www/deck-lumio'
+          strip_components: 3
+
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: sudo systemctl reload nginx
+
   deploy-migrations:
     runs-on: ubuntu-latest
     needs: [lint-and-typecheck]
