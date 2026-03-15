@@ -221,11 +221,11 @@ Plans:
   5. User can unsubscribe from a deck, removing its cards from future study sessions
   6. Empty states display contextual guidance (no decks available, no search results, all decks already subscribed)
   7. All discovery UI text is available in both IT and EN
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 44-01: TBD
-- [ ] 44-02: TBD
+- [ ] 44-01-PLAN.md — Data layer: discovery functions in @lumio/core (searchDecks, subscribe, unsubscribe, subscriptions, flag emoji) + i18n strings (EN/IT)
+- [ ] 44-02-PLAN.md — Discovery UI: 4th tab in MainNavigator, DiscoveryScreen with search/tags/subscribe, DeckCard, TagChipBar, Repos screen shared deck entries
 
 ## Progress
 
@@ -249,8 +249,8 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
 | 42. Backend Pipeline | 2/2 | Complete    | 2026-03-13 | - |
 | 43. Deck Builder Metadata | 2/2 | Complete    | 2026-03-13 | - |
-| 44. Mobile Discovery | v3.1 | 0/? | Not started | - |
+| 44. Mobile Discovery | v3.1 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-13 -- Phase 43 plans created (2 plans)*
+*Last updated: 2026-03-15 -- Phase 44 plans created (2 plans)*
