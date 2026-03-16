@@ -213,6 +213,54 @@
 
 ---
 
+## Milestone: v3.1 — Deck Discovery
+
+**Shipped:** 2026-03-16
+**Phases:** 4 | **Plans:** 8 | **Sessions:** ~3
+
+### What Was Built
+- deck_index table with weighted tsvector/GIN fulltext search and immutable wrapper function for generated column
+- search_decks RPC with prefix matching for search-as-you-type, tag filtering, and card_count at query time
+- Subfolder-aware study RPCs: transparent subfolder_path filtering on 7 JOINs (zero signature changes)
+- docora-webhook deck.yaml detection, parsing (parseYaml reusing parseFrontmatter), and idempotent deck_index upsert/delete
+- deck-commit commit_yaml action with server-enforced author and lightweight YAML serialization
+- DeckMetadataForm in deck builder with collapsible UI, dirty tracking, YAML load/save, EN/IT i18n
+- Discovery tab (4th bottom tab) with search-as-you-type, tag chip bar, optimistic subscribe/unsubscribe
+- Shared deck entries in Repos screen with display_name enrichment from deck_index
+
+### What Worked
+- End-to-end pipeline approach: DB schema → webhook indexing → deck builder metadata → mobile discovery — each phase cleanly consumed the prior one's output
+- Transparent subfolder filter pattern: added to 7 JOINs across 2 RPCs with zero signature changes — existing mobile code worked unchanged
+- parseYaml wrapper reusing parseFrontmatter avoided adding a YAML library to the edge function
+- Prefix matching fix found during device verification (search-as-you-type requires `:*` suffix, not websearch_to_tsquery)
+- Optimistic UI with Set-based key tracking for subscribe/unsubscribe gives instant feedback
+
+### What Was Inefficient
+- websearch_to_tsquery chosen in Phase 41 had to be replaced with prefix matching in Phase 44 when device testing revealed partial typing didn't match — research didn't test search-as-you-type behavior
+- Client-side join between user_repositories and deck_index is a workaround for PostgREST not supporting embedding without FK — adds 2 round trips
+
+### Patterns Established
+- Immutable tsvector wrapper: wrap generated column expression in IMMUTABLE SQL function when using STABLE functions
+- COALESCE-based unique index: for nullable columns in unique constraints
+- Transparent subfolder filter: `AND (ur.subfolder_path IS NULL OR c.file_path LIKE ur.subfolder_path || '%')` on every user_repositories JOIN
+- Optimistic UI with Set<string> rollback: add key immediately, revert on error
+- Debounced search via useRef setTimeout: 300ms on text, immediate on tag selection
+- Prefix tsquery pattern: exact match all words except last, `:*` on last word
+
+### Key Lessons
+1. Search-as-you-type requires prefix matching (`:*`), not websearch_to_tsquery — test with partial input during research, not just complete words
+2. When PostgREST can't embed (no FK), client-side join with Map lookup is clean and fast enough for small result sets
+3. Transparent filter patterns (adding conditions to existing JOINs) are the cleanest way to extend RPCs without breaking callers
+4. Idempotent operations (UPSERT, 409-as-success) simplify webhook and UI code simultaneously
+5. Device verification catches real UX issues (search behavior, key collisions) that code review and unit tests miss
+
+### Cost Observations
+- Model mix: 80% opus, 20% sonnet (quality profile)
+- Sessions: ~3 (4 days, with gap between Phase 43 and 44)
+- Notable: 4 phases, 8 plans, 17 tasks — full end-to-end pipeline from DB to mobile UI in 4 days
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -224,6 +272,7 @@
 | v2.2 | ~2 | 2 | Cleanest milestone — zero deviations, zero issues |
 | v2.3 | ~1 | 2 | Fastest milestone — pure UI polish, same-day ship |
 | v3.0 | ~5 | 5 | First web app milestone; new platform (Vite/React SPA); clean sequential chain |
+| v3.1 | ~3 | 4 | First cross-platform pipeline (DB → webhook → web → mobile); prefix matching fix during device test |
 
 ### Cumulative Quality
 
@@ -234,6 +283,7 @@
 | v2.2 | — | Session limit (manual) | — |
 | v2.3 | — | UI polish (UAT) | — |
 | v3.0 | 38+ (auth/theme/i18n/validation) | Lib layer | Vite 7, React 19, Tailwind 4, @uiw/react-md-editor, katex, yaml |
+| v3.1 | 5 (api.test.ts) | API layer | — (zero new dependencies) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -245,3 +295,5 @@
 6. Pure UI polish milestones are fast, low-risk, and benefit most from UAT (v2.3)
 7. Shared backend across multiple frontends is a massive complexity reducer — one auth, one DB, no sync (v3.0)
 8. Browser compatibility for npm packages must be verified during research, not mid-implementation (v3.0)
+9. Search-as-you-type requires prefix matching — test with partial input during research, not just complete words (v3.1)
+10. Transparent filter patterns on existing JOINs are the cleanest way to extend RPCs without breaking callers (v3.1)
