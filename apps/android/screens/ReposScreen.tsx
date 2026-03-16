@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
+  Text,
   FlatList,
   Alert,
   StyleSheet,
@@ -9,11 +10,14 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
+import { Ionicons } from '@expo/vector-icons';
 import {
   getUserRepositories,
   addRepository,
   deleteRepository,
+  getUserDeckSubscriptions,
   type Repository,
+  type DeckSubscription,
 } from '@lumio/core';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../hooks/useTheme';
@@ -35,6 +39,7 @@ export function ReposScreen() {
   const { t } = useI18n();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [sharedDecks, setSharedDecks] = useState<DeckSubscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -43,8 +48,12 @@ export function ReposScreen() {
 
   const fetchRepos = useCallback(async () => {
     try {
-      const repos = await getUserRepositories();
+      const [repos, subs] = await Promise.all([
+        getUserRepositories(),
+        getUserDeckSubscriptions(),
+      ]);
       setRepositories(repos);
+      setSharedDecks(subs);
     } catch (error) {
       console.error('[ReposScreen] fetchRepos error:', error);
       Toast.show({
@@ -199,6 +208,48 @@ export function ReposScreen() {
             subtitle={t('repos.emptySubtitle')}
           />
         }
+        ListFooterComponent={
+          sharedDecks.length > 0 ? (
+            <View style={{ paddingBottom: 8 }}>
+              {sharedDecks.map((sub) => (
+                <View
+                  key={`${sub.repository_id}:${sub.subfolder_path}`}
+                  style={[
+                    styles.sharedDeckItem,
+                    { borderBottomColor: colors.border },
+                  ]}
+                >
+                  <Ionicons
+                    name="compass-outline"
+                    size={24}
+                    color={colors.primary}
+                    style={{ marginRight: 12 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 15,
+                        fontWeight: '500',
+                      }}
+                    >
+                      {sub.display_name}
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                        marginTop: 2,
+                      }}
+                    >
+                      {t('discovery.sharedDeck')}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null
+        }
       />
       <RepoErrorModal
         visible={!!errorRepo}
@@ -224,5 +275,12 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flexGrow: 1,
+  },
+  sharedDeckItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });
