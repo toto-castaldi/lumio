@@ -52,7 +52,7 @@ otp_expiry = 3600
 
 [auth.email.smtp]
 host = "env(SMTP_HOST)"
-port = 587
+port = 1025
 user = "env(SMTP_USER)"
 pass = "env(SMTP_PASS)"
 admin_email = "env(SMTP_ADMIN_EMAIL)"
