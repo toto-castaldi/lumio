@@ -52,7 +52,15 @@ export function ReposScreen() {
         getUserRepositories(),
         getUserDeckSubscriptions(),
       ]);
-      setRepositories(repos);
+      // Deduplicate repos by id — subfolder subscriptions can cause
+      // the same repository to appear multiple times in the join
+      const seen = new Set<string>();
+      const uniqueRepos = repos.filter((r) => {
+        if (seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      });
+      setRepositories(uniqueRepos);
       setSharedDecks(subs);
     } catch (error) {
       console.error('[ReposScreen] fetchRepos error:', error);
