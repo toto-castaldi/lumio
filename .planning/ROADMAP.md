@@ -161,7 +161,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 - [x] **Phase 41: Database Foundation** - Schema, RPCs, RLS, and study pipeline updates for deck discovery and subfolder subscription (completed 2026-03-13)
 - [x] **Phase 42: Backend Pipeline** - Edge function enhancements for deck.yaml ingestion and commit support (completed 2026-03-13)
 - [x] **Phase 43: Deck Builder Metadata** - Metadata authoring UI for deck authors to publish discoverable decks (completed 2026-03-13)
-- [ ] **Phase 44: Mobile Discovery** - Discovery tab with fulltext search, category browse, and deck subscription in the Android app
+- [x] **Phase 44: Mobile Discovery** - Discovery tab with fulltext search, category browse, and deck subscription in the Android app (completed 2026-03-16)
 
 ## Phase Details
 
@@ -249,7 +249,7 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
 | 42. Backend Pipeline | 2/2 | Complete    | 2026-03-13 | - |
 | 43. Deck Builder Metadata | 2/2 | Complete    | 2026-03-13 | - |
-| 44. Mobile Discovery | 1/2 | In Progress|  | - |
+| 44. Mobile Discovery | 2/2 | Complete   | 2026-03-16 | - |
 
 ---
 *Roadmap created: 2026-01-29*

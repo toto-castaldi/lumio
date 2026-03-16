@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
-status: executing
-stopped_at: Completed 44-01-PLAN.md
-last_updated: "2026-03-16T09:59:41.946Z"
-last_activity: 2026-03-16 — Plan 44-01 executed (Discovery data layer + i18n strings)
+status: completed
+stopped_at: Completed 44-02-PLAN.md
+last_updated: "2026-03-16T10:59:41.974Z"
+last_activity: 2026-03-16 — Plan 44-02 executed (Discovery UI + device verification)
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
-  percent: 98
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 ## Current Position
 
 Phase: 44 of 44 (Mobile Discovery)
-Plan: 1 of 2
-Status: Executing (Phase 44, Plan 01 complete)
-Last activity: 2026-03-16 — Plan 44-01 executed (Discovery data layer + i18n strings)
+Plan: 2 of 2
+Status: Complete (Phase 44, all plans complete)
+Last activity: 2026-03-16 — Plan 44-02 executed (Discovery UI + device verification)
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,8 @@ Recent decisions affecting current work:
 - [Phase 44]: Client-side join between user_repositories and deck_index (no FK, PostgREST cannot embed)
 - [Phase 44]: 409 conflict treated as success in subscribeToDeck for idempotent double-tap handling
 - [Phase 44]: Title-cased subfolder_path as fallback display_name for orphaned subscriptions
+- [Phase 44]: Prefix matching (:*) on last word in search_decks RPC for search-as-you-type instead of websearch_to_tsquery
+- [Phase 44]: Deduplicate repos by id in ReposScreen to prevent React key collision from multiple subfolder subscriptions
 
 ### Pending Todos
 
@@ -95,11 +97,12 @@ None.
 | Phase 43 P01 | 2min | 1 tasks | 3 files |
 | Phase 43 P02 | 5min | 3 tasks | 4 files |
 | Phase 44 P01 | 2min | 2 tasks | 4 files |
+| Phase 44 P02 | 8min | 4 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-03-16T09:59:41.941Z
-Stopped at: Completed 44-01-PLAN.md
+Last session: 2026-03-16T10:59:41.967Z
+Stopped at: Completed 44-02-PLAN.md
 Resume file: None
 
 ---
