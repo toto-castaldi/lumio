@@ -30,13 +30,13 @@ Requirements for Deck Discovery milestone. Each maps to roadmap phases.
 ### Mobile Discovery
 
 - [ ] **DISC-01**: User can access a Discovery tab (4th bottom tab with compass icon)
-- [ ] **DISC-02**: User can search shared decks via fulltext search bar with 300ms debounce
+- [x] **DISC-02**: User can search shared decks via fulltext search bar with 300ms debounce
 - [ ] **DISC-03**: User sees search results with deck name, description, card count, and author
-- [ ] **DISC-04**: User can browse decks by category via horizontal scrollable chip bar
-- [ ] **DISC-05**: User can subscribe to a shared deck with single tap
-- [ ] **DISC-06**: User can unsubscribe from a shared deck
+- [x] **DISC-04**: User can browse decks by category via horizontal scrollable chip bar
+- [x] **DISC-05**: User can subscribe to a shared deck with single tap
+- [x] **DISC-06**: User can unsubscribe from a shared deck
 - [ ] **DISC-07**: User sees appropriate empty states (no decks, no results, all subscribed)
-- [ ] **DISC-08**: Discovery UI is fully localized in IT and EN
+- [x] **DISC-08**: Discovery UI is fully localized in IT and EN
 
 ### Study Integration
 
@@ -80,13 +80,13 @@ Deferred to v3.2 or later.
 | DKBL-02 | Phase 43 | Complete |
 | DKBL-03 | Phase 43 | Complete |
 | DISC-01 | Phase 44 | Pending |
-| DISC-02 | Phase 44 | Pending |
+| DISC-02 | Phase 44 | Complete |
 | DISC-03 | Phase 44 | Pending |
-| DISC-04 | Phase 44 | Pending |
-| DISC-05 | Phase 44 | Pending |
-| DISC-06 | Phase 44 | Pending |
+| DISC-04 | Phase 44 | Complete |
+| DISC-05 | Phase 44 | Complete |
+| DISC-06 | Phase 44 | Complete |
 | DISC-07 | Phase 44 | Pending |
-| DISC-08 | Phase 44 | Pending |
+| DISC-08 | Phase 44 | Complete |
 | STDY-01 | Phase 41 | Complete |
 
 **Coverage:**

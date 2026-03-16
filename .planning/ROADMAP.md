@@ -249,7 +249,7 @@ Phases execute in numeric order: 41 → 42 → 43 → 44
 | 41. Database Foundation | 2/2 | Complete    | 2026-03-13 | - |
 | 42. Backend Pipeline | 2/2 | Complete    | 2026-03-13 | - |
 | 43. Deck Builder Metadata | 2/2 | Complete    | 2026-03-13 | - |
-| 44. Mobile Discovery | v3.1 | 0/2 | Not started | - |
+| 44. Mobile Discovery | 1/2 | In Progress|  | - |
 
 ---
 *Roadmap created: 2026-01-29*

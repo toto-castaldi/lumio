@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Deck Discovery
 status: executing
-stopped_at: Phase 44 context gathered
-last_updated: "2026-03-15T18:28:26.873Z"
-last_activity: 2026-03-13 — Plan 43-02 executed (DeckMetadataForm component with i18n, integrated into DeckDetailPanel)
+stopped_at: Completed 44-01-PLAN.md
+last_updated: "2026-03-16T09:59:41.946Z"
+last_activity: 2026-03-16 — Plan 44-01 executed (Discovery data layer + i18n strings)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 7
+  percent: 98
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 43 — Deck Builder Metadata
+**Current focus:** Phase 44 — Mobile Discovery
 
 ## Current Position
 
-Phase: 43 of 44 (Deck Builder Metadata)
-Plan: 2 of 2
-Status: Executing (Phase 43, Plan 02 complete)
-Last activity: 2026-03-13 — Plan 43-02 executed (DeckMetadataForm component with i18n, integrated into DeckDetailPanel)
+Phase: 44 of 44 (Mobile Discovery)
+Plan: 1 of 2
+Status: Executing (Phase 44, Plan 01 complete)
+Last activity: 2026-03-16 — Plan 44-01 executed (Discovery data layer + i18n strings)
 
-Progress: [██████████] 100%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - [Phase 43]: getDeckYaml maps data-level "File not found" error to null return, rethrows all other errors
 - [Phase 43]: Form starts collapsed by default, dirty tracking via JSON.stringify comparison against loadedRef snapshot
 - [Phase 43]: Race condition guard via cancelled flag in useEffect for rapid deck switching
+- [Phase 44]: Client-side join between user_repositories and deck_index (no FK, PostgREST cannot embed)
+- [Phase 44]: 409 conflict treated as success in subscribeToDeck for idempotent double-tap handling
+- [Phase 44]: Title-cased subfolder_path as fallback display_name for orphaned subscriptions
 
 ### Pending Todos
 
@@ -91,12 +94,13 @@ None.
 | Phase 42 P01 | 2min | 2 tasks | 1 files |
 | Phase 43 P01 | 2min | 1 tasks | 3 files |
 | Phase 43 P02 | 5min | 3 tasks | 4 files |
+| Phase 44 P01 | 2min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-03-15T18:28:26.871Z
-Stopped at: Phase 44 context gathered
-Resume file: .planning/phases/44-mobile-discovery/44-CONTEXT.md
+Last session: 2026-03-16T09:59:41.941Z
+Stopped at: Completed 44-01-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-01-29*
