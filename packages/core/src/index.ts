@@ -79,5 +79,16 @@ export { Deck } from './deck';
 // Export CardView class for image URL transformation
 export { CardView } from './card';
 
+// Export discovery functions (Phase 44)
+export {
+  searchDecks,
+  subscribeToDeck,
+  unsubscribeFromDeck,
+  getUserDeckSubscriptions,
+  getLanguageFlag,
+  type DeckSearchResult,
+  type DeckSubscription,
+} from './supabase/discovery';
+
 // Export SRS functions (Phase 23)
 export { sm2, newSM2Item } from './srs';
