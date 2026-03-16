@@ -181,6 +181,26 @@ const en = {
   navigation: {
     repositories: 'Repositories',
     settings: 'Settings',
+    discovery: 'Discover',
+  },
+  discovery: {
+    title: 'Discover',
+    searchPlaceholder: 'Search decks...',
+    allTags: 'All',
+    noDecksTitle: 'No decks available yet',
+    noDecksSubtitle: 'Deck authors are preparing content. Check back soon!',
+    noResultsTitle: 'No decks found',
+    noResultsSubtitle: 'Try a different search or clear your filters',
+    clearFilters: 'Clear filters',
+    subscribed: 'Subscribed to %{name}',
+    unsubscribed: 'Unsubscribed from %{name}',
+    subscribeFailed: 'Failed to subscribe',
+    unsubscribeFailed: 'Failed to unsubscribe',
+    unsubscribeTitle: 'Unsubscribe from %{name}?',
+    unsubscribeBody: 'Your study progress will be preserved.',
+    unsubscribe: 'Unsubscribe',
+    cardCount: '%{count} cards',
+    sharedDeck: 'Shared deck',
   },
   auth: {
     login: {

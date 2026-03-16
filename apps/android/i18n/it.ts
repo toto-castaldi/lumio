@@ -184,6 +184,26 @@ const it: Translations = {
   navigation: {
     repositories: 'Repository',
     settings: 'Impostazioni',
+    discovery: 'Scopri',
+  },
+  discovery: {
+    title: 'Scopri',
+    searchPlaceholder: 'Cerca mazzi...',
+    allTags: 'Tutti',
+    noDecksTitle: 'Nessun mazzo disponibile',
+    noDecksSubtitle: 'Gli autori stanno preparando i contenuti. Ricontrolla presto!',
+    noResultsTitle: 'Nessun mazzo trovato',
+    noResultsSubtitle: 'Prova una ricerca diversa o cancella i filtri',
+    clearFilters: 'Cancella filtri',
+    subscribed: 'Iscritto a %{name}',
+    unsubscribed: 'Disiscritto da %{name}',
+    subscribeFailed: 'Iscrizione fallita',
+    unsubscribeFailed: 'Disiscrizione fallita',
+    unsubscribeTitle: 'Disiscriversi da %{name}?',
+    unsubscribeBody: 'I tuoi progressi di studio verranno conservati.',
+    unsubscribe: 'Disiscriviti',
+    cardCount: '%{count} schede',
+    sharedDeck: 'Mazzo condiviso',
   },
   auth: {
     login: {
