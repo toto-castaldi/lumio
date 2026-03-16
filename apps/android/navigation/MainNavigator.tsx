@@ -6,17 +6,20 @@ import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ReposScreen } from '../screens/ReposScreen';
+import { DiscoveryScreen } from '../screens/DiscoveryScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 
 export type MainTabParamList = {
   Dashboard: undefined;
   Repos: undefined;
+  Discovery: undefined;
   Settings: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-type TabIconName = 'home' | 'home-outline' | 'folder' | 'folder-outline' | 'settings' | 'settings-outline';
+type TabIconName = 'home' | 'home-outline' | 'folder' | 'folder-outline'
+  | 'compass' | 'compass-outline' | 'settings' | 'settings-outline';
 
 /**
  * MainNavigator provides the main app experience with bottom tabs.
@@ -75,6 +78,20 @@ export function MainNavigator() {
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons
                 name={(focused ? 'folder' : 'folder-outline') as TabIconName}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Discovery"
+          component={DiscoveryScreen}
+          options={{
+            title: t('navigation.discovery'),
+            tabBarIcon: ({ focused, color, size }) => (
+              <Ionicons
+                name={(focused ? 'compass' : 'compass-outline') as TabIconName}
                 size={size}
                 color={color}
               />
