@@ -4,7 +4,7 @@ milestone: v3.1
 milestone_name: Deck Discovery
 status: completed
 stopped_at: Completed 44-02-PLAN.md
-last_updated: "2026-03-16T11:04:16.054Z"
+last_updated: "2026-03-16T11:06:44.658Z"
 last_activity: 2026-03-16 — Plan 44-02 executed (Discovery UI + device verification)
 progress:
   total_phases: 4
@@ -18,57 +18,32 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-13)
+See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 44 — Mobile Discovery
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 44 of 44 (Mobile Discovery)
-Plan: 2 of 2
-Status: Complete (Phase 44, all plans complete)
-Last activity: 2026-03-16 — Plan 44-02 executed (Discovery UI + device verification)
+Milestone: v3.1 Deck Discovery — SHIPPED 2026-03-16
+Status: Milestone complete, awaiting next milestone planning
+Last activity: 2026-03-16 — v3.1 milestone archived
 
-Progress: [██████████] 100%
+Progress: All milestones through v3.1 shipped
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 80 (70 across v1.1-v2.3 + 10 in v3.0)
-- Total milestones shipped: 12 (v1.1 through v3.0)
-- Timeline: 44 days (2026-01-29 to 2026-03-13)
+- Total plans completed: 88 (70 across v1.1-v2.3 + 10 in v3.0 + 8 in v3.1)
+- Total milestones shipped: 13 (v1.1 through v3.1)
+- Timeline: 47 days (2026-01-29 to 2026-03-16)
 
 ## Accumulated Context
 
 ### Decisions
 
-All decisions logged in PROJECT.md Key Decisions table (77 entries).
-
-Recent decisions affecting current work:
-- Research recommends `subfolder_path` column on `user_repositories` over separate subscription table
-- Research recommends `'simple'` tsvector config everywhere (avoids stemming for multilingual deck names)
-- Card count computed at query time via correlated subquery, not stored in deck_index
-- Standardize on `display_name` field (not `name`) to distinguish from filesystem directory name
-- Created `deck_index_search_vector()` IMMUTABLE wrapper function for generated tsvector column (to_tsvector and array_to_string are STABLE, not IMMUTABLE)
-- Used `is_platform BOOLEAN` column to identify platform repos (explicit over implicit NULL pattern)
-- Used COALESCE-based unique index for subfolder_path NULL handling in user_repositories
-- [Phase 41]: Created deck_index_search_vector() IMMUTABLE wrapper for generated tsvector column (to_tsvector and array_to_string are STABLE)
-- [Phase 41]: Used websearch_to_tsquery (not plainto_tsquery) for Google-style search syntax in search_decks RPC
-- [Phase 41]: Subfolder filter added transparently to study RPC JOINs -- no signature changes, backward compatible with NULL subfolder_path
-- [Phase 42]: Server-enforced author from public.users.display_name with email prefix fallback, client value always ignored
-- [Phase 42]: Lightweight YAML serialization via string concatenation (no external yaml library needed for fixed structure)
-- [Phase 42]: Reused parseFrontmatter() via parseYaml() wrapper for pure YAML parsing -- no new YAML library needed
-- [Phase 42]: Both handleCreate and handleUpdate use UPSERT for idempotent out-of-order webhook delivery
-- [Phase 43]: get_yaml bypasses validateUserPath (.md-only restriction) using deck_name-based path construction
-- [Phase 43]: getDeckYaml maps data-level "File not found" error to null return, rethrows all other errors
-- [Phase 43]: Form starts collapsed by default, dirty tracking via JSON.stringify comparison against loadedRef snapshot
-- [Phase 43]: Race condition guard via cancelled flag in useEffect for rapid deck switching
-- [Phase 44]: Client-side join between user_repositories and deck_index (no FK, PostgREST cannot embed)
-- [Phase 44]: 409 conflict treated as success in subscribeToDeck for idempotent double-tap handling
-- [Phase 44]: Title-cased subfolder_path as fallback display_name for orphaned subscriptions
-- [Phase 44]: Prefix matching (:*) on last word in search_decks RPC for search-as-you-type instead of websearch_to_tsquery
-- [Phase 44]: Deduplicate repos by id in ReposScreen to prevent React key collision from multiple subfolder subscriptions
+All decisions logged in PROJECT.md Key Decisions table (92 entries).
+v3.1 decisions archived — see PROJECT.md for full table.
 
 ### Pending Todos
 
@@ -101,8 +76,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T10:59:41.967Z
-Stopped at: Completed 44-02-PLAN.md
+Last session: 2026-03-16
+Stopped at: v3.1 milestone archived
 Resume file: None
 
 ---

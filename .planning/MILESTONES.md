@@ -1,5 +1,34 @@
 # Milestones: Lumio
 
+## v3.1 Deck Discovery (Shipped: 2026-03-16)
+
+**Delivered:** End-to-end deck discovery pipeline — from deck.yaml metadata authoring in the deck builder, through Docora webhook indexing into a fulltext-searchable deck_index table, to a Discovery tab in the Android app where users search, browse by tag, and subscribe to shared decks with a single tap.
+
+**Phases completed:** 41-44 (8 plans total)
+
+**Key accomplishments:**
+
+- deck_index table with weighted tsvector/GIN fulltext search (name > tags > description) and immutable wrapper function for generated column
+- search_decks RPC with prefix matching for search-as-you-type, tag filtering, and card_count computed at query time
+- Subfolder-aware study RPCs: transparent subfolder_path filtering on 7 JOINs across get_study_cards_for_session and get_due_card_count
+- docora-webhook deck.yaml detection, parsing (parseYaml wrapper), and idempotent deck_index upsert/delete
+- deck-commit commit_yaml action with server-enforced author, language validation, and lightweight YAML serialization
+- DeckMetadataForm in deck builder with collapsible UI, dirty tracking, YAML load/save, EN/IT i18n
+- Discovery tab (4th bottom tab, compass icon) with search-as-you-type, tag chip bar, optimistic subscribe/unsubscribe
+- Shared deck entries in Repos screen with display_name enrichment from deck_index
+
+**Stats:**
+
+- 52 files changed (+7,691 / -78 lines)
+- 4 phases, 8 plans, 17 tasks
+- 4 days (2026-03-13 to 2026-03-16)
+
+**Git range:** `2cca21a` → `734b67d` (31 commits)
+
+**What's next:** v3.2 TBD
+
+---
+
 ## v3.0 Deck Builder Web (Shipped: 2026-03-13)
 
 **Delivered:** React SPA deck builder at deck.lumio.toto-castaldi.com where authenticated users create decks and flashcards in markdown, committed via edge function to a shared Git repo, synced by Docora for AI question generation.

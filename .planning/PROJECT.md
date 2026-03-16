@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. Due frontend: app nativa Android (React Native/Expo) per lo studio e web app React SPA (deck.lumio.toto-castaldi.com) per la creazione di deck e carte. L'app Android è bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, dashboard compatta 2x2, card browse, storico sessioni, gestione errori sync, autenticazione dual-mode (Google OAuth + email/password), account linking bidirezionale, e password reset via OTP. Il deck builder web permette di creare/modificare deck e carte in markdown con editor live preview, committate via edge function su un repo Git condiviso. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Docora sincronizza e genera domande AI per entrambi i flussi (repo utente e repo condiviso).
+Lumio è una piattaforma di studio basata su flashcard che sfrutta l'AI per trasformare concetti in sessioni di apprendimento interattive con ripetizione spaziata. Due frontend: app nativa Android (React Native/Expo) per lo studio e web app React SPA (deck.lumio.toto-castaldi.com) per la creazione di deck e carte. L'app Android è bilingue IT/EN con branding Lumio, ripetizione spaziata SM-2, sessioni configurabili con cap RPC, dashboard compatta 2x2, card browse, storico sessioni, gestione errori sync, autenticazione dual-mode (Google OAuth + email/password), account linking bidirezionale, password reset via OTP, e discovery di deck condivisi con ricerca fulltext e iscrizione. Il deck builder web permette di creare/modificare deck e carte in markdown con editor live preview e metadata (nome, descrizione, lingua, tag) salvati in deck.yaml, committate via edge function su un repo Git condiviso. Il contenuto viene dai repository Git, le domande sono pre-generate dal sistema. Docora sincronizza e genera domande AI per entrambi i flussi (repo utente e repo condiviso), e indicizza i metadata deck nel deck_index per la ricerca fulltext.
 
 ## Core Value
 
@@ -101,20 +101,20 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Edge function deck-commit con 8 azioni GitHub API e isolamento path utente — v3.0
 - ✓ Docora sync repo condiviso per generazione AI — v3.0
 - ✓ Deploy produzione deck.lumio.toto-castaldi.com con SSL e CI/CD — v3.0
+- ✓ deck_index table con fulltext search tsvector/GIN e ranking pesato (name > tags > description) — v3.1
+- ✓ search_decks RPC con prefix matching per search-as-you-type e filtro tag — v3.1
+- ✓ Iscrizione a sottocartella deck (subfolder_path su user_repositories) con studio filtrato — v3.1
+- ✓ lumio-decks repo piattaforma sempre disponibile per sync Docora — v3.1
+- ✓ docora-webhook indicizza deck.yaml in deck_index (upsert/delete) — v3.1
+- ✓ deck-commit commit_yaml action con autore server-enforced e serializzazione YAML — v3.1
+- ✓ DeckMetadataForm nel deck builder (nome, descrizione, lingua, tag) con caricamento/salvataggio YAML — v3.1
+- ✓ Discovery tab (4° tab, icona bussola) con ricerca fulltext, chip tag, subscribe/unsubscribe ottimistico — v3.1
+- ✓ Deck condivisi visibili nella schermata Repos con display_name arricchito da deck_index — v3.1
+- ✓ i18n completa Discovery IT/EN (17 chiavi per lingua) — v3.1
 
 ### Active
 
-## Current Milestone: v3.1 Deck Discovery
-
-**Goal:** Permettere agli utenti mobile di scoprire e aggiungere deck creati con il deck builder, tramite ricerca fulltext su metadata deck nel repo condiviso lumio-decks.
-
-**Target features:**
-- Metadata a livello deck nel deck builder (nome, descrizione, categoria, tag) salvati in file deck.yaml
-- Indice deck in Supabase con fulltext search Postgres, popolato dal sync Docora di lumio-decks
-- Sincronizzazione lumio-decks a livello piattaforma (sempre presente)
-- Schermata discovery nell'app mobile con search bar fulltext su nome, categoria, tag, autore
-- Iscrizione utente a sottocartella specifica del repo condiviso (non intero repo)
-- Visualizzazione carte filtrate per deck scelto
+(None — planning next milestone)
 
 **Future milestones:**
 - v3.2: TBD
@@ -155,18 +155,19 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v3.0):**
+**Stato attuale (post v3.1):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/deck-builder (Vite/React SPA), apps/landing (static HTML), packages/core, packages/shared
-- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 8 azioni GitHub API), Docora webhook + study_sessions + card_review_schedule tables
+- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 9 azioni GitHub API + docora-webhook con deck.yaml indexing), Docora webhook + study_sessions + card_review_schedule + deck_index tables
 - Tech stack Android: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23
 - Tech stack Deck Builder: Vite 7, React 19, react-router 7, Tailwind 4, @uiw/react-md-editor 4, vitest
 - CI/CD: lint-and-typecheck → build-apk → deploy-landing → deploy-deck-builder → deploy-migrations → deploy-functions
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
 - Auth condivisa: dual-mode Google OAuth + email/password, OTP verification, password reset, account linking bidirezionale
-- App Android bilingue IT/EN con branding Lumio, SM-2, sessioni configurabili, dashboard 2x2, card browse, study history, sync error handling
-- Deck builder web bilingue IT/EN con dark mode, deck CRUD, card authoring con markdown editor, live preview, toolbar
-- ~49,200 LOC (TS/TSX/CSS/SQL) — ~20,600 Android + ~28,600 deck-builder
-- 12 milestones shipped: v1.1 → v2.3 (mobile), v3.0 (deck builder web)
+- App Android bilingue IT/EN con branding Lumio, SM-2, sessioni configurabili, dashboard 2x2, card browse, study history, sync error handling, Discovery tab
+- Deck builder web bilingue IT/EN con dark mode, deck CRUD, card authoring con markdown editor, live preview, toolbar, metadata form (deck.yaml)
+- Discovery pipeline: deck.yaml → Docora webhook → deck_index (tsvector/GIN) → search_decks RPC → Discovery screen
+- ~56,900 LOC (TS/TSX/CSS/SQL) — ~28,300 Android + ~28,600 deck-builder
+- 13 milestones shipped: v1.1 → v3.1
 
 ## Constraints
 
@@ -262,6 +263,20 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Responsive MDEditor: split desktop, toggle mobile | Optimal UX per viewport via matchMedia | ✓ Good — v3.0 |
 | HTTP-only Nginx template, Certbot adds SSL on server | SSL config is server-specific, not repo-portable | ✓ Good — v3.0 |
 | deploy-deck-builder parallels deploy-landing in CI | Independent apps, no build dependency between them | ✓ Good — v3.0 |
+| Immutable wrapper function for tsvector generated column | PostgreSQL requires IMMUTABLE for generated columns; to_tsvector is STABLE | ✓ Good — v3.1 |
+| 'simple' tsvector config (no stemming) | Multilingual deck names need exact token match, not language-specific stemming | ✓ Good — v3.1 |
+| subfolder_path on user_repositories (not separate table) | Simpler schema, reuses existing subscription model | ✓ Good — v3.1 |
+| COALESCE-based unique index for nullable subfolder_path | Broader compatibility than NULLS NOT DISTINCT, clearer semantics | ✓ Good — v3.1 |
+| websearch_to_tsquery replaced with prefix matching | Search-as-you-type requires partial word matching (:* suffix) | ✓ Good — v3.1 |
+| Card count computed at query time (not stored) | Avoids sync complexity between cards table and deck_index | ✓ Good — v3.1 |
+| Transparent subfolder filter via JOIN conditions | No RPC signature changes, backward compatible with NULL subfolder_path | ✓ Good — v3.1 |
+| parseYaml wrapper reusing parseFrontmatter | No new YAML library needed; existing parser handles deck.yaml structure | ✓ Good — v3.1 |
+| Server-enforced author from user profile | Client value always ignored; prevents impersonation | ✓ Good — v3.1 |
+| UPSERT for idempotent webhook delivery | Handles out-of-order Docora webhook events gracefully | ✓ Good — v3.1 |
+| Client-side join for user_repositories + deck_index | No FK relationship, PostgREST cannot embed | ✓ Good — v3.1 |
+| 409 conflict as success in subscribeToDeck | Idempotent double-tap handling without error UI | ✓ Good — v3.1 |
+| Optimistic UI with Set rollback for subscribe | Immediate visual feedback, revert on error | ✓ Good — v3.1 |
+| Collapsible metadata form (collapsed by default) | Non-intrusive for quick deck browsing, expand when needed | ✓ Good — v3.1 |
 
 ---
-*Last updated: 2026-03-13 after v3.1 milestone start*
+*Last updated: 2026-03-16 after v3.1 milestone*
