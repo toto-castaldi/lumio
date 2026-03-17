@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Shared Deck Parity
 status: completed
-stopped_at: Completed 47-01-PLAN.md
-last_updated: "2026-03-17T13:16:53.728Z"
-last_activity: 2026-03-17 — Completed 47-01 (Card Fetching & Browsing)
+stopped_at: Completed 48-01-PLAN.md
+last_updated: "2026-03-17T13:51:42.395Z"
+last_activity: 2026-03-17 — Completed 48-01 (Dashboard Study Parity)
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v3.3 Shared Deck Parity — Phase 47 (Card Fetching & Browsing)
+**Current focus:** v3.3 Shared Deck Parity — Phase 48 (Dashboard Study Parity)
 
 ## Current Position
 
-Phase: 47 of 48 (Card Fetching & Browsing)
+Phase: 48 of 48 (Dashboard Study Parity)
 Plan: 1 of 1 complete
-Status: Phase 47 complete
-Last activity: 2026-03-17 — Completed 47-01 (Card Fetching & Browsing)
+Status: Phase 48 complete
+Last activity: 2026-03-17 — Completed 48-01 (Dashboard Study Parity)
 
 Progress: [██████████] 100%
 
@@ -50,6 +50,8 @@ Recent decisions affecting current work:
 - [Phase 46]: Construct fallback Repository object for shared deck CardDetail navigation
 - [Phase 47]: Used .limit(1) instead of .single() for access check to handle multiple subscriptions to same repo
 - [Phase 47]: Server-side file_path prefix filtering with JS .startsWith() rather than SQL LIKE for subfolder card scoping
+- [Phase 48]: Each shared deck subscription counts as separate repository in repositoryCount
+- [Phase 48]: Card deduplication via Set for overlapping subscriptions in getStats()
 
 ### Pending Todos
 
@@ -72,11 +74,12 @@ None.
 | 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
 | Phase 47 P01 | 2min | 2 tasks | 3 files |
+| Phase 48 P01 | 2min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-17T13:14:36.293Z
-Stopped at: Completed 47-01-PLAN.md
+Last session: 2026-03-17T13:50:46Z
+Stopped at: Completed 48-01-PLAN.md
 Resume file: None
 
 ---

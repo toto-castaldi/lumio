@@ -9,8 +9,8 @@ Requirements for Shared Deck Parity. Shared deck subscriptions must behave ident
 
 ### Stats
 
-- [ ] **STATS-01**: Dashboard repo count include shared deck subscriptions come repository separati
-- [ ] **STATS-02**: Dashboard card count include le carte dei mazzi condivisi (filtrate per subfolder_path)
+- [x] **STATS-01**: Dashboard repo count include shared deck subscriptions come repository separati
+- [x] **STATS-02**: Dashboard card count include le carte dei mazzi condivisi (filtrate per subfolder_path)
 
 ### Card Browsing
 
@@ -19,8 +19,8 @@ Requirements for Shared Deck Parity. Shared deck subscriptions must behave ident
 
 ### Studio
 
-- [ ] **STUDY-01**: Carte dei mazzi condivisi appaiono nelle sessioni di studio
-- [ ] **STUDY-02**: Conteggio "Da ripassare oggi" include carte dei mazzi condivisi
+- [x] **STUDY-01**: Carte dei mazzi condivisi appaiono nelle sessioni di studio
+- [x] **STUDY-02**: Conteggio "Da ripassare oggi" include carte dei mazzi condivisi
 
 ## Future Requirements
 
@@ -40,12 +40,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STATS-01 | Phase 48 | Pending |
-| STATS-02 | Phase 48 | Pending |
+| STATS-01 | Phase 48 | Complete |
+| STATS-02 | Phase 48 | Complete |
 | BROWSE-01 | Phase 47 | Complete |
 | BROWSE-02 | Phase 47 | Complete |
-| STUDY-01 | Phase 48 | Pending |
-| STUDY-02 | Phase 48 | Pending |
+| STUDY-01 | Phase 48 | Complete |
+| STUDY-02 | Phase 48 | Complete |
 
 **Coverage:**
 - v3.3 requirements: 6 total
