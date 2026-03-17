@@ -5,9 +5,9 @@ milestone_name: Deck Management UX
 status: active
 stopped_at: null
 last_updated: "2026-03-17T00:00:00.000Z"
-last_activity: 2026-03-17 — Milestone v3.2 started
+last_activity: 2026-03-17 — Roadmap created for v3.2
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 45 - Navigation & Display Cleanup
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 45 of 46 (Navigation & Display Cleanup)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-17 — Milestone v3.2 started
+Status: Ready to plan
+Last activity: 2026-03-17 — Roadmap created for v3.2
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -42,7 +44,7 @@ Last activity: 2026-03-17 — Milestone v3.2 started
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table (92 entries).
-v3.1 decisions archived — see PROJECT.md for full table.
+v3.1 decisions archived -- see PROJECT.md for full table.
 
 ### Pending Todos
 
@@ -75,10 +77,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: v3.1 milestone archived
+Last session: 2026-03-17
+Stopped at: Roadmap created for v3.2 Deck Management UX
 Resume file: None
 
 ---
 *State initialized: 2026-01-29*
-*Last updated: 2026-03-13 (Plan 41-01 complete)*
+*Last updated: 2026-03-17 (v3.2 roadmap created)*

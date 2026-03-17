@@ -15,6 +15,7 @@
 - ✅ **v2.3 Dashboard Polish** — Phases 34-35 (shipped 2026-03-05)
 - ✅ **v3.0 Deck Builder Web** — Phases 36-40 (shipped 2026-03-13)
 - ✅ **v3.1 Deck Discovery** — Phases 41-44 (shipped 2026-03-16)
+- 🚧 **v3.2 Deck Management UX** — Phases 45-46 (in progress)
 
 ## Phases
 
@@ -166,7 +167,46 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 </details>
 
+### 🚧 v3.2 Deck Management UX (In Progress)
+
+**Milestone Goal:** Migliorare la gestione dei mazzi condivisi nell'app Android -- riordino tab, nascondi repo piattaforma, e parita funzionale (swipe unsubscribe, tap per carte) con i repo normali.
+
+- [ ] **Phase 45: Navigation & Display Cleanup** - Tab reorder e filtro repo piattaforma
+- [ ] **Phase 46: Shared Deck Interaction** - Swipe unsubscribe e card browsing per mazzi condivisi
+
+## Phase Details
+
+### Phase 45: Navigation & Display Cleanup
+**Goal**: Users see a cleaner, more logical navigation layout with Discovery promoted and platform internals hidden
+**Depends on**: Phase 44
+**Requirements**: NAV-01, REPO-01
+**Success Criteria** (what must be TRUE):
+  1. The Discovery tab appears as the 3rd tab (before Repository) in the bottom navigation bar
+  2. The lumio-decks shared repository does not appear in the Repository list -- only user-subscribed deck entries and personal repos are visible
+  3. Tab order is consistent across all app screens (no stale order on navigation)
+**Plans**: TBD
+
+Plans:
+- [ ] 45-01: TBD
+
+### Phase 46: Shared Deck Interaction
+**Goal**: Users can manage and browse shared decks with the same interactions available for personal repositories
+**Depends on**: Phase 45
+**Requirements**: DECK-01, DECK-02, DECK-03
+**Success Criteria** (what must be TRUE):
+  1. User can swipe left on a shared deck entry in the Repository screen to reveal an unsubscribe action
+  2. Unsubscribing from a shared deck removes the subscription and associated study data (card_review_schedule entries)
+  3. User can tap a shared deck entry to see a list of cards filtered by the deck's subfolder path
+  4. User can tap a card in the shared deck card list to view full card detail with markdown, code highlighting, LaTeX, and images
+**Plans**: TBD
+
+Plans:
+- [ ] 46-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 45 → 46
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -183,7 +223,9 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
+| 45. Navigation & Display Cleanup | v3.2 | 0/? | Not started | - |
+| 46. Shared Deck Interaction | v3.2 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-16 -- v3.1 Deck Discovery shipped*
+*Last updated: 2026-03-17 -- v3.2 Deck Management UX roadmap created*

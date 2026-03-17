@@ -36,17 +36,17 @@ None — focused milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | TBD | Pending |
-| REPO-01 | TBD | Pending |
-| DECK-01 | TBD | Pending |
-| DECK-02 | TBD | Pending |
-| DECK-03 | TBD | Pending |
+| NAV-01 | Phase 45 | Pending |
+| REPO-01 | Phase 45 | Pending |
+| DECK-01 | Phase 46 | Pending |
+| DECK-02 | Phase 46 | Pending |
+| DECK-03 | Phase 46 | Pending |
 
 **Coverage:**
 - v3.2 requirements: 5 total
-- Mapped to phases: 0
-- Unmapped: 5 ⚠️
+- Mapped to phases: 5
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*
