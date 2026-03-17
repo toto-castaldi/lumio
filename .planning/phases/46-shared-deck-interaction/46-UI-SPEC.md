@@ -32,14 +32,13 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, inline padding, marginTop between subtitle lines |
-| sm | 6px | Tag chip gaps, icon-to-text margins |
-| md | 12px | Icon-to-content margin in list rows |
+| sm | 8px | Tag chip gaps, icon-to-text margins, icon-to-content margin in list rows |
 | lg | 16px | List item padding (horizontal and vertical), section padding |
 | xl | 24px | Empty state CTA margin-top |
 | 2xl | 32px | Empty state container padding |
 | 3xl | 64px | Empty state icon size |
 
-Exceptions: 14px used for vertical padding on shared deck rows (matches existing `sharedDeckItem` paddingVertical -- will be normalized to 16px as part of the unified list refactor).
+Exceptions: none.
 
 ---
 
@@ -168,7 +167,7 @@ Additional tokens used in this phase:
 | Unsubscribe dialog title | `repos.unsubscribeTitle` | Unsubscribe from "%{name}"? |
 | Unsubscribe dialog body | `repos.unsubscribeBody` | All study progress for this deck will be permanently deleted. |
 | Unsubscribe button | `repos.unsubscribe` | Unsubscribe |
-| Unsubscribe success toast title | `repos.unsubscribed` | Unsubscribed |
+| Unsubscribe success toast title | `repos.unsubscribed` | Deck removed |
 | Unsubscribe success toast body | `repos.unsubscribedBody` | "%{name}" has been removed. |
 | Unsubscribe error toast | `repos.unsubscribeFailed` | Failed to unsubscribe |
 
@@ -180,7 +179,7 @@ Additional tokens used in this phase:
 | Unsubscribe dialog title | `repos.unsubscribeTitle` | Disiscriversi da "%{name}"? |
 | Unsubscribe dialog body | `repos.unsubscribeBody` | Tutti i progressi di studio per questo mazzo verranno eliminati definitivamente. |
 | Unsubscribe button | `repos.unsubscribe` | Disiscriviti |
-| Unsubscribe success toast title | `repos.unsubscribed` | Disiscritto |
+| Unsubscribe success toast title | `repos.unsubscribed` | Mazzo rimosso |
 | Unsubscribe success toast body | `repos.unsubscribedBody` | "%{name}" e' stato rimosso. |
 | Unsubscribe error toast | `repos.unsubscribeFailed` | Disiscrizione fallita |
 
@@ -203,15 +202,15 @@ Additional tokens used in this phase:
 
 ```
 +----------------------------------------------------------+
-| [compass-outline 24px]  12px  [display_name     ]  [>]  |
+| [compass-outline 24px]  8px   [display_name     ]  [>]  |
 |                                [Shared deck      ]       |
 +----------------------------------------------------------+
   paddingHorizontal: 16px
-  paddingVertical: 16px (normalized from 14px)
+  paddingVertical: 16px
   borderBottom: hairlineWidth, colors.border
   icon: colors.primary, compass-outline, 24px
-  name: colors.text, 15px, fontWeight 500
-  subtitle: colors.textSecondary, 12px, marginTop 2px
+  name: colors.text, 16px, fontWeight 600
+  subtitle: colors.textSecondary, 12px, marginTop 4px
   chevron: colors.textSecondary, chevron-forward, 20px
 ```
 
