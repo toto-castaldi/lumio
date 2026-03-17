@@ -29,7 +29,7 @@ export function CardListScreen() {
   const { t } = useI18n();
   const route = useRoute<CardListRouteProp>();
   const navigation = useNavigation<CardListNavigationProp>();
-  const { repoId } = route.params;
+  const { repoId, subfolderPath } = route.params;
 
   const [cards, setCards] = useState<Card[]>([]);
   const [repository, setRepository] = useState<Repository | null>(null);
@@ -43,14 +43,37 @@ export function CardListScreen() {
         getUserRepositories(),
       ]);
 
-      const repo = repos.find((r) => r.id === repoId) ?? null;
+      let repo = repos.find((r) => r.id === repoId) ?? null;
+
+      // For shared decks, the repo may not be in user's personal repos.
+      // Construct a minimal Repository object for CardDetail navigation.
+      if (!repo && allCards.length > 0) {
+        repo = {
+          id: repoId,
+          url: '',
+          name: route.params.repoName,
+          isPrivate: false,
+          formatVersion: 1,
+          syncStatus: 'synced' as const,
+          isAuthError: false,
+          createdAt: '',
+          updatedAt: '',
+        };
+      }
       setRepository(repo);
 
-      // Apply .lumioignore filtering via Deck
+      // Apply .lumioignore filtering via Deck (skip for shared decks)
       let activeCards = allCards;
-      if (repo) {
+      if (repo && !subfolderPath) {
         const deck = new Deck(repo, allCards);
         activeCards = deck.getActiveCards();
+      }
+
+      // Filter by subfolder path for shared deck browsing
+      if (subfolderPath) {
+        activeCards = activeCards.filter((card) =>
+          card.filePath.startsWith(subfolderPath)
+        );
       }
 
       // Sort alphabetically by title
@@ -64,7 +87,7 @@ export function CardListScreen() {
         text2: error instanceof Error ? error.message : t('common.unknownError'),
       });
     }
-  }, [repoId, t]);
+  }, [repoId, subfolderPath, t]);
 
   useEffect(() => {
     fetchCards().finally(() => setIsLoading(false));

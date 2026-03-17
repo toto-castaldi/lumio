@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   FlatList,
   Alert,
   StyleSheet,
@@ -10,12 +9,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Toast from 'react-native-toast-message';
-import { Ionicons } from '@expo/vector-icons';
 import {
   getUserRepositories,
   addRepository,
   deleteRepository,
   getUserDeckSubscriptions,
+  unsubscribeDeckRpc,
   type Repository,
   type DeckSubscription,
 } from '@lumio/core';
@@ -23,16 +22,22 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../hooks/useTheme';
 import { useI18n } from '../hooks/useI18n';
 import { RepoListItem } from '../components/RepoListItem';
+import { SharedDeckListItem } from '../components/SharedDeckListItem';
 import { AddRepoForm } from '../components/AddRepoForm';
 import { EmptyState } from '../components/EmptyState';
 import { RepoErrorModal } from '../components/RepoErrorModal';
 
+type ListItem =
+  | { kind: 'deck'; deck: DeckSubscription }
+  | { kind: 'repo'; repo: Repository };
+
 /**
  * Repository management screen.
- * - FlatList of user repositories with swipe-to-delete
+ * - FlatList of user repositories and shared deck subscriptions (unified list)
  * - Add repository form with auto-detection of public/private
+ * - Swipe-to-delete repos, swipe-to-unsubscribe shared decks
  * - Pull-to-refresh
- * - Empty state when no repositories exist
+ * - Empty state when no repositories or shared decks exist
  */
 export function ReposScreen() {
   const { colors } = useTheme();
@@ -45,6 +50,18 @@ export function ReposScreen() {
   const [isAdding, setIsAdding] = useState(false);
   const [showPatPrompt, setShowPatPrompt] = useState(false);
   const [errorRepo, setErrorRepo] = useState<Repository | null>(null);
+
+  const unifiedList = useMemo(() => {
+    const deckItems: ListItem[] = sharedDecks
+      .slice()
+      .sort((a, b) => a.display_name.localeCompare(b.display_name))
+      .map((deck) => ({ kind: 'deck' as const, deck }));
+    const repoItems: ListItem[] = repositories
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((repo) => ({ kind: 'repo' as const, repo }));
+    return [...deckItems, ...repoItems];
+  }, [repositories, sharedDecks]);
 
   const fetchRepos = useCallback(async () => {
     try {
@@ -178,6 +195,40 @@ export function ReposScreen() {
     [fetchRepos, t],
   );
 
+  const handleUnsubscribeDeck = useCallback(
+    (repositoryId: string, subfolderPath: string, displayName: string) => {
+      Alert.alert(
+        t('repos.unsubscribeTitle', { name: displayName }),
+        t('repos.unsubscribeBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('repos.unsubscribe'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await unsubscribeDeckRpc(repositoryId, subfolderPath);
+                Toast.show({
+                  type: 'success',
+                  text1: t('repos.unsubscribed'),
+                  text2: t('repos.unsubscribedBody', { name: displayName }),
+                });
+                await fetchRepos();
+              } catch (error) {
+                Toast.show({
+                  type: 'error',
+                  text1: t('repos.unsubscribeFailed'),
+                  text2: error instanceof Error ? error.message : t('common.unknownError'),
+                });
+              }
+            },
+          },
+        ],
+      );
+    },
+    [fetchRepos, t],
+  );
+
   if (isLoading) {
     return (
       <View
@@ -200,25 +251,43 @@ export function ReposScreen() {
         onCancel={() => setShowPatPrompt(false)}
       />
       <FlatList
-        data={repositories}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RepoListItem
-            repo={item}
-            onPress={() => {
-              if (item.syncStatus === 'failed') {
-                setErrorRepo(item);
-              } else {
-                navigation.navigate('CardList', { repoId: item.id, repoName: item.name });
+        data={unifiedList}
+        keyExtractor={(item) =>
+          item.kind === 'deck'
+            ? `deck:${item.deck.repository_id}:${item.deck.subfolder_path}`
+            : `repo:${item.repo.id}`
+        }
+        renderItem={({ item }) =>
+          item.kind === 'deck' ? (
+            <SharedDeckListItem
+              deck={item.deck}
+              onPress={() =>
+                navigation.navigate('CardList', {
+                  repoId: item.deck.repository_id,
+                  repoName: item.deck.display_name,
+                  subfolderPath: item.deck.subfolder_path,
+                })
               }
-            }}
-            onDelete={handleDeleteRepo}
-          />
-        )}
+              onUnsubscribe={handleUnsubscribeDeck}
+            />
+          ) : (
+            <RepoListItem
+              repo={item.repo}
+              onPress={() => {
+                if (item.repo.syncStatus === 'failed') {
+                  setErrorRepo(item.repo);
+                } else {
+                  navigation.navigate('CardList', { repoId: item.repo.id, repoName: item.repo.name });
+                }
+              }}
+              onDelete={handleDeleteRepo}
+            />
+          )
+        }
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         contentContainerStyle={
-          repositories.length === 0 ? styles.emptyContainer : undefined
+          unifiedList.length === 0 ? styles.emptyContainer : undefined
         }
         ListEmptyComponent={
           <EmptyState
@@ -226,48 +295,6 @@ export function ReposScreen() {
             title={t('repos.emptyTitle')}
             subtitle={t('repos.emptySubtitle')}
           />
-        }
-        ListFooterComponent={
-          sharedDecks.length > 0 ? (
-            <View style={{ paddingBottom: 8 }}>
-              {sharedDecks.map((sub) => (
-                <View
-                  key={`${sub.repository_id}:${sub.subfolder_path}`}
-                  style={[
-                    styles.sharedDeckItem,
-                    { borderBottomColor: colors.border },
-                  ]}
-                >
-                  <Ionicons
-                    name="compass-outline"
-                    size={24}
-                    color={colors.primary}
-                    style={{ marginRight: 12 }}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        color: colors.text,
-                        fontSize: 15,
-                        fontWeight: '500',
-                      }}
-                    >
-                      {sub.display_name}
-                    </Text>
-                    <Text
-                      style={{
-                        color: colors.textSecondary,
-                        fontSize: 12,
-                        marginTop: 2,
-                      }}
-                    >
-                      {t('discovery.sharedDeck')}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : null
         }
       />
       <RepoErrorModal
@@ -294,12 +321,5 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flexGrow: 1,
-  },
-  sharedDeckItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });
