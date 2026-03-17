@@ -111,18 +111,16 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Discovery tab (4° tab, icona bussola) con ricerca fulltext, chip tag, subscribe/unsubscribe ottimistico — v3.1
 - ✓ Deck condivisi visibili nella schermata Repos con display_name arricchito da deck_index — v3.1
 - ✓ i18n completa Discovery IT/EN (17 chiavi per lingua) — v3.1
+- ✓ Tab Discovery promosso a 2° posizione nav (Dashboard → Discovery → Repos → Settings) — v3.2
+- ✓ Repo piattaforma lumio-decks nascosto da lista repo, stats, e add manuale con info toast — v3.2
+- ✓ Unsubscribe atomico da mazzo condiviso via SECURITY DEFINER RPC (card_review_schedule + user_repositories) — v3.2
+- ✓ Swipe-to-unsubscribe su mazzi condivisi con dialog conferma e toast — v3.2
+- ✓ Lista unificata FlatList con discriminated union (deck | repo) per repos e mazzi condivisi — v3.2
+- ✓ Filtro carte per subfolder e navigazione CardDetail per mazzi condivisi — v3.2
 
 ### Active
 
-**Current Milestone: v3.2 Deck Management UX**
-
-**Goal:** Migliorare la gestione dei mazzi condivisi nell'app Android — riordino tab, nascondi repo piattaforma, e parità funzionale (swipe unsubscribe, tap → carte) con i repo normali.
-
-**Target features:**
-- Riordino tab bottom: Discovery prima di Repository
-- Nascondi repo condiviso lumio-decks dalla lista repository
-- Swipe a sinistra su mazzi condivisi per disiscriversi (con cancellazione dati studio)
-- Tap su mazzi condivisi per navigare a lista carte → dettaglio carta
+(No active milestone — start next with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -160,7 +158,7 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v3.1):**
+**Stato attuale (post v3.2):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/deck-builder (Vite/React SPA), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 9 azioni GitHub API + docora-webhook con deck.yaml indexing), Docora webhook + study_sessions + card_review_schedule + deck_index tables
 - Tech stack Android: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23
@@ -172,7 +170,7 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - Deck builder web bilingue IT/EN con dark mode, deck CRUD, card authoring con markdown editor, live preview, toolbar, metadata form (deck.yaml)
 - Discovery pipeline: deck.yaml → Docora webhook → deck_index (tsvector/GIN) → search_decks RPC → Discovery screen
 - ~56,900 LOC (TS/TSX/CSS/SQL) — ~28,300 Android + ~28,600 deck-builder
-- 13 milestones shipped: v1.1 → v3.1
+- 14 milestones shipped: v1.1 → v3.2
 
 ## Constraints
 
@@ -282,6 +280,12 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | 409 conflict as success in subscribeToDeck | Idempotent double-tap handling without error UI | ✓ Good — v3.1 |
 | Optimistic UI with Set rollback for subscribe | Immediate visual feedback, revert on error | ✓ Good — v3.1 |
 | Collapsible metadata form (collapsed by default) | Non-intrusive for quick deck browsing, expand when needed | ✓ Good — v3.1 |
+| Post-query array filter for is_platform exclusion | Simpler than nested Supabase filter syntax | ✓ Good — v3.2 |
+| Sentinel error string PLATFORM_REPO for client detection | Clean client-side routing to info toast vs error toast | ✓ Good — v3.2 |
+| SECURITY DEFINER RPC for atomic unsubscribe | Deletes card_review_schedule + user_repositories in single transaction | ✓ Good — v3.2 |
+| Discriminated union (kind: 'deck' \| 'repo') for FlatList | Type-safe rendering of mixed shared decks and personal repos | ✓ Good — v3.2 |
+| Skip .lumioignore when subfolderPath is set | Shared decks don't have per-user .lumioignore | ✓ Good — v3.2 |
+| Fallback Repository object for shared deck CardDetail | Enables CardDetail navigation without repo in user's personal collection | ✓ Good — v3.2 |
 
 ---
-*Last updated: 2026-03-16 after v3.1 milestone*
+*Last updated: 2026-03-17 after v3.2 milestone*

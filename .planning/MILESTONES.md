@@ -1,5 +1,33 @@
 # Milestones: Lumio
 
+## v3.2 Deck Management UX (Shipped: 2026-03-17)
+
+**Delivered:** Improved shared deck management UX in the Android app — Discovery promoted to 2nd tab, platform repo hidden, swipe-to-unsubscribe with atomic data cleanup, and full card browsing for shared decks.
+
+**Phases completed:** 45-46 (3 plans, 6 tasks)
+
+**Key accomplishments:**
+
+- Discovery tab promoted to 2nd nav position (Dashboard → Discovery → Repos → Settings)
+- Platform repo lumio-decks hidden from repo list, stats, and manual add with info toast
+- Atomic unsubscribe_deck SECURITY DEFINER RPC (deletes card_review_schedule + user_repositories in one transaction)
+- SharedDeckListItem with swipe-to-unsubscribe, confirmation dialog, and success toast
+- Unified FlatList with discriminated union (kind: 'deck' | 'repo') merging shared decks and personal repos
+- Subfolder-aware card list filtering and CardDetail navigation for shared decks
+
+**Stats:**
+
+- 25 files changed (+2,276 / -128 lines)
+- 2 phases, 3 plans, 6 tasks
+- 1 day (2026-03-17)
+- UAT: 6/6 tests passed
+
+**Git range:** `b6e237e` → `24b5982` (4 feat commits)
+
+**What's next:** TBD
+
+---
+
 ## v3.1 Deck Discovery (Shipped: 2026-03-16)
 
 **Delivered:** End-to-end deck discovery pipeline — from deck.yaml metadata authoring in the deck builder, through Docora webhook indexing into a fulltext-searchable deck_index table, to a Discovery tab in the Android app where users search, browse by tag, and subscribe to shared decks with a single tap.
