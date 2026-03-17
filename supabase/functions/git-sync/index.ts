@@ -433,18 +433,24 @@ async function getStats(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<{ repositoryCount: number; cardCount: number }> {
-  // Get user's repository links with lumioignore_content
+  // Get user's repository links with lumioignore_content and is_platform
   const { data: userRepos, error: repoError } = await supabase
     .from("user_repositories")
     .select(`
       repository_id,
-      repository:repositories(id, lumioignore_content)
+      repository:repositories(id, lumioignore_content, is_platform)
     `)
     .eq("user_id", userId);
 
   if (repoError) throw repoError;
 
-  const repositoryCount = userRepos?.length || 0;
+  // Filter out platform repositories before counting
+  const filteredRepos = (userRepos || []).filter(ur => {
+    const repo = ur.repository as { id: string; lumioignore_content: string | null; is_platform?: boolean } | null;
+    return repo && repo.is_platform !== true;
+  });
+
+  const repositoryCount = filteredRepos.length;
 
   if (repositoryCount === 0) {
     return { repositoryCount: 0, cardCount: 0 };
@@ -452,15 +458,15 @@ async function getStats(
 
   // Build map of repository ID -> ignore filter
   const repoIgnoreFilters = new Map<string, IgnoreFilter | null>();
-  for (const ur of userRepos!) {
-    const repo = ur.repository as { id: string; lumioignore_content: string | null } | null;
+  for (const ur of filteredRepos) {
+    const repo = ur.repository as { id: string; lumioignore_content: string | null; is_platform?: boolean } | null;
     if (repo) {
       repoIgnoreFilters.set(repo.id, createIgnoreFilter(repo.lumioignore_content));
     }
   }
 
-  // Get all cards from linked repositories
-  const repoIds = userRepos!.map(r => r.repository_id);
+  // Get all cards from linked repositories (non-platform only)
+  const repoIds = filteredRepos.map(r => r.repository_id);
   const { data: allCards, error: cardError } = await supabase
     .from("cards")
     .select("id, repository_id, file_path")
@@ -502,10 +508,10 @@ async function getRepositories(
 
   if (error) throw error;
 
-  // Extract repositories from the join result
+  // Extract repositories from the join result, excluding platform repos
   return (data || [])
-    .map(d => d.repository as Repository)
-    .filter(r => r !== null);
+    .map(d => d.repository as unknown as (Repository & { is_platform?: boolean }))
+    .filter(r => r !== null && r.is_platform !== true);
 }
 
 /**

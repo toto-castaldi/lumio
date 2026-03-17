@@ -71,20 +71,6 @@ export function MainNavigator() {
           }}
         />
         <Tab.Screen
-          name="Repos"
-          component={ReposScreen}
-          options={{
-            title: t('navigation.repositories'),
-            tabBarIcon: ({ focused, color, size }) => (
-              <Ionicons
-                name={(focused ? 'folder' : 'folder-outline') as TabIconName}
-                size={size}
-                color={color}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
           name="Discovery"
           component={DiscoveryScreen}
           options={{
@@ -92,6 +78,20 @@ export function MainNavigator() {
             tabBarIcon: ({ focused, color, size }) => (
               <Ionicons
                 name={(focused ? 'compass' : 'compass-outline') as TabIconName}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Repos"
+          component={ReposScreen}
+          options={{
+            title: t('navigation.repositories'),
+            tabBarIcon: ({ focused, color, size }) => (
+              <Ionicons
+                name={(focused ? 'folder' : 'folder-outline') as TabIconName}
                 size={size}
                 color={color}
               />
