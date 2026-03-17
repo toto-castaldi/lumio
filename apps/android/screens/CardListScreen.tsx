@@ -39,7 +39,7 @@ export function CardListScreen() {
   const fetchCards = useCallback(async () => {
     try {
       const [allCards, repos] = await Promise.all([
-        getRepositoryCards(repoId),
+        getRepositoryCards(repoId, subfolderPath),
         getUserRepositories(),
       ]);
 

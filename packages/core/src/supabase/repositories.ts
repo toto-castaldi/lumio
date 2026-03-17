@@ -164,12 +164,17 @@ function mapCard(dbCard: Record<string, unknown>): Card {
 /**
  * Get all cards for a repository
  * @param repositoryId - UUID of the repository
+ * @param subfolderPath - Optional subfolder path for shared deck browsing
  */
-export async function getRepositoryCards(repositoryId: string): Promise<Card[]> {
+export async function getRepositoryCards(repositoryId: string, subfolderPath?: string): Promise<Card[]> {
+  const body: Record<string, unknown> = { repositoryId };
+  if (subfolderPath) {
+    body.subfolderPath = subfolderPath;
+  }
   const response = await callGitSync<{
     success: boolean;
     cards: Record<string, unknown>[];
-  }>('get_cards', { repositoryId });
+  }>('get_cards', body);
 
   return response.cards.map(mapCard);
 }
