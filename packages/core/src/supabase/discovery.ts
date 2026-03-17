@@ -201,6 +201,38 @@ export async function unsubscribeFromDeck(
   }
 }
 
+/**
+ * Unsubscribe from a deck via the atomic unsubscribe_deck RPC.
+ * Deletes both card_review_schedule entries and the user_repositories row
+ * in a single database transaction.
+ */
+export async function unsubscribeDeckRpc(
+  repositoryId: string,
+  subfolderPath: string
+): Promise<void> {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const supabaseUrl = getSupabaseUrl();
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/unsubscribe_deck`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: getSupabaseAnonKey(),
+    },
+    body: JSON.stringify({
+      p_repository_id: repositoryId,
+      p_subfolder_path: subfolderPath,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to unsubscribe from deck');
+  }
+}
+
 // =============================================================================
 // USER SUBSCRIPTIONS WITH DISPLAY NAME ENRICHMENT
 // =============================================================================

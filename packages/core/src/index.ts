@@ -84,6 +84,7 @@ export {
   searchDecks,
   subscribeToDeck,
   unsubscribeFromDeck,
+  unsubscribeDeckRpc,
   getUserDeckSubscriptions,
   getLanguageFlag,
   type DeckSearchResult,
