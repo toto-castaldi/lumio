@@ -64,6 +64,12 @@ const it: Translations = {
       'Aggiungi un URL di un repository GitHub qui sopra per iniziare. Le tue flashcard appariranno dopo la sincronizzazione.',
     platformRepoTitle: 'Disponibile in Scopri',
     platformRepoBody: 'Questo mazzo è disponibile nella tab Scopri. Sfoglia e iscriviti da lì!',
+    unsubscribeTitle: 'Disiscriversi da "%{name}"?',
+    unsubscribeBody: 'Tutti i progressi di studio per questo mazzo verranno eliminati definitivamente.',
+    unsubscribe: 'Disiscriviti',
+    unsubscribed: 'Mazzo rimosso',
+    unsubscribedBody: '"%{name}" e\' stato rimosso.',
+    unsubscribeFailed: 'Disiscrizione fallita',
   },
   study: {
     review: 'Revisione',

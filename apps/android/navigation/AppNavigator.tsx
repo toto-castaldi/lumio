@@ -29,7 +29,7 @@ export type RootStackParamList = {
     skippedCount: number;
     timeSpentSeconds: number;
   };
-  CardList: { repoId: string; repoName: string };
+  CardList: { repoId: string; repoName: string; subfolderPath?: string };
   CardDetail: { card: Card; repository: Repository };
   StudyHistory: undefined;
   SetPassword: { email: string };

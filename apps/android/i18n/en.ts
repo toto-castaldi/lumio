@@ -61,6 +61,12 @@ const en = {
       'Add a GitHub repository URL above to get started. Your flashcards will appear after syncing.',
     platformRepoTitle: 'Available in Discovery',
     platformRepoBody: 'This deck is available in the Discovery tab. Browse and subscribe from there!',
+    unsubscribeTitle: 'Unsubscribe from "%{name}"?',
+    unsubscribeBody: 'All study progress for this deck will be permanently deleted.',
+    unsubscribe: 'Unsubscribe',
+    unsubscribed: 'Deck removed',
+    unsubscribedBody: '"%{name}" has been removed.',
+    unsubscribeFailed: 'Failed to unsubscribe',
   },
   study: {
     review: 'Review',
