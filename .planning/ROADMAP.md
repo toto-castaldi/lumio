@@ -178,7 +178,7 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
 
 </details>
 
-### 🚧 v3.3 Shared Deck Parity (In Progress)
+### v3.3 Shared Deck Parity (In Progress)
 
 **Milestone Goal:** Shared deck subscriptions behave identically to personal repositories for counting, browsing, and study.
 
@@ -195,10 +195,10 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
   1. User taps a shared deck in the repo list and sees only the cards belonging to that deck's subfolder
   2. getCards() edge function returns correct cards when the user has multiple subscriptions to different subfolders of the same repository
   3. Card detail view works identically for shared deck cards and personal repo cards (markdown, code, LaTeX, images all render)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 47-01: TBD
+- [ ] 47-01-PLAN.md — Fix getCards() subfolder handling and wire subfolderPath through client call chain
 
 ### Phase 48: Dashboard & Study Parity
 **Goal**: Shared deck subscriptions are fully counted in dashboard statistics and included in study sessions
@@ -217,7 +217,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 47 → 48
+Phases execute in numeric order: 47 -> 48
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -235,9 +235,9 @@ Phases execute in numeric order: 47 → 48
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
 | 45-46. Deck Management UX | v3.2 | 3/3 | Complete | 2026-03-17 |
-| 47. Card Fetching & Browsing | v3.3 | 0/? | Not started | - |
+| 47. Card Fetching & Browsing | v3.3 | 0/1 | Not started | - |
 | 48. Dashboard & Study Parity | v3.3 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 — v3.3 Shared Deck Parity roadmap created*
+*Last updated: 2026-03-17 — Phase 47 plan created*
