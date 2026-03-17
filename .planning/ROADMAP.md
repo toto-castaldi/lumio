@@ -236,7 +236,7 @@ Phases execute in numeric order: 47 -> 48
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
 | 45-46. Deck Management UX | v3.2 | 3/3 | Complete | 2026-03-17 |
 | 47. Card Fetching & Browsing | 1/1 | Complete    | 2026-03-17 | - |
-| 48. Dashboard & Study Parity | 1/1 | Complete   | 2026-03-17 | - |
+| 48. Dashboard & Study Parity | 1/1 | Complete    | 2026-03-17 | - |
 
 ---
 *Roadmap created: 2026-01-29*
