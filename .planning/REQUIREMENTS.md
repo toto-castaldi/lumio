@@ -9,11 +9,11 @@ Requirements for Deck Management UX milestone. Each maps to roadmap phases.
 
 ### Navigation
 
-- [ ] **NAV-01**: Tab Discovery appare prima di tab Repository nella bottom navigation
+- [x] **NAV-01**: Tab Discovery appare prima di tab Repository nella bottom navigation
 
 ### Repository Display
 
-- [ ] **REPO-01**: Il repository condiviso lumio-decks non appare nella lista repository
+- [x] **REPO-01**: Il repository condiviso lumio-decks non appare nella lista repository
 
 ### Shared Decks
 
@@ -36,8 +36,8 @@ None — focused milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | Phase 45 | Pending |
-| REPO-01 | Phase 45 | Pending |
+| NAV-01 | Phase 45 | Complete |
+| REPO-01 | Phase 45 | Complete |
 | DECK-01 | Phase 46 | Pending |
 | DECK-02 | Phase 46 | Pending |
 | DECK-03 | Phase 46 | Pending |
