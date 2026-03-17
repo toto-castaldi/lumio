@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Shared Deck Parity
-status: active
-stopped_at: ""
-last_updated: "2026-03-17T15:00:00.000Z"
-last_activity: 2026-03-17 — v3.3 roadmap created
+status: completed
+stopped_at: Completed 47-01-PLAN.md
+last_updated: "2026-03-17T13:14:36.299Z"
+last_activity: 2026-03-17 — Completed 47-01 (Card Fetching & Browsing)
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 47 of 48 (Card Fetching & Browsing)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-17 — v3.3 roadmap created
+Plan: 1 of 1 complete
+Status: Phase 47 complete
+Last activity: 2026-03-17 — Completed 47-01 (Card Fetching & Browsing)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -48,6 +48,8 @@ Recent decisions affecting current work:
 - [Phase 46]: Used discriminated union (kind: 'deck' | 'repo') for type-safe unified FlatList rendering
 - [Phase 46]: Skip .lumioignore filtering when subfolderPath is set (shared decks don't have per-user .lumioignore)
 - [Phase 46]: Construct fallback Repository object for shared deck CardDetail navigation
+- [Phase 47]: Used .limit(1) instead of .single() for access check to handle multiple subscriptions to same repo
+- [Phase 47]: Server-side file_path prefix filtering with JS .startsWith() rather than SQL LIKE for subfolder card scoping
 
 ### Pending Todos
 
@@ -69,11 +71,12 @@ None.
 | 6 | Fix i18n countdown interpolation bug on OTP verification screens | 2026-03-03 | d771d4b | [6-fix-i18n-countdown-bug-on-email-verifica](./quick/6-fix-i18n-countdown-bug-on-email-verifica/) |
 | 8 | Navigate to Login after successful password update | 2026-03-04 | 6870913 | [8-navigate-to-home-after-successful-passwo](./quick/8-navigate-to-home-after-successful-passwo/) |
 | 9 | Use git tag version when higher than STATE.md | 2026-03-04 | 262e189 | [9-use-git-tag-version-when-higher-than-sta](./quick/9-use-git-tag-version-when-higher-than-sta/) |
+| Phase 47 P01 | 2min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: v3.3 roadmap created, ready to plan Phase 47
+Last session: 2026-03-17T13:14:36.293Z
+Stopped at: Completed 47-01-PLAN.md
 Resume file: None
 
 ---

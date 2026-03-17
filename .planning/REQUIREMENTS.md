@@ -14,8 +14,8 @@ Requirements for Shared Deck Parity. Shared deck subscriptions must behave ident
 
 ### Card Browsing
 
-- [ ] **BROWSE-01**: Utente può aprire un mazzo condiviso dalla lista repo e vedere le carte filtrate per subfolder
-- [ ] **BROWSE-02**: Edge function getCards() gestisce multiple subscriptions allo stesso repository senza errore
+- [x] **BROWSE-01**: Utente può aprire un mazzo condiviso dalla lista repo e vedere le carte filtrate per subfolder
+- [x] **BROWSE-02**: Edge function getCards() gestisce multiple subscriptions allo stesso repository senza errore
 
 ### Studio
 
@@ -42,8 +42,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | STATS-01 | Phase 48 | Pending |
 | STATS-02 | Phase 48 | Pending |
-| BROWSE-01 | Phase 47 | Pending |
-| BROWSE-02 | Phase 47 | Pending |
+| BROWSE-01 | Phase 47 | Complete |
+| BROWSE-02 | Phase 47 | Complete |
 | STUDY-01 | Phase 48 | Pending |
 | STUDY-02 | Phase 48 | Pending |
 
