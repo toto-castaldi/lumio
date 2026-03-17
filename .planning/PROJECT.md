@@ -120,7 +120,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(No active milestone — start next with `/gsd:new-milestone`)
+## Current Milestone: v3.3 Shared Deck Parity
+
+**Goal:** Fare in modo che i mazzi condivisi (shared deck subscriptions) siano trattati come repository standard per conteggi, browsing e studio.
+
+**Target features:**
+- Dashboard repo/card count include shared deck subscriptions
+- Card browsing funzionante per shared decks (subfolder_path filtering)
+- Edge function getCards() supporta subfolder_path e gestisce multiple subscriptions
 
 ### Out of Scope
 
@@ -288,4 +295,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Fallback Repository object for shared deck CardDetail | Enables CardDetail navigation without repo in user's personal collection | ✓ Good — v3.2 |
 
 ---
-*Last updated: 2026-03-17 after v3.2 milestone*
+*Last updated: 2026-03-17 after v3.3 milestone start*

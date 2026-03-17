@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.2
-milestone_name: Deck Management UX
-status: completed
-stopped_at: Completed 46-02-PLAN.md (Phase 46 complete)
-last_updated: "2026-03-17T11:38:31.689Z"
-last_activity: 2026-03-17 — Completed 46-02 (Shared Deck UI)
+milestone: v3.3
+milestone_name: Shared Deck Parity
+status: active
+stopped_at: ""
+last_updated: "2026-03-17T14:00:00.000Z"
+last_activity: 2026-03-17 — Milestone v3.3 started
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Planning next milestone
+**Current focus:** v3.3 Shared Deck Parity
 
 ## Current Position
 
-Phase: 46 of 46 (Shared Deck Interaction)
-Plan: 2 of 2
-Status: Phase 46 complete
-Last activity: 2026-03-17 — Completed 46-02 (Shared Deck UI)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-17 — Milestone v3.3 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
