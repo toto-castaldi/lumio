@@ -88,6 +88,24 @@ html[lang="it"] [lang="en"] {
   color: var(--text-light);
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-link {
+  color: var(--purple-primary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: text-decoration 0.2s;
+}
+
+.header-link:hover {
+  text-decoration: underline;
+}
+
 /* Hero Section */
 .hero {
   text-align: center;
@@ -130,6 +148,32 @@ html[lang="it"] [lang="en"] {
 .btn-download:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+}
+
+.hero-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-deck-builder {
+  display: inline-block;
+  background-color: transparent;
+  color: var(--purple-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.9rem 2.5rem;
+  border-radius: 12px;
+  border: 2px solid var(--purple-primary);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s, transform 0.15s;
+}
+
+.btn-deck-builder:hover {
+  background-color: var(--purple-primary);
+  color: var(--text-light);
+  transform: translateY(-2px);
 }
 
 /* Features Section */
@@ -308,5 +352,15 @@ html[lang="it"] [lang="en"] {
   .screenshot-placeholder {
     width: 100%;
     min-height: 400px;
+  }
+
+  .hero-buttons {
+    width: 100%;
+  }
+
+  .btn-download,
+  .btn-deck-builder {
+    width: 100%;
+    text-align: center;
   }
 }
