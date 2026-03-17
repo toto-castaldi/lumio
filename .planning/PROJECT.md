@@ -117,17 +117,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Swipe-to-unsubscribe su mazzi condivisi con dialog conferma e toast — v3.2
 - ✓ Lista unificata FlatList con discriminated union (deck | repo) per repos e mazzi condivisi — v3.2
 - ✓ Filtro carte per subfolder e navigazione CardDetail per mazzi condivisi — v3.2
+- ✓ getCards() edge function: .limit(1) per multi-subscription repos, subfolder_path card filtering server-side — v3.3
+- ✓ subfolderPath wired end-to-end da CardListScreen a edge function — v3.3
+- ✓ Dashboard repo/card count include shared deck subscriptions con Set-based deduplication — v3.3
+- ✓ Studio e "Da ripassare oggi" includono carte dei mazzi condivisi (RPC subfolder filter verificato) — v3.3
 
 ### Active
 
-## Current Milestone: v3.3 Shared Deck Parity
-
-**Goal:** Fare in modo che i mazzi condivisi (shared deck subscriptions) siano trattati come repository standard per conteggi, browsing e studio.
-
-**Target features:**
-- Dashboard repo/card count include shared deck subscriptions
-- Card browsing funzionante per shared decks (subfolder_path filtering)
-- Edge function getCards() supporta subfolder_path e gestisce multiple subscriptions
+(No active milestone — start next with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -165,7 +162,7 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v3.2):**
+**Stato attuale (post v3.3):**
 - Monorepo pnpm: apps/android (Expo/React Native), apps/deck-builder (Vite/React SPA), apps/landing (static HTML), packages/core, packages/shared
 - Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 9 azioni GitHub API + docora-webhook con deck.yaml indexing), Docora webhook + study_sessions + card_review_schedule + deck_index tables
 - Tech stack Android: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23
@@ -176,8 +173,8 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - App Android bilingue IT/EN con branding Lumio, SM-2, sessioni configurabili, dashboard 2x2, card browse, study history, sync error handling, Discovery tab
 - Deck builder web bilingue IT/EN con dark mode, deck CRUD, card authoring con markdown editor, live preview, toolbar, metadata form (deck.yaml)
 - Discovery pipeline: deck.yaml → Docora webhook → deck_index (tsvector/GIN) → search_decks RPC → Discovery screen
-- ~56,900 LOC (TS/TSX/CSS/SQL) — ~28,300 Android + ~28,600 deck-builder
-- 14 milestones shipped: v1.1 → v3.2
+- ~57,100 LOC (TS/TSX/CSS/SQL) — ~28,500 Android + ~28,600 deck-builder
+- 15 milestones shipped: v1.1 → v3.3
 
 ## Constraints
 
@@ -293,6 +290,11 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Discriminated union (kind: 'deck' \| 'repo') for FlatList | Type-safe rendering of mixed shared decks and personal repos | ✓ Good — v3.2 |
 | Skip .lumioignore when subfolderPath is set | Shared decks don't have per-user .lumioignore | ✓ Good — v3.2 |
 | Fallback Repository object for shared deck CardDetail | Enables CardDetail navigation without repo in user's personal collection | ✓ Good — v3.2 |
+| .limit(1) instead of .single() for multi-subscription access check | .single() fails when user has multiple subfolder subscriptions to same repo | ✓ Good — v3.3 |
+| Server-side subfolder card filtering in getCards() | Defense in depth: server filters + client filter as safety net | ✓ Good — v3.3 |
+| Shared deck subscriptions count as separate repos in getStats() | Each subfolder subscription is a distinct "repo" from user perspective | ✓ Good — v3.3 |
+| Set-based card deduplication in getStats() | Prevents double-counting when subscriptions overlap on same cards | ✓ Good — v3.3 |
+| Study RPCs unchanged (subfolder filter already in place) | Migration 20260313000005 covers shared deck cards transparently | ✓ Good — v3.3 |
 
 ---
-*Last updated: 2026-03-17 after v3.3 milestone start*
+*Last updated: 2026-03-17 after v3.3 milestone*

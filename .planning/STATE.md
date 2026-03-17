@@ -4,7 +4,7 @@ milestone: v3.3
 milestone_name: Shared Deck Parity
 status: completed
 stopped_at: Completed 48-01-PLAN.md
-last_updated: "2026-03-17T13:55:25.581Z"
+last_updated: "2026-03-17T14:00:40.534Z"
 last_activity: 2026-03-17 — Completed 48-01 (Dashboard Study Parity)
 progress:
   total_phases: 2
@@ -21,33 +21,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** v3.3 Shared Deck Parity — Phase 48 (Dashboard Study Parity)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 48 of 48 (Dashboard Study Parity)
-Plan: 1 of 1 complete
-Status: Phase 48 complete
-Last activity: 2026-03-17 — Completed 48-01 (Dashboard Study Parity)
+Phase: —
+Plan: —
+Status: Milestone v3.3 complete, planning next
+Last activity: 2026-03-17 — Milestone v3.3 Shared Deck Parity shipped
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 91 (across v1.1-v3.2)
-- Total milestones shipped: 14 (v1.1 through v3.2)
+- Total plans completed: 93 (across v1.1-v3.3)
+- Total milestones shipped: 15 (v1.1 through v3.3)
 - Timeline: 48 days (2026-01-29 to 2026-03-17)
 
 ## Accumulated Context
 
 ### Decisions
 
-All decisions logged in PROJECT.md Key Decisions table (96 entries).
-Recent decisions affecting current work:
-- [Phase 46]: Used discriminated union (kind: 'deck' | 'repo') for type-safe unified FlatList rendering
-- [Phase 46]: Skip .lumioignore filtering when subfolderPath is set (shared decks don't have per-user .lumioignore)
-- [Phase 46]: Construct fallback Repository object for shared deck CardDetail navigation
+All decisions logged in PROJECT.md Key Decisions table (101 entries).
+v3.3 decisions archived — see PROJECT.md for full table.
 - [Phase 47]: Used .limit(1) instead of .single() for access check to handle multiple subscriptions to same repo
 - [Phase 47]: Server-side file_path prefix filtering with JS .startsWith() rather than SQL LIKE for subfolder card scoping
 - [Phase 48]: Each shared deck subscription counts as separate repository in repositoryCount

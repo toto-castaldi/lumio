@@ -1,5 +1,30 @@
 # Milestones: Lumio
 
+## v3.3 Shared Deck Parity (Shipped: 2026-03-17)
+
+**Delivered:** Fixed shared deck subscriptions to behave identically to personal repositories for card browsing, dashboard statistics, and study sessions.
+
+**Phases completed:** 47-48 (2 plans, 4 tasks)
+
+**Key accomplishments:**
+
+- Fixed getCards() edge function: replaced .single() with .limit(1) for multi-subscription repos, added server-side subfolder_path card filtering
+- Wired subfolderPath through full client chain (CardListScreen → @lumio/core → edge function)
+- Fixed getStats() to include shared deck subscriptions in dashboard repo/card counts with Set-based deduplication
+- Verified study RPCs already correctly include shared deck cards via existing subfolder filter migration
+
+**Stats:**
+
+- 4 files changed (+227 / -29 lines)
+- 2 phases, 2 plans, 4 tasks
+- 1 day (2026-03-17)
+
+**Git range:** `a765d32` → `292e0ad` (2 feat + 1 test commits)
+
+**What's next:** Deploy to prod and verify
+
+---
+
 ## v3.2 Deck Management UX (Shipped: 2026-03-17)
 
 **Delivered:** Improved shared deck management UX in the Android app — Discovery promoted to 2nd tab, platform repo hidden, swipe-to-unsubscribe with atomic data cleanup, and full card browsing for shared decks.
