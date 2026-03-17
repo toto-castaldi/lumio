@@ -198,10 +198,11 @@ Plans:
   2. Unsubscribing from a shared deck removes the subscription and associated study data (card_review_schedule entries)
   3. User can tap a shared deck entry to see a list of cards filtered by the deck's subfolder path
   4. User can tap a card in the shared deck card list to view full card detail with markdown, code highlighting, LaTeX, and images
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 46-01: TBD
+- [ ] 46-01-PLAN.md — Backend RPC, client function, route params, and i18n keys
+- [ ] 46-02-PLAN.md — SharedDeckListItem component, unified list, swipe unsubscribe, card browsing
 
 ## Progress
 
@@ -224,8 +225,8 @@ Phases execute in numeric order: 45 -> 46
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
 | 45. Navigation & Display Cleanup | 1/1 | Complete    | 2026-03-17 | - |
-| 46. Shared Deck Interaction | v3.2 | 0/? | Not started | - |
+| 46. Shared Deck Interaction | v3.2 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 -- Phase 45 planned (1 plan)*
+*Last updated: 2026-03-17 -- Phase 46 planned (2 plans)*
