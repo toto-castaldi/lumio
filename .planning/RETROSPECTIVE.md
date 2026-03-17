@@ -303,6 +303,41 @@
 
 ---
 
+## Milestone: v3.3 — Shared Deck Parity
+
+**Shipped:** 2026-03-17
+**Phases:** 2 | **Plans:** 2
+
+### What Was Built
+- Fixed getCards() edge function (.single() → .limit(1), subfolder_path filtering)
+- Wired subfolderPath through full client chain (CardListScreen → core → edge function)
+- Fixed getStats() to include shared deck subscriptions in dashboard counts
+- Verified study RPCs already handle shared deck cards correctly
+
+### What Worked
+- Bug analysis before milestone definition — identified all root causes upfront, no surprises during implementation
+- Verification-only tasks (STUDY-01/STUDY-02) — confirmed existing code works without unnecessary changes
+- Smallest milestone yet: 4 files changed, +227/-29 lines
+
+### What Was Inefficient
+- Nothing significant — clean bugfix milestone
+
+### Patterns Established
+- `.limit(1)` instead of `.single()` for tables where multiple rows per user are expected
+- Server-side + client-side filtering as defense-in-depth for card scoping
+- Set-based deduplication for counting across overlapping subscriptions
+
+### Key Lessons
+- Platform repo exclusion (`is_platform = true`) must account for user subscriptions to subfolders within the platform repo
+- Existing RPC migrations may already cover new use cases — verify before writing code
+
+### Cost Observations
+- Model mix: opus for executor (1), sonnet for verifier (1) and plan checker (1)
+- Sessions: 1
+- Notable: Entire milestone from analysis to completion in single conversation
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -316,6 +351,7 @@
 | v3.0 | ~5 | 5 | First web app milestone; new platform (Vite/React SPA); clean sequential chain |
 | v3.1 | ~3 | 4 | First cross-platform pipeline (DB → webhook → web → mobile); prefix matching fix during device test |
 | v3.2 | ~1 | 2 | Smallest milestone since v2.3; pure UX parity for shared decks; single-session complete |
+| v3.3 | ~1 | 2 | Bugfix milestone — analysis-driven, zero surprises, single-session |
 
 ### Cumulative Quality
 
@@ -328,6 +364,7 @@
 | v3.0 | 38+ (auth/theme/i18n/validation) | Lib layer | Vite 7, React 19, Tailwind 4, @uiw/react-md-editor, katex, yaml |
 | v3.1 | 5 (api.test.ts) | API layer | — (zero new dependencies) |
 | v3.2 | 6 (UAT device) | UI + integration | — (zero new dependencies) |
+| v3.3 | 1 (getStats unit) | Edge function | — (zero new dependencies) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -343,3 +380,5 @@
 10. Transparent filter patterns on existing JOINs are the cleanest way to extend RPCs without breaking callers (v3.1)
 11. Always apply new SQL migrations before testing features — local Supabase doesn't auto-migrate (v3.2)
 12. Discriminated union types are the cleanest way to render mixed data in FlatList without runtime type checks (v3.2)
+13. Platform repo exclusion filters must account for user subscriptions to subfolders within the platform repo (v3.3)
+14. Verify existing code before writing new code — RPC subfolder filters already covered shared deck study (v3.3)
