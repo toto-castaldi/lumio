@@ -525,17 +525,23 @@ async function getRepositories(
 async function getCards(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-  repositoryId: string
+  repositoryId: string,
+  subfolderPath?: string
 ): Promise<Card[]> {
   // Verify user has access to this repository
-  const { data: userRepo, error: repoError } = await supabase
+  let accessQuery = supabase
     .from("user_repositories")
     .select("id")
     .eq("user_id", userId)
-    .eq("repository_id", repositoryId)
-    .single();
+    .eq("repository_id", repositoryId);
 
-  if (repoError || !userRepo) {
+  if (subfolderPath) {
+    accessQuery = accessQuery.eq("subfolder_path", subfolderPath);
+  }
+
+  const { data: userRepos, error: repoError } = await accessQuery.limit(1);
+
+  if (repoError || !userRepos || userRepos.length === 0) {
     throw new Error("Repository not found or access denied");
   }
 
@@ -548,6 +554,11 @@ async function getCards(
     .order("title", { ascending: true });
 
   if (error) throw error;
+
+  // Filter by subfolder path for shared deck browsing
+  if (subfolderPath) {
+    return (data || []).filter((card: Card) => card.file_path.startsWith(subfolderPath));
+  }
   return data || [];
 }
 
@@ -684,7 +695,7 @@ serve(async (req) => {
       }
 
       case "get_cards": {
-        const { repositoryId } = body;
+        const { repositoryId, subfolderPath } = body;
         if (!repositoryId) {
           return new Response(
             JSON.stringify({ error: "Missing repositoryId" }),
@@ -695,7 +706,7 @@ serve(async (req) => {
           );
         }
 
-        const cards = await getCards(supabase, userId, repositoryId);
+        const cards = await getCards(supabase, userId, repositoryId, subfolderPath as string | undefined);
         return new Response(
           JSON.stringify({ success: true, cards }),
           {
