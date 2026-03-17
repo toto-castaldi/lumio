@@ -59,6 +59,8 @@ const en = {
     emptyTitle: 'No repositories yet',
     emptySubtitle:
       'Add a GitHub repository URL above to get started. Your flashcards will appear after syncing.',
+    platformRepoTitle: 'Available in Discovery',
+    platformRepoBody: 'This deck is available in the Discovery tab. Browse and subscribe from there!',
   },
   study: {
     review: 'Review',

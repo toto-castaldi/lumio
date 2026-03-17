@@ -280,6 +280,11 @@ async function addRepository(
   const { data: existingRepo } = await supabase.rpc('find_repository_by_url', { p_url: url });
 
   if (existingRepo) {
+    // Guard: prevent manual addition of platform repositories
+    if (existingRepo.is_platform === true) {
+      throw new Error("PLATFORM_REPO");
+    }
+
     // Repository exists - check if user already has it
     const { data: hasLink } = await supabase.rpc('check_user_repository_exists', {
       p_user_id: userId,

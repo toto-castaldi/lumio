@@ -102,6 +102,17 @@ export function ReposScreen() {
         const message =
           error instanceof Error ? error.message : t('common.unknownError');
 
+        // Check if the URL matches a platform repository
+        const isPlatformRepo = message === 'PLATFORM_REPO';
+        if (isPlatformRepo) {
+          Toast.show({
+            type: 'info',
+            text1: t('repos.platformRepoTitle'),
+            text2: t('repos.platformRepoBody'),
+          });
+          throw error; // Re-throw so form doesn't clear
+        }
+
         // If the error indicates private/not-found and no PAT was provided,
         // prompt the user for a Personal Access Token
         const isPrivateError =

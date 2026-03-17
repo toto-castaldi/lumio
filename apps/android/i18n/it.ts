@@ -62,6 +62,8 @@ const it: Translations = {
     emptyTitle: 'Nessun repository',
     emptySubtitle:
       'Aggiungi un URL di un repository GitHub qui sopra per iniziare. Le tue flashcard appariranno dopo la sincronizzazione.',
+    platformRepoTitle: 'Disponibile in Scopri',
+    platformRepoBody: 'Questo mazzo è disponibile nella tab Scopri. Sfoglia e iscriviti da lì!',
   },
   study: {
     review: 'Revisione',
