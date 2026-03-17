@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.1
-milestone_name: Deck Discovery
-status: completed
-stopped_at: Completed 44-02-PLAN.md
-last_updated: "2026-03-16T11:06:44.658Z"
-last_activity: 2026-03-16 — Plan 44-02 executed (Discovery UI + device verification)
+milestone: v3.2
+milestone_name: Deck Management UX
+status: active
+stopped_at: null
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 — Milestone v3.2 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,11 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-16)
 
 ## Current Position
 
-Milestone: v3.1 Deck Discovery — SHIPPED 2026-03-16
-Status: Milestone complete, awaiting next milestone planning
-Last activity: 2026-03-16 — v3.1 milestone archived
-
-Progress: All milestones through v3.1 shipped
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-17 — Milestone v3.2 started
 
 ## Performance Metrics
 

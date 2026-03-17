@@ -114,10 +114,15 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(None — planning next milestone)
+**Current Milestone: v3.2 Deck Management UX**
 
-**Future milestones:**
-- v3.2: TBD
+**Goal:** Migliorare la gestione dei mazzi condivisi nell'app Android — riordino tab, nascondi repo piattaforma, e parità funzionale (swipe unsubscribe, tap → carte) con i repo normali.
+
+**Target features:**
+- Riordino tab bottom: Discovery prima di Repository
+- Nascondi repo condiviso lumio-decks dalla lista repository
+- Swipe a sinistra su mazzi condivisi per disiscriversi (con cancellazione dati studio)
+- Tap su mazzi condivisi per navigare a lista carte → dettaglio carta
 
 ### Out of Scope
 
