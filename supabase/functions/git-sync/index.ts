@@ -438,21 +438,26 @@ async function getStats(
   supabase: ReturnType<typeof createClient>,
   userId: string
 ): Promise<{ repositoryCount: number; cardCount: number }> {
-  // Get user's repository links with lumioignore_content and is_platform
+  // Get user's repository links with lumioignore_content, is_platform, and subfolder_path
   const { data: userRepos, error: repoError } = await supabase
     .from("user_repositories")
     .select(`
       repository_id,
+      subfolder_path,
       repository:repositories(id, lumioignore_content, is_platform)
     `)
     .eq("user_id", userId);
 
   if (repoError) throw repoError;
 
-  // Filter out platform repositories before counting
+  // Filter: keep non-platform repos always; keep platform entries with subfolder_path (shared deck subscriptions)
   const filteredRepos = (userRepos || []).filter(ur => {
     const repo = ur.repository as { id: string; lumioignore_content: string | null; is_platform?: boolean } | null;
-    return repo && repo.is_platform !== true;
+    if (!repo) return false;
+    // Keep non-platform repos always
+    if (repo.is_platform !== true) return true;
+    // Keep platform repo entries that have subfolder_path (shared deck subscriptions)
+    return ur.subfolder_path != null;
   });
 
   const repositoryCount = filteredRepos.length;
@@ -461,17 +466,10 @@ async function getStats(
     return { repositoryCount: 0, cardCount: 0 };
   }
 
-  // Build map of repository ID -> ignore filter
-  const repoIgnoreFilters = new Map<string, IgnoreFilter | null>();
-  for (const ur of filteredRepos) {
-    const repo = ur.repository as { id: string; lumioignore_content: string | null; is_platform?: boolean } | null;
-    if (repo) {
-      repoIgnoreFilters.set(repo.id, createIgnoreFilter(repo.lumioignore_content));
-    }
-  }
+  // Deduplicate repository IDs (multiple subscriptions can point to same repo)
+  const repoIds = [...new Set(filteredRepos.map(r => r.repository_id))];
 
-  // Get all cards from linked repositories (non-platform only)
-  const repoIds = filteredRepos.map(r => r.repository_id);
+  // Get all cards from linked repositories
   const { data: allCards, error: cardError } = await supabase
     .from("cards")
     .select("id, repository_id, file_path")
@@ -480,14 +478,34 @@ async function getStats(
 
   if (cardError) throw cardError;
 
-  // Filter cards by .lumioignore
-  let cardCount = 0;
-  for (const card of allCards || []) {
-    const ignoreFilter = repoIgnoreFilters.get(card.repository_id);
-    if (!isCardIgnored(card.file_path, ignoreFilter)) {
-      cardCount++;
+  // Count cards per subscription entry, using Set to avoid double-counting
+  const countedCardIds = new Set<string>();
+
+  for (const ur of filteredRepos) {
+    const repo = ur.repository as { id: string; lumioignore_content: string | null; is_platform?: boolean } | null;
+    if (!repo) continue;
+
+    const repoCards = (allCards || []).filter(c => c.repository_id === repo.id);
+
+    if (ur.subfolder_path) {
+      // Shared deck subscription: filter by subfolder prefix, no lumioignore
+      for (const card of repoCards) {
+        if (card.file_path.startsWith(ur.subfolder_path) && !countedCardIds.has(card.id)) {
+          countedCardIds.add(card.id);
+        }
+      }
+    } else {
+      // Personal repo: apply lumioignore filter
+      const ignoreFilter = createIgnoreFilter(repo.lumioignore_content);
+      for (const card of repoCards) {
+        if (!isCardIgnored(card.file_path, ignoreFilter) && !countedCardIds.has(card.id)) {
+          countedCardIds.add(card.id);
+        }
+      }
     }
   }
+
+  const cardCount = countedCardIds.size;
 
   return {
     repositoryCount,
