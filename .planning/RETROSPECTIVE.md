@@ -261,6 +261,48 @@
 
 ---
 
+## Milestone: v3.2 — Deck Management UX
+
+**Shipped:** 2026-03-17
+**Phases:** 2 | **Plans:** 3 | **Sessions:** ~1
+
+### What Was Built
+- Discovery tab promoted to 2nd nav position for better discoverability
+- Platform repo lumio-decks hidden from repo list, stats, and manual add with info toast
+- Atomic unsubscribe_deck RPC (SECURITY DEFINER, deletes card_review_schedule + user_repositories)
+- SharedDeckListItem with swipe-to-unsubscribe, confirmation dialog, success toast
+- Unified FlatList with discriminated union merging shared decks and personal repos
+- Subfolder-aware card list filtering and CardDetail navigation for shared decks
+
+### What Worked
+- Small, focused milestone (2 phases) completed in a single day with zero blockers
+- Wave-based execution: backend first (Wave 1), then UI (Wave 2) — clean dependency chain
+- TypeScript compilation as quality gate caught 2 bugs auto-fixed during execution (property name casing, missing field)
+- UI-SPEC created before implementation ensured consistent component design
+- UAT on real device confirmed all 6 tests passed after seeding test data
+
+### What Was Inefficient
+- DB reset during UAT testing required Kong restart (502 from auth) — not obvious, cost 10 min debugging
+- Test data seeding was manual SQL — could benefit from a seed script for shared deck test scenarios
+- Migration not auto-applied to local Supabase — first unsubscribe attempt failed with "function not found"
+
+### Patterns Established
+- Discriminated union pattern for mixed FlatList data (kind: 'deck' | 'repo')
+- Fallback entity construction for cross-user content browsing
+- Atomic multi-table cleanup via SECURITY DEFINER RPC (delete dependent rows first, then parent)
+
+### Key Lessons
+- Always run `supabase db reset` or apply migrations before testing features that depend on new SQL functions
+- Kong gateway may need restart after Supabase container restarts — check health endpoint, not just container status
+- Small UX milestones (2 phases) with clear requirements are fastest to execute and verify
+
+### Cost Observations
+- Model mix: opus for executors (2), sonnet for verifier (1) and integration checker (1)
+- Sessions: 1
+- Notable: 2 phases, 3 plans, 6 tasks — full end-to-end from RPC to swipeable UI in single session
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -273,6 +315,7 @@
 | v2.3 | ~1 | 2 | Fastest milestone — pure UI polish, same-day ship |
 | v3.0 | ~5 | 5 | First web app milestone; new platform (Vite/React SPA); clean sequential chain |
 | v3.1 | ~3 | 4 | First cross-platform pipeline (DB → webhook → web → mobile); prefix matching fix during device test |
+| v3.2 | ~1 | 2 | Smallest milestone since v2.3; pure UX parity for shared decks; single-session complete |
 
 ### Cumulative Quality
 
@@ -284,6 +327,7 @@
 | v2.3 | — | UI polish (UAT) | — |
 | v3.0 | 38+ (auth/theme/i18n/validation) | Lib layer | Vite 7, React 19, Tailwind 4, @uiw/react-md-editor, katex, yaml |
 | v3.1 | 5 (api.test.ts) | API layer | — (zero new dependencies) |
+| v3.2 | 6 (UAT device) | UI + integration | — (zero new dependencies) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -297,3 +341,5 @@
 8. Browser compatibility for npm packages must be verified during research, not mid-implementation (v3.0)
 9. Search-as-you-type requires prefix matching — test with partial input during research, not just complete words (v3.1)
 10. Transparent filter patterns on existing JOINs are the cleanest way to extend RPCs without breaking callers (v3.1)
+11. Always apply new SQL migrations before testing features — local Supabase doesn't auto-migrate (v3.2)
+12. Discriminated union types are the cleanest way to render mixed data in FlatList without runtime type checks (v3.2)
