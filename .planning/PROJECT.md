@@ -124,7 +124,13 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ### Active
 
-(No active milestone — start next with `/gsd:new-milestone`)
+#### Current Milestone: v3.4 Landing Page Enhancement
+
+**Goal:** Arricchire il sito pubblico vetrina con link al deck builder e classifica dinamica dei deck condivisi più popolari.
+
+**Target features:**
+- Link al deck builder (deck.lumio.toto-castaldi.com) nella landing page
+- Classifica dinamica top 10 shared deck più sottoscritti (RPC Supabase pubblica + sezione HTML)
 
 ### Out of Scope
 
@@ -297,4 +303,4 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Study RPCs unchanged (subfolder filter already in place) | Migration 20260313000005 covers shared deck cards transparently | ✓ Good — v3.3 |
 
 ---
-*Last updated: 2026-03-17 after v3.3 milestone*
+*Last updated: 2026-03-17 after v3.4 milestone start*
