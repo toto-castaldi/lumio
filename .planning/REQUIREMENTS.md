@@ -40,18 +40,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STATS-01 | — | Pending |
-| STATS-02 | — | Pending |
-| BROWSE-01 | — | Pending |
-| BROWSE-02 | — | Pending |
-| STUDY-01 | — | Pending |
-| STUDY-02 | — | Pending |
+| STATS-01 | Phase 48 | Pending |
+| STATS-02 | Phase 48 | Pending |
+| BROWSE-01 | Phase 47 | Pending |
+| BROWSE-02 | Phase 47 | Pending |
+| STUDY-01 | Phase 48 | Pending |
+| STUDY-02 | Phase 48 | Pending |
 
 **Coverage:**
 - v3.3 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6 ⚠️
+- Mapped to phases: 6
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 — traceability updated with phase mappings*

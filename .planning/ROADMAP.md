@@ -16,6 +16,7 @@
 - ✅ **v3.0 Deck Builder Web** — Phases 36-40 (shipped 2026-03-13)
 - ✅ **v3.1 Deck Discovery** — Phases 41-44 (shipped 2026-03-16)
 - ✅ **v3.2 Deck Management UX** — Phases 45-46 (shipped 2026-03-17)
+- 🚧 **v3.3 Shared Deck Parity** — Phases 47-48 (in progress)
 
 ## Phases
 
@@ -177,7 +178,46 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
 
 </details>
 
+### 🚧 v3.3 Shared Deck Parity (In Progress)
+
+**Milestone Goal:** Shared deck subscriptions behave identically to personal repositories for counting, browsing, and study.
+
+- [ ] **Phase 47: Card Fetching & Browsing** - Fix getCards() for subfolder-based subscriptions and card browsing parity
+- [ ] **Phase 48: Dashboard & Study Parity** - Dashboard counts and study sessions include shared deck data
+
+## Phase Details
+
+### Phase 47: Card Fetching & Browsing
+**Goal**: Users can browse cards in shared deck subscriptions the same way they browse cards in personal repositories
+**Depends on**: Phase 46
+**Requirements**: BROWSE-01, BROWSE-02
+**Success Criteria** (what must be TRUE):
+  1. User taps a shared deck in the repo list and sees only the cards belonging to that deck's subfolder
+  2. getCards() edge function returns correct cards when the user has multiple subscriptions to different subfolders of the same repository
+  3. Card detail view works identically for shared deck cards and personal repo cards (markdown, code, LaTeX, images all render)
+**Plans**: TBD
+
+Plans:
+- [ ] 47-01: TBD
+
+### Phase 48: Dashboard & Study Parity
+**Goal**: Shared deck subscriptions are fully counted in dashboard statistics and included in study sessions
+**Depends on**: Phase 47
+**Requirements**: STATS-01, STATS-02, STUDY-01, STUDY-02
+**Success Criteria** (what must be TRUE):
+  1. Dashboard repo count includes each shared deck subscription as a separate entry alongside personal repositories
+  2. Dashboard card count includes cards from all subscribed shared decks (filtered by subfolder_path)
+  3. Study session cards include shared deck cards with correct SRS scheduling (overdue first, then new)
+  4. "Da ripassare oggi" counter on the dashboard reflects due cards from both personal repos and shared decks
+**Plans**: TBD
+
+Plans:
+- [ ] 48-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 47 → 48
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -195,7 +235,9 @@ Full details: `.planning/milestones/v3.2-ROADMAP.md`
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
 | 45-46. Deck Management UX | v3.2 | 3/3 | Complete | 2026-03-17 |
+| 47. Card Fetching & Browsing | v3.3 | 0/? | Not started | - |
+| 48. Dashboard & Study Parity | v3.3 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 — v3.2 Deck Management UX shipped*
+*Last updated: 2026-03-17 — v3.3 Shared Deck Parity roadmap created*
