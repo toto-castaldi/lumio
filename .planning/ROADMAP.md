@@ -209,10 +209,10 @@ Plans:
   2. Dashboard card count includes cards from all subscribed shared decks (filtered by subfolder_path)
   3. Study session cards include shared deck cards with correct SRS scheduling (overdue first, then new)
   4. "Da ripassare oggi" counter on the dashboard reflects due cards from both personal repos and shared decks
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 48-01: TBD
+- [ ] 48-01-PLAN.md — Fix getStats() for shared deck counting and verify study RPCs
 
 ## Progress
 
@@ -236,8 +236,8 @@ Phases execute in numeric order: 47 -> 48
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
 | 45-46. Deck Management UX | v3.2 | 3/3 | Complete | 2026-03-17 |
 | 47. Card Fetching & Browsing | 1/1 | Complete    | 2026-03-17 | - |
-| 48. Dashboard & Study Parity | v3.3 | 0/? | Not started | - |
+| 48. Dashboard & Study Parity | v3.3 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 — Phase 47 plan created*
+*Last updated: 2026-03-17 — Phase 48 plan created*
