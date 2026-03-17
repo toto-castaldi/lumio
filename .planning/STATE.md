@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: Deck Management UX
-status: completed
-stopped_at: Phase 46 UI-SPEC approved
-last_updated: "2026-03-17T09:16:50.781Z"
-last_activity: 2026-03-17 — Completed 45-01 (Navigation & Display Cleanup)
+status: in-progress
+stopped_at: Completed 46-01-PLAN.md
+last_updated: "2026-03-17T09:45:37Z"
+last_activity: 2026-03-17 — Completed 46-01 (Backend & Data Layer)
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_plans: 3
+  completed_plans: 2
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Gli utenti studiano concetti tramite quiz generati dall'AI -- il contenuto viene dai repository Git, le domande vengono generate e pre-cachate dal sistema.
-**Current focus:** Phase 45 - Navigation & Display Cleanup
+**Current focus:** Phase 46 - Shared Deck Interaction
 
 ## Current Position
 
-Phase: 45 of 46 (Navigation & Display Cleanup)
-Plan: 1 of 1
+Phase: 46 of 46 (Shared Deck Interaction)
+Plan: 1 of 2
 Status: Plan 01 complete
-Last activity: 2026-03-17 — Completed 45-01 (Navigation & Display Cleanup)
+Last activity: 2026-03-17 — Completed 46-01 (Backend & Data Layer)
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -47,6 +47,8 @@ All decisions logged in PROJECT.md Key Decisions table (92 entries).
 v3.1 decisions archived -- see PROJECT.md for full table.
 - [Phase 45]: Used post-query array filter for is_platform exclusion (simpler than nested Supabase filter syntax)
 - [Phase 45]: Used sentinel error string PLATFORM_REPO for client-side detection of platform repo rejection
+- [Phase 46]: Used SECURITY DEFINER RPC for atomic unsubscribe (deletes card_review_schedule + user_repositories in single transaction)
+- [Phase 46]: Kept existing unsubscribeFromDeck for backward compatibility, added new unsubscribeDeckRpc alongside
 
 ### Pending Todos
 
@@ -77,12 +79,13 @@ None.
 | Phase 44 P01 | 2min | 2 tasks | 4 files |
 | Phase 44 P02 | 8min | 4 tasks | 6 files |
 | Phase 45 P01 | 2min | 2 tasks | 5 files |
+| Phase 46 P01 | 2min | 2 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-03-17T09:16:50.772Z
-Stopped at: Phase 46 UI-SPEC approved
-Resume file: .planning/phases/46-shared-deck-interaction/46-UI-SPEC.md
+Last session: 2026-03-17T09:45:37Z
+Stopped at: Completed 46-01-PLAN.md
+Resume file: .planning/phases/46-shared-deck-interaction/46-02-PLAN.md
 
 ---
 *State initialized: 2026-01-29*
