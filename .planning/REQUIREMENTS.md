@@ -19,7 +19,7 @@ Requirements for Deck Management UX milestone. Each maps to roadmap phases.
 
 - [x] **DECK-01**: L'utente può disiscriversi da un mazzo condiviso tramite swipe a sinistra nella pagina Repository (con cancellazione dati studio)
 - [x] **DECK-02**: L'utente può fare tap su un mazzo condiviso per vedere la lista carte filtrate per subfolder
-- [ ] **DECK-03**: L'utente può navigare dal mazzo condiviso al dettaglio singola carta (markdown preview, code, LaTeX, immagini)
+- [x] **DECK-03**: L'utente può navigare dal mazzo condiviso al dettaglio singola carta (markdown preview, code, LaTeX, immagini)
 
 ## Future Requirements
 
@@ -40,7 +40,7 @@ None — focused milestone.
 | REPO-01 | Phase 45 | Complete |
 | DECK-01 | Phase 46 | Complete |
 | DECK-02 | Phase 46 | Complete |
-| DECK-03 | Phase 46 | Pending |
+| DECK-03 | Phase 46 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 5 total

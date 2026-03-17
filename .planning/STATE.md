@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: Deck Management UX
 status: in-progress
-stopped_at: Completed 46-01-PLAN.md
-last_updated: "2026-03-17T09:45:37Z"
-last_activity: 2026-03-17 — Completed 46-01 (Backend & Data Layer)
+stopped_at: Completed 46-02-PLAN.md (Phase 46 complete)
+last_updated: "2026-03-17T09:53:21Z"
+last_activity: 2026-03-17 — Completed 46-02 (Shared Deck UI)
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 100
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-16)
 ## Current Position
 
 Phase: 46 of 46 (Shared Deck Interaction)
-Plan: 1 of 2
-Status: Plan 01 complete
-Last activity: 2026-03-17 — Completed 46-01 (Backend & Data Layer)
+Plan: 2 of 2
+Status: Phase 46 complete
+Last activity: 2026-03-17 — Completed 46-02 (Shared Deck UI)
 
-Progress: [███████░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -49,6 +49,9 @@ v3.1 decisions archived -- see PROJECT.md for full table.
 - [Phase 45]: Used sentinel error string PLATFORM_REPO for client-side detection of platform repo rejection
 - [Phase 46]: Used SECURITY DEFINER RPC for atomic unsubscribe (deletes card_review_schedule + user_repositories in single transaction)
 - [Phase 46]: Kept existing unsubscribeFromDeck for backward compatibility, added new unsubscribeDeckRpc alongside
+- [Phase 46]: Used discriminated union (kind: 'deck' | 'repo') for type-safe unified FlatList rendering
+- [Phase 46]: Skip .lumioignore filtering when subfolderPath is set (shared decks don't have per-user .lumioignore)
+- [Phase 46]: Construct fallback Repository object for shared deck CardDetail navigation
 
 ### Pending Todos
 
@@ -80,12 +83,12 @@ None.
 | Phase 44 P02 | 8min | 4 tasks | 6 files |
 | Phase 45 P01 | 2min | 2 tasks | 5 files |
 | Phase 46 P01 | 2min | 2 tasks | 6 files |
+| Phase 46 P02 | 4min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-03-17T09:45:37Z
-Stopped at: Completed 46-01-PLAN.md
-Resume file: .planning/phases/46-shared-deck-interaction/46-02-PLAN.md
+Last session: 2026-03-17T09:53:21Z
+Stopped at: Completed 46-02-PLAN.md (Phase 46 complete)
 
 ---
 *State initialized: 2026-01-29*

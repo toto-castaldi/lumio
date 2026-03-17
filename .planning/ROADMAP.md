@@ -172,7 +172,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 **Milestone Goal:** Migliorare la gestione dei mazzi condivisi nell'app Android -- riordino tab, nascondi repo piattaforma, e parita funzionale (swipe unsubscribe, tap per carte) con i repo normali.
 
 - [x] **Phase 45: Navigation & Display Cleanup** - Tab reorder e filtro repo piattaforma (completed 2026-03-17)
-- [ ] **Phase 46: Shared Deck Interaction** - Swipe unsubscribe e card browsing per mazzi condivisi
+- [x] **Phase 46: Shared Deck Interaction** - Swipe unsubscribe e card browsing per mazzi condivisi (completed 2026-03-17)
 
 ## Phase Details
 
@@ -225,7 +225,7 @@ Phases execute in numeric order: 45 -> 46
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
 | 45. Navigation & Display Cleanup | 1/1 | Complete    | 2026-03-17 | - |
-| 46. Shared Deck Interaction | 1/2 | In Progress|  | - |
+| 46. Shared Deck Interaction | 2/2 | Complete   | 2026-03-17 | - |
 
 ---
 *Roadmap created: 2026-01-29*
