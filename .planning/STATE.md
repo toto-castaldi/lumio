@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: Deck Management UX
 status: completed
-stopped_at: Phase 46 context gathered
-last_updated: "2026-03-17T08:58:35.264Z"
+stopped_at: Phase 46 UI-SPEC approved
+last_updated: "2026-03-17T09:16:50.781Z"
 last_activity: 2026-03-17 — Completed 45-01 (Navigation & Display Cleanup)
 progress:
   total_phases: 2
@@ -80,9 +80,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T08:58:35.255Z
-Stopped at: Phase 46 context gathered
-Resume file: .planning/phases/46-shared-deck-interaction/46-CONTEXT.md
+Last session: 2026-03-17T09:16:50.772Z
+Stopped at: Phase 46 UI-SPEC approved
+Resume file: .planning/phases/46-shared-deck-interaction/46-UI-SPEC.md
 
 ---
 *State initialized: 2026-01-29*
