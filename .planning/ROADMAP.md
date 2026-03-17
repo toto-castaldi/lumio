@@ -167,7 +167,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 </details>
 
-### 🚧 v3.2 Deck Management UX (In Progress)
+### v3.2 Deck Management UX (In Progress)
 
 **Milestone Goal:** Migliorare la gestione dei mazzi condivisi nell'app Android -- riordino tab, nascondi repo piattaforma, e parita funzionale (swipe unsubscribe, tap per carte) con i repo normali.
 
@@ -181,13 +181,13 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 **Depends on**: Phase 44
 **Requirements**: NAV-01, REPO-01
 **Success Criteria** (what must be TRUE):
-  1. The Discovery tab appears as the 3rd tab (before Repository) in the bottom navigation bar
+  1. The Discovery tab appears as the 2nd tab (after Dashboard, before Repository) in the bottom navigation bar
   2. The lumio-decks shared repository does not appear in the Repository list -- only user-subscribed deck entries and personal repos are visible
   3. Tab order is consistent across all app screens (no stale order on navigation)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 45-01: TBD
+- [ ] 45-01-PLAN.md — Tab reorder, platform repo filter, and add-repo guard
 
 ### Phase 46: Shared Deck Interaction
 **Goal**: Users can manage and browse shared decks with the same interactions available for personal repositories
@@ -206,7 +206,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 45 → 46
+Phases execute in numeric order: 45 -> 46
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -223,9 +223,9 @@ Phases execute in numeric order: 45 → 46
 | 34-35. Dashboard Polish | v2.3 | 2/2 | Complete | 2026-03-05 |
 | 36-40. Deck Builder Web | v3.0 | 10/10 | Complete | 2026-03-13 |
 | 41-44. Deck Discovery | v3.1 | 8/8 | Complete | 2026-03-16 |
-| 45. Navigation & Display Cleanup | v3.2 | 0/? | Not started | - |
+| 45. Navigation & Display Cleanup | v3.2 | 0/1 | Not started | - |
 | 46. Shared Deck Interaction | v3.2 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 -- v3.2 Deck Management UX roadmap created*
+*Last updated: 2026-03-17 -- Phase 45 planned (1 plan)*
