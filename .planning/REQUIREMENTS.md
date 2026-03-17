@@ -36,17 +36,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| LEAD-01 | — | Pending |
-| LEAD-02 | — | Pending |
-| LEAD-03 | — | Pending |
+| NAV-01 | Phase 49 | Pending |
+| NAV-02 | Phase 49 | Pending |
+| LEAD-01 | Phase 50 | Pending |
+| LEAD-02 | Phase 50 | Pending |
+| LEAD-03 | Phase 50 | Pending |
 
 **Coverage:**
 - v3.4 requirements: 5 total
-- Mapped to phases: 0
-- Unmapped: 5 ⚠️
+- Mapped to phases: 5
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*

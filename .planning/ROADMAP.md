@@ -17,6 +17,7 @@
 - ✅ **v3.1 Deck Discovery** — Phases 41-44 (shipped 2026-03-16)
 - ✅ **v3.2 Deck Management UX** — Phases 45-46 (shipped 2026-03-17)
 - ✅ **v3.3 Shared Deck Parity** — Phases 47-48 (shipped 2026-03-17)
+- 🚧 **v3.4 Landing Page Enhancement** — Phases 49-50 (in progress)
 
 ## Phases
 
@@ -188,6 +189,52 @@ Full details: `.planning/milestones/v3.3-ROADMAP.md`
 
 </details>
 
+### 🚧 v3.4 Landing Page Enhancement (In Progress)
+
+**Milestone Goal:** Arricchire il sito pubblico vetrina con link al deck builder e classifica dinamica dei deck condivisi piu popolari.
+
+- [ ] **Phase 49: Deck Builder Navigation** - Header link and hero CTA pointing to the deck builder web app
+- [ ] **Phase 50: Popular Decks Leaderboard** - Public RPC and landing page section showing top 10 shared decks by subscribers
+
+## Phase Details
+
+### Phase 49: Deck Builder Navigation
+**Goal**: Visitors can discover and reach the deck builder directly from the landing page
+**Depends on**: Nothing (first phase of v3.4)
+**Requirements**: NAV-01, NAV-02
+**Success Criteria** (what must be TRUE):
+  1. Visitor sees a "Deck Builder" link in the landing page header navigation that opens deck.lumio.toto-castaldi.com
+  2. Visitor sees a secondary "Crea Deck" button in the hero section alongside the existing "Download APK" button
+  3. Both links navigate to the deck builder web app in a new tab
+**Plans**: TBD
+
+Plans:
+- [ ] 49-01: TBD
+
+### Phase 50: Popular Decks Leaderboard
+**Goal**: Visitors see a live ranking of the most popular shared decks, demonstrating platform activity and content quality
+**Depends on**: Phase 49
+**Requirements**: LEAD-01, LEAD-02, LEAD-03
+**Success Criteria** (what must be TRUE):
+  1. A public Supabase RPC `top_decks` returns the top 10 decks ordered by subscriber count without requiring authentication
+  2. The landing page displays a "Popular Decks" section after the Features section, populated via client-side fetch on page load
+  3. Each deck entry in the leaderboard shows the deck name, subscriber count, tag chips, and language indicator
+  4. The leaderboard renders correctly with zero decks (empty state) and updates on every page load
+**Plans**: TBD
+
+Plans:
+- [ ] 50-01: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 49 → 50
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 49. Deck Builder Navigation | v3.4 | 0/? | Not started | - |
+| 50. Popular Decks Leaderboard | v3.4 | 0/? | Not started | - |
+
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 — Phase 48 plan created*
+*Last updated: 2026-03-17 — v3.4 roadmap created (Phases 49-50)*
