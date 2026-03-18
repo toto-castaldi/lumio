@@ -220,10 +220,10 @@ Plans:
   2. The landing page displays a "Popular Decks" section after the Features section, populated via client-side fetch on page load
   3. Each deck entry in the leaderboard shows the deck name, subscriber count, tag chips, and language indicator
   4. The leaderboard renders correctly with zero decks (empty state) and updates on every page load
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 50-01: TBD
+- [ ] 50-01-PLAN.md — Public top_decks RPC + landing page leaderboard section with CI integration
 
 ## Progress
 
@@ -233,8 +233,8 @@ Phases execute in numeric order: 49 → 50
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 49. Deck Builder Navigation | v3.4 | Complete    | 2026-03-18 | 2026-03-18 |
-| 50. Popular Decks Leaderboard | v3.4 | 0/? | Not started | - |
+| 50. Popular Decks Leaderboard | v3.4 | 0/1 | Planning complete | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-18 — Phase 49 complete (1/1 plans)*
+*Last updated: 2026-03-18 — Phase 50 planned (1 plan)*
