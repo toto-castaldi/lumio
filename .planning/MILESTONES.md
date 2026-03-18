@@ -1,5 +1,26 @@
 # Milestones: Lumio
 
+## v3.4 Landing Page Enhancement (Shipped: 2026-03-18)
+
+**Delivered:** Arricchita la landing page pubblica con link al deck builder e classifica dinamica dei deck condivisi più popolari.
+
+**Phases completed:** 49-50 (2 plans, 4 tasks)
+
+**Key accomplishments:**
+
+- Added deck builder navigation links (header link + hero CTA) with bilingual "Create Deck" / "Crea Mazzo" labels
+- Created first public (anon-accessible) Supabase RPC `top_decks` using SECURITY DEFINER + GRANT TO anon
+- Built dynamic Popular Decks leaderboard on landing page with ranked list, subscriber counts, tag chips, and language flags
+- Integrated CI pipeline Supabase credential injection for landing page via sed placeholder replacement
+
+**Stats:**
+
+- 17 files changed (+2,059 / -46 lines)
+- 2 phases, 2 plans, 4 tasks
+- 2 days (2026-03-17 → 2026-03-18)
+
+---
+
 ## v3.3 Shared Deck Parity (Shipped: 2026-03-17)
 
 **Delivered:** Fixed shared deck subscriptions to behave identically to personal repositories for card browsing, dashboard statistics, and study sessions.

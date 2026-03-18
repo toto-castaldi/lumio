@@ -122,15 +122,14 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 - ✓ Dashboard repo/card count include shared deck subscriptions con Set-based deduplication — v3.3
 - ✓ Studio e "Da ripassare oggi" includono carte dei mazzi condivisi (RPC subfolder filter verificato) — v3.3
 
+- ✓ Link "Crea Mazzo" / "Create Deck" nell'header e hero della landing page con apertura deck builder in nuovo tab — v3.4
+- ✓ RPC pubblica `top_decks` che ritorna top 10 deck per subscriber count senza autenticazione (SECURITY DEFINER + GRANT TO anon) — v3.4
+- ✓ Sezione "Popular Decks" / "Mazzi Popolari" nella landing page con classifica dinamica, tag chips, flag lingua — v3.4
+- ✓ CI pipeline injection credenziali Supabase per landing page via sed placeholder — v3.4
+
 ### Active
 
-#### Current Milestone: v3.4 Landing Page Enhancement
-
-**Goal:** Arricchire il sito pubblico vetrina con link al deck builder e classifica dinamica dei deck condivisi più popolari.
-
-**Target features:**
-- Link al deck builder (deck.lumio.toto-castaldi.com) nella landing page
-- Classifica dinamica top 10 shared deck più sottoscritti (RPC Supabase pubblica + sezione HTML)
+(No active milestone — run /gsd:new-milestone to start next)
 
 ### Out of Scope
 
@@ -168,19 +167,21 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 
 ## Context
 
-**Stato attuale (post v3.3):**
-- Monorepo pnpm: apps/android (Expo/React Native), apps/deck-builder (Vite/React SPA), apps/landing (static HTML), packages/core, packages/shared
-- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 9 azioni GitHub API + docora-webhook con deck.yaml indexing), Docora webhook + study_sessions + card_review_schedule + deck_index tables
+**Stato attuale (post v3.4):**
+- Monorepo pnpm: apps/android (Expo/React Native), apps/deck-builder (Vite/React SPA), apps/landing (static HTML + dynamic JS), packages/core, packages/shared
+- Backend Supabase: auth (Google OAuth + email/password), DB, storage, edge functions (deck-commit con 9 azioni GitHub API + docora-webhook con deck.yaml indexing), Docora webhook + study_sessions + card_review_schedule + deck_index tables + top_decks public RPC
 - Tech stack Android: Expo SDK 54, React Native 0.81, react-navigation, @lumio/core, i18n-js, react-native-marked, supermemo@2.0.23
 - Tech stack Deck Builder: Vite 7, React 19, react-router 7, Tailwind 4, @uiw/react-md-editor 4, vitest
-- CI/CD: lint-and-typecheck → build-apk → deploy-landing → deploy-deck-builder → deploy-migrations → deploy-functions
+- Tech stack Landing: vanilla HTML/CSS/JS, bilingual IT/EN, dynamic Supabase fetch for leaderboard
+- CI/CD: lint-and-typecheck → build-apk → deploy-landing (with Supabase credential injection) → deploy-deck-builder → deploy-migrations → deploy-functions
 - Versioning: STATE.md milestone → extract-version.cjs → version.ts, APK versionName, landing page, edge function
 - Auth condivisa: dual-mode Google OAuth + email/password, OTP verification, password reset, account linking bidirezionale
 - App Android bilingue IT/EN con branding Lumio, SM-2, sessioni configurabili, dashboard 2x2, card browse, study history, sync error handling, Discovery tab
 - Deck builder web bilingue IT/EN con dark mode, deck CRUD, card authoring con markdown editor, live preview, toolbar, metadata form (deck.yaml)
 - Discovery pipeline: deck.yaml → Docora webhook → deck_index (tsvector/GIN) → search_decks RPC → Discovery screen
-- ~57,100 LOC (TS/TSX/CSS/SQL) — ~28,500 Android + ~28,600 deck-builder
-- 15 milestones shipped: v1.1 → v3.3
+- Landing page: deck builder navigation + dynamic popular decks leaderboard (top_decks anon RPC)
+- ~59,100 LOC (TS/TSX/CSS/SQL/JS) — ~28,500 Android + ~28,600 deck-builder + ~2,000 landing
+- 16 milestones shipped: v1.1 → v3.4
 
 ## Constraints
 
@@ -301,6 +302,12 @@ Gli utenti studiano concetti tramite quiz generati dall'AI — il contenuto vien
 | Shared deck subscriptions count as separate repos in getStats() | Each subfolder subscription is a distinct "repo" from user perspective | ✓ Good — v3.3 |
 | Set-based card deduplication in getStats() | Prevents double-counting when subscriptions overlap on same cards | ✓ Good — v3.3 |
 | Study RPCs unchanged (subfolder filter already in place) | Migration 20260313000005 covers shared deck cards transparently | ✓ Good — v3.3 |
+| "Crea Mazzo" instead of "Crea Deck" for Italian labels | Natural Italian translation per user feedback | ✓ Good — v3.4 |
+| "Mazzi Popolari" instead of "Deck Popolari" for Italian heading | Consistent with "Crea Mazzo" naming convention | ✓ Good — v3.4 |
+| SECURITY DEFINER + GRANT TO anon for public RPC | First public endpoint — bypasses RLS for anonymous visitors | ✓ Good — v3.4 |
+| Direct Supabase REST fetch (no client library) for landing | Zero npm dependencies for static landing page | ✓ Good — v3.4 |
+| CI sed placeholder injection for Supabase credentials | Same pattern as __LUMIO_VERSION__, pipe delimiter for URLs with slashes | ✓ Good — v3.4 |
+| Dynamic section injection via JS (no static HTML) | Section hidden when no data — no empty state visible | ✓ Good — v3.4 |
 
 ---
-*Last updated: 2026-03-17 after v3.4 milestone start*
+*Last updated: 2026-03-18 after v3.4 milestone completion*
