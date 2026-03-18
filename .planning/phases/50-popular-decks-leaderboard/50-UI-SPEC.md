@@ -31,15 +31,15 @@ Declared values aligned with existing landing page patterns (rem-based, mapped t
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px (0.25rem) | Inline gaps between tag chips |
-| sm | 8px (0.5rem) | Chip internal padding, rank number gap |
-| md | 16px (1rem) | Gap between leaderboard rows, entry internal padding |
-| lg | 24px (1.5rem) | Container horizontal padding (existing `.container`) |
+| xs | 4px (0.25rem) | Inline gaps between tag chips, chip vertical padding |
+| sm | 8px (0.5rem) | Chip horizontal padding, rank number gap |
+| md | 16px (1rem) | Gap between leaderboard rows, entry vertical padding |
+| lg | 24px (1.5rem) | Container horizontal padding (existing `.container`), entry horizontal padding |
 | xl | 32px (2rem) | Leaderboard list top margin below heading |
-| 2xl | 40px (2.5rem) | Section heading margin-bottom (existing pattern) |
+| 2xl | 48px (3rem) | Section heading margin-bottom |
 | 3xl | 64px (4rem) | Section vertical padding (existing pattern: `padding: 4rem 0`) |
 
-Exceptions: none
+Exceptions: none. All values are multiples of 4 from the standard set {4, 8, 16, 24, 32, 48, 64}.
 
 ---
 
@@ -50,16 +50,18 @@ All sizes match existing landing page typographic scale extracted from `styles.c
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 0.95rem (15.2px) | 400 | 1.5 |
-| Label | 0.85rem (13.6px) | 600 | 1.4 |
+| Label | 0.75rem (12px) | 700 | 1.4 |
 | Heading | 1.75rem (28px) | 700 | 1.2 |
 | Display | not used this phase | - | - |
 
+Two weights only: 400 (regular) and 700 (bold).
+
 Mapping to leaderboard elements:
-- **Section heading** ("Popular Decks" / "Deck Popolari"): Heading role -- 1.75rem, weight 700, `text-align: center`, `margin-bottom: 2.5rem`. Matches existing `.features h2` and `.screenshots h2`.
-- **Deck name**: Body role -- 0.95rem, weight 600, color `var(--text-light)`.
+- **Section heading** ("Popular Decks" / "Deck Popolari"): Heading role -- 1.75rem, weight 700, `text-align: center`, `margin-bottom: 3rem`. Matches existing `.features h2` and `.screenshots h2`.
+- **Deck name**: Body role -- 0.95rem, weight 700, color `var(--text-light)`.
 - **Subscriber count**: Body role -- 0.95rem, weight 400, color `var(--text-secondary)`.
 - **Rank number**: Body role -- 0.95rem, weight 700, color `var(--amber-primary)`.
-- **Tag chip text**: Label role -- 0.85rem, weight 600.
+- **Tag chip text**: Label role -- 0.75rem, weight 700.
 - **Language flag**: Body role -- 0.95rem (emoji, no weight applies).
 
 ---
@@ -108,7 +110,7 @@ Structure: `<section class="popular-decks">` placed in `index.html` after `.feat
 - Background: `var(--card-bg)`
 - Border: `1px solid rgba(124, 58, 237, 0.15)` (matches `.feature-card`)
 - Border-radius: `14px` (matches `.feature-card`)
-- Padding: `1rem 1.25rem`
+- Padding: `1rem 1.5rem` (16px vertical, 24px horizontal)
 - Layout: CSS flexbox, `align-items: center`, `gap: 1rem`
 - No hover state change (entries are not interactive, per CONTEXT.md decision)
 - No cursor pointer, no link wrapping
@@ -117,8 +119,8 @@ Structure: `<section class="popular-decks">` placed in `index.html` after `.feat
 
 - Background: `rgba(124, 58, 237, 0.15)`
 - Color: `var(--purple-primary)`
-- Font: 0.85rem, weight 600
-- Padding: `0.2rem 0.6rem`
+- Font: 0.75rem, weight 700
+- Padding: `0.25rem 0.5rem` (4px vertical, 8px horizontal)
 - Border-radius: `6px`
 - Max visible: 3 chips per entry. If more than 3 tags exist, show first 3 only with no overflow indicator.
 
