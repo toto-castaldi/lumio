@@ -70,7 +70,7 @@
         }
 
         var html = '<section class="popular-decks">' +
-          '<h2><span lang="en">Popular Decks</span><span lang="it">Deck Popolari</span></h2>' +
+          '<h2><span lang="en">Popular Decks</span><span lang="it">Mazzi Popolari</span></h2>' +
           '<ol class="leaderboard-list">';
 
         decks.forEach(function (deck, i) {
