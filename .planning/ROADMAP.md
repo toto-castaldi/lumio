@@ -193,7 +193,7 @@ Full details: `.planning/milestones/v3.3-ROADMAP.md`
 
 **Milestone Goal:** Arricchire il sito pubblico vetrina con link al deck builder e classifica dinamica dei deck condivisi piu popolari.
 
-- [ ] **Phase 49: Deck Builder Navigation** - Header link and hero CTA pointing to the deck builder web app
+- [x] **Phase 49: Deck Builder Navigation** - Header link and hero CTA pointing to the deck builder web app (completed 2026-03-18)
 - [ ] **Phase 50: Popular Decks Leaderboard** - Public RPC and landing page section showing top 10 shared decks by subscribers
 
 ## Phase Details
@@ -206,10 +206,10 @@ Full details: `.planning/milestones/v3.3-ROADMAP.md`
   1. Visitor sees a "Deck Builder" link in the landing page header navigation that opens deck.lumio.toto-castaldi.com
   2. Visitor sees a secondary "Crea Deck" button in the hero section alongside the existing "Download APK" button
   3. Both links navigate to the deck builder web app in a new tab
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 49-01-PLAN.md — Header link + hero CTA button for deck builder navigation
+- [x] 49-01-PLAN.md — Header link + hero CTA button for deck builder navigation
 
 ### Phase 50: Popular Decks Leaderboard
 **Goal**: Visitors see a live ranking of the most popular shared decks, demonstrating platform activity and content quality
@@ -232,9 +232,9 @@ Phases execute in numeric order: 49 → 50
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 49. Deck Builder Navigation | v3.4 | 0/1 | Not started | - |
+| 49. Deck Builder Navigation | v3.4 | 1/1 | Complete | 2026-03-18 |
 | 50. Popular Decks Leaderboard | v3.4 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-01-29*
-*Last updated: 2026-03-17 — Phase 49 planned (1 plan)*
+*Last updated: 2026-03-18 — Phase 49 complete (1/1 plans)*

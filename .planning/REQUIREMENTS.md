@@ -9,8 +9,8 @@ Requirements for Landing Page Enhancement milestone. Each maps to roadmap phases
 
 ### Navigation
 
-- [ ] **NAV-01**: Link al deck builder visibile nell'header della landing page
-- [ ] **NAV-02**: Bottone secondario "Crea Deck" nell'hero accanto a "Download APK"
+- [x] **NAV-01**: Link al deck builder visibile nell'header della landing page
+- [x] **NAV-02**: Bottone secondario "Crea Deck" nell'hero accanto a "Download APK"
 
 ### Leaderboard
 
@@ -36,8 +36,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-01 | Phase 49 | Pending |
-| NAV-02 | Phase 49 | Pending |
+| NAV-01 | Phase 49 | Complete |
+| NAV-02 | Phase 49 | Complete |
 | LEAD-01 | Phase 50 | Pending |
 | LEAD-02 | Phase 50 | Pending |
 | LEAD-03 | Phase 50 | Pending |
