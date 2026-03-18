@@ -194,7 +194,7 @@ Full details: `.planning/milestones/v3.3-ROADMAP.md`
 **Milestone Goal:** Arricchire il sito pubblico vetrina con link al deck builder e classifica dinamica dei deck condivisi piu popolari.
 
 - [x] **Phase 49: Deck Builder Navigation** - Header link and hero CTA pointing to the deck builder web app (completed 2026-03-18)
-- [ ] **Phase 50: Popular Decks Leaderboard** - Public RPC and landing page section showing top 10 shared decks by subscribers
+- [x] **Phase 50: Popular Decks Leaderboard** - Public RPC and landing page section showing top 10 shared decks by subscribers (completed 2026-03-18)
 
 ## Phase Details
 
@@ -220,7 +220,7 @@ Plans:
   2. The landing page displays a "Popular Decks" section after the Features section, populated via client-side fetch on page load
   3. Each deck entry in the leaderboard shows the deck name, subscriber count, tag chips, and language indicator
   4. The leaderboard renders correctly with zero decks (empty state) and updates on every page load
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 50-01-PLAN.md — Public top_decks RPC + landing page leaderboard section with CI integration
@@ -233,7 +233,7 @@ Phases execute in numeric order: 49 → 50
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 49. Deck Builder Navigation | v3.4 | Complete    | 2026-03-18 | 2026-03-18 |
-| 50. Popular Decks Leaderboard | v3.4 | 0/1 | Planning complete | - |
+| 50. Popular Decks Leaderboard | 1/1 | Complete   | 2026-03-18 | - |
 
 ---
 *Roadmap created: 2026-01-29*

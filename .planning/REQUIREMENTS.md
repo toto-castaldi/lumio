@@ -14,9 +14,9 @@ Requirements for Landing Page Enhancement milestone. Each maps to roadmap phases
 
 ### Leaderboard
 
-- [ ] **LEAD-01**: RPC Supabase pubblica `top_decks` che ritorna top 10 deck per subscriber count
-- [ ] **LEAD-02**: Sezione "Popular Decks" nella landing page dopo Features con fetch client-side
-- [ ] **LEAD-03**: Ogni deck nella classifica mostra nome, subscriber count, tag chips, e lingua
+- [x] **LEAD-01**: RPC Supabase pubblica `top_decks` che ritorna top 10 deck per subscriber count
+- [x] **LEAD-02**: Sezione "Popular Decks" nella landing page dopo Features con fetch client-side
+- [x] **LEAD-03**: Ogni deck nella classifica mostra nome, subscriber count, tag chips, e lingua
 
 ## Future Requirements
 
@@ -38,9 +38,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | NAV-01 | Phase 49 | Complete |
 | NAV-02 | Phase 49 | Complete |
-| LEAD-01 | Phase 50 | Pending |
-| LEAD-02 | Phase 50 | Pending |
-| LEAD-03 | Phase 50 | Pending |
+| LEAD-01 | Phase 50 | Complete |
+| LEAD-02 | Phase 50 | Complete |
+| LEAD-03 | Phase 50 | Complete |
 
 **Coverage:**
 - v3.4 requirements: 5 total
