@@ -233,7 +233,7 @@ Phases execute in numeric order: 49 → 50
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 49. Deck Builder Navigation | v3.4 | Complete    | 2026-03-18 | 2026-03-18 |
-| 50. Popular Decks Leaderboard | 1/1 | Complete   | 2026-03-18 | - |
+| 50. Popular Decks Leaderboard | 1/1 | Complete    | 2026-03-18 | - |
 
 ---
 *Roadmap created: 2026-01-29*
