@@ -328,6 +328,97 @@ html[lang="it"] [lang="en"] {
   text-decoration: underline;
 }
 
+/* Popular Decks Leaderboard */
+.popular-decks {
+  padding: 4rem 0;
+}
+
+.popular-decks h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.leaderboard-list {
+  list-style: none;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.leaderboard-entry {
+  background-color: var(--card-bg);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 14px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.entry-rank {
+  color: var(--amber-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  min-width: 2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.entry-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.entry-subscribers {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.entry-lang {
+  font-size: 0.95rem;
+}
+
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.tag-chip {
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--purple-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 /* Responsive: Desktop */
 @media (min-width: 768px) {
   .features-grid {
@@ -362,5 +453,15 @@ html[lang="it"] [lang="en"] {
   .btn-deck-builder {
     width: 100%;
     text-align: center;
+  }
+
+  .leaderboard-entry {
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+  }
+
+  .entry-tags {
+    width: 100%;
+    padding-left: 3rem;
   }
 }

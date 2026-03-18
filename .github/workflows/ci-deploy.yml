@@ -181,6 +181,14 @@ jobs:
           DISPLAY_VERSION="${{ steps.version.outputs.version }}+${{ github.run_number }}.${SHORT_SHA}"
           sed -i "s/__LUMIO_VERSION__/${DISPLAY_VERSION}/g" apps/landing/index.html
 
+      - name: Inject Supabase config into landing page
+        run: |
+          sed -i "s|__SUPABASE_URL__|$SUPABASE_URL|g" apps/landing/script.js
+          sed -i "s|__SUPABASE_ANON_KEY__|$SUPABASE_ANON_KEY|g" apps/landing/script.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
       - name: Deploy to DigitalOcean
         uses: appleboy/scp-action@v0.1.7
         with:
