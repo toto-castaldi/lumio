@@ -1,0 +1,55 @@
+# healthcheck.example.yml — OPS-01 external healthcheck (PLACEHOLDER TEMPLATE)
+#
+# This is a TEMPLATE committed to the public self-hosting repo. The LIVE workflow is
+# materialized in the SOURCE repo (alongside deploy.yml) as:
+#     .github/workflows/healthcheck.yml
+# Copy this file there, then create the GH Actions secrets it references. NO real
+# domains / recipients / sender / Brevo key live in this file — secrets references only.
+# See docs/site-healthcheck-runbook.md for the materialize + secrets + sequencing steps.
+#
+# Why off-jarvis GH cron: it runs OUTSIDE jarvis, so it catches the failure mode that
+# matters — jarvis or the tunnel being down — which an on-jarvis cron would be blind to.
+# Why Brevo transactional API: a single api-key header + one curl POST, smallest secret surface.
+
+name: site healthcheck
+
+on:
+  schedule:
+    # GH enforces a 5-minute MINIMUM; ~15 min is reliable + low-noise. Expect 5-30 min jitter.
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+# No checkout needed → minimal token surface (public-repo Actions hardening).
+permissions:
+  contents: none
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe targets and alert on failure
+        env:
+          # All real values come from GH Actions secrets in the SOURCE repo — never committed.
+          TARGETS: ${{ secrets.HEALTHCHECK_TARGETS }}   # space-separated real domains
+          BREVO_KEY: ${{ secrets.BREVO_API_KEY }}       # Brevo transactional api-key
+          ALERT_TO: ${{ secrets.ALERT_RECIPIENT }}      # operator inbox
+          ALERT_FROM: ${{ secrets.ALERT_SENDER }}       # DKIM/DMARC-authenticated Brevo sender
+        run: |
+          set -u
+          fail=""
+          for url in $TARGETS; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' \
+              --max-time 20 --retry 2 --retry-delay 5 "https://$url/")
+            [ "$code" = "200" ] || fail="$fail $url(=$code)"
+          done
+          if [ -z "$fail" ]; then
+            echo "all up"
+            exit 0
+          fi
+          echo "DOWN:$fail"
+          # On failure, POST a Brevo transactional email. The api-key is a header, never echoed.
+          curl -sS -X POST https://api.brevo.com/v3/smtp/email \
+            -H "api-key: $BREVO_KEY" \
+            -H 'content-type: application/json' \
+            -d "{\"sender\":{\"email\":\"$ALERT_FROM\"},\"to\":[{\"email\":\"$ALERT_TO\"}],\"subject\":\"[jarvis] site DOWN:$fail\",\"textContent\":\"Healthcheck first-failed-observation for:$fail\"}"
+          exit 1
