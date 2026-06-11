@@ -38,8 +38,13 @@ jobs:
           set -u
           fail=""
           for url in $TARGETS; do
+            # `|| true`: GH Actions runs steps under `bash -eo pipefail`, so a DNS/connection
+            # failure (curl exit 6/7/28 — exactly the "jarvis/tunnel down" case) would otherwise
+            # ABORT the step before we can alert. curl still writes %{http_code} (000 on no HTTP
+            # response); we treat anything != 200 (including 000) as DOWN and send the alert.
             code=$(curl -sS -o /dev/null -w '%{http_code}' \
-              --max-time 20 --retry 2 --retry-delay 5 "https://$url/")
+              --max-time 20 --retry 2 --retry-delay 5 "https://$url/" || true)
+            [ -n "$code" ] || code="000"
             [ "$code" = "200" ] || fail="$fail $url(=$code)"
           done
           if [ -z "$fail" ]; then
@@ -48,8 +53,12 @@ jobs:
           fi
           echo "DOWN:$fail"
           # On failure, POST a Brevo transactional email. The api-key is a header, never echoed.
-          curl -sS -X POST https://api.brevo.com/v3/smtp/email \
+          # Capture + echo the Brevo HTTP status + body (messageId on success; never the key) so a
+          # rejected send (e.g. unverified sender, bad key) is visible in the run log instead of a
+          # silent no-mail. `|| true` keeps the intentional `exit 1` (red run) as the last word.
+          resp=$(curl -sS -w '\nHTTP:%{http_code}' -X POST https://api.brevo.com/v3/smtp/email \
             -H "api-key: $BREVO_KEY" \
             -H 'content-type: application/json' \
-            -d "{\"sender\":{\"email\":\"$ALERT_FROM\"},\"to\":[{\"email\":\"$ALERT_TO\"}],\"subject\":\"[jarvis] site DOWN:$fail\",\"textContent\":\"Healthcheck first-failed-observation for:$fail\"}"
+            -d "{\"sender\":{\"email\":\"$ALERT_FROM\"},\"to\":[{\"email\":\"$ALERT_TO\"}],\"subject\":\"[jarvis] site DOWN:$fail\",\"textContent\":\"Healthcheck first-failed-observation for:$fail\"}" || true)
+          echo "brevo-response: $resp"
           exit 1
