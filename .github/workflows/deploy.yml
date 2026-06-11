@@ -1,0 +1,66 @@
+# deploy.yml — Deploy della landing (apps/landing) su jarvis via runner self-hosted.
+# Affianca ci-deploy.yml (che gira sui tag v* → droplet DO): questo gira su ogni push a
+# main e deploya su jarvis (staging del milestone "Static Sites Exit"). Il droplet resta
+# vivo finché non si fa il cutover DNS.
+#
+# Sicurezza (runner self-hosted su repo PUBBLICO):
+#   - Trigger SOLO push:main (mai pull_request) → un push da fork non raggiunge il runner.
+#   - Job guard if: github.repository == 'toto-castaldi/lumio'.
+#   - permissions: contents: read; actions/checkout pinnato a SHA.
+#   - Runner: utente nologin dedicato (dum-e), no sudo, non in docker, drop-in systemd hardened.
+
+name: Deploy to jarvis
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-jarvis
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.repository == 'toto-castaldi/lumio'
+    runs-on: [self-hosted, jarvis, deploy]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 (SHA-pinned)
+
+      - name: Inject version into landing
+        run: |
+          set -euo pipefail
+          # Versione dal Milestone in .planning/STATE.md (no dipendenza node sul runner).
+          VERSION=$(grep -ioE '^milestone:[[:space:]]*v?[0-9.]+' .planning/STATE.md | head -1 | grep -oE '[0-9.]+' | head -1)
+          SHORT_SHA=${GITHUB_SHA::7}
+          DISPLAY_VERSION="${VERSION}+${GITHUB_RUN_NUMBER}.${SHORT_SHA}"
+          sed -i "s/__LUMIO_VERSION__/${DISPLAY_VERSION}/g" apps/landing/index.html
+
+      - name: Inject Supabase config into landing
+        run: |
+          set -euo pipefail
+          sed -i "s|__SUPABASE_URL__|$SUPABASE_URL|g" apps/landing/script.js
+          sed -i "s|__SUPABASE_ANON_KEY__|$SUPABASE_ANON_KEY|g" apps/landing/script.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Deploy to jarvis (release dir + atomic symlink flip)
+        run: |
+          set -euo pipefail
+          WEBROOT="/srv/site-1-frontend/www"          # webroot host-only (montata :ro nel container nginx)
+          DEST="$WEBROOT/releases/$GITHUB_SHA"
+          mkdir -p "$DEST"
+          # Release fresca e completa in una dir versionata (MAI rsync --delete in-place
+          # sulla root viva). package.json escluso (non è un asset web).
+          rsync -a --delete --exclude=package.json apps/landing/ "$DEST/"
+          # Flip ATOMICO del symlink (rename(2)) → nginx serve la nuova release senza reload.
+          ln -sfn "releases/$GITHUB_SHA" "$WEBROOT/.current.tmp"
+          mv -T "$WEBROOT/.current.tmp" "$WEBROOT/current"
+          # Prune: tieni le ultime 5 release (rollback).
+          ls -1dt "$WEBROOT"/releases/*/ | tail -n +6 | xargs -r rm -rf
+          # Log di deploy lato jarvis (D-11; l'altra metà è il tab Actions).
+          printf '%s  deployed %s\n' "$(date -u +%FT%TZ)" "$GITHUB_SHA" >> "$HOME/deploy.log"
