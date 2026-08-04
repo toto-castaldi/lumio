@@ -113,7 +113,7 @@
 - `SENTRY_DSN` - Error tracking
 - `RESEND_API_KEY` - Email delivery service
 - `ENCRYPTION_KEY` - AES-256-GCM key for encrypting user API keys (32 bytes base64)
-- `DOCORA_API_URL` - External Docora API endpoint (default: https://api.docora.toto-castaldi.com)
+- `DOCORA_API_URL` - External Docora API endpoint (default: https://api-docora.toto-castaldi.com)
 - `DOCORA_TOKEN_AUTHENTICATION` - JWT token for Docora API authentication
 - `DOCORA_CLIENT_AUTH_KEY` - HMAC secret for validating webhook signatures from Docora
 

@@ -27,7 +27,7 @@
 
 **Repository Monitoring:**
 - Docora API - Git repository monitoring and webhook delivery
-  - API URL: Environment variable `DOCORA_API_URL` (default: https://api.docora.toto-castaldi.com)
+  - API URL: Environment variable `DOCORA_API_URL` (default: https://api-docora.toto-castaldi.com)
   - Auth: `DOCORA_TOKEN_AUTHENTICATION` (JWT token)
   - Webhook Auth: HMAC-SHA256 with `DOCORA_CLIENT_AUTH_KEY`
   - Implementation: `supabase/functions/git-sync/index.ts` and `supabase/functions/docora-webhook/index.ts`
