@@ -1183,7 +1183,7 @@ openssl rand -base64 32
 | `SENTRY_DSN` | Sentry DSN |
 | `RESEND_API_KEY` | Resend API key for emails |
 | `ENCRYPTION_KEY` | Key for encrypting API keys |
-| `DOCORA_API_URL` | URL Docora API (default: `https://api.docora.toto-castaldi.com`) |
+| `DOCORA_API_URL` | URL Docora API (default: `https://api-docora.toto-castaldi.com`) |
 | `DOCORA_TOKEN_AUTHENTICATION` | JWT per autenticare chiamate a Docora API |
 | `DOCORA_CLIENT_AUTH_KEY` | Secret per verifica HMAC webhook |
 

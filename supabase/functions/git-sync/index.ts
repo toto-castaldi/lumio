@@ -133,7 +133,13 @@ async function getUserId(
 // DOCORA API CLIENT
 // =============================================================================
 
-const DOCORA_API_URL = Deno.env.get("DOCORA_API_URL") || "https://api.docora.toto-castaldi.com";
+// The fallback must stay in sync with the DOCORA_API_URL function secret.
+// Docora moved off the droplet on 2026-08-04. The previous two-level API
+// hostname cannot be served with valid TLS through the new tunnel (free-plan
+// Universal SSL covers a single label only), so it was NOT kept as an alias:
+// it now answers 502 on purpose, so a client left un-repointed fails loudly
+// instead of writing to a database that is about to be destroyed.
+const DOCORA_API_URL = Deno.env.get("DOCORA_API_URL") || "https://api-docora.toto-castaldi.com";
 const DOCORA_TOKEN_AUTHENTICATION = Deno.env.get("DOCORA_TOKEN_AUTHENTICATION");
 
 interface DocoraRepository {
