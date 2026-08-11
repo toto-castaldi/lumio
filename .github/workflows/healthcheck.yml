@@ -1,15 +1,10 @@
-# healthcheck.example.yml — OPS-01 external healthcheck (PLACEHOLDER TEMPLATE)
+# healthcheck.yml — OPS-01 + OPS-03 external healthcheck (LIVE)
 #
-# This is a TEMPLATE committed to the public self-hosting repo. The LIVE workflow is
-# materialized in the SOURCE repo (alongside deploy.yml) as:
-#     .github/workflows/healthcheck.yml
-# Copy this file there, then create the GH Actions secrets it references. NO real
-# domains / recipients / sender / Brevo key live in this file — secrets references only.
-# See docs/site-healthcheck-runbook.md for the materialize + secrets + sequencing steps.
-#
-# Why off-jarvis GH cron: it runs OUTSIDE jarvis, so it catches the failure mode that
-# matters — jarvis or the tunnel being down — which an on-jarvis cron would be blind to.
-# Why Brevo transactional API: a single api-key header + one curl POST, smallest secret surface.
+# MATERIALIZED from the template that lives in the private self-hosting repo at
+#     .github/workflows/healthcheck.example.yml
+# Edit the template first, then re-materialize here — otherwise the two drift and the
+# runbook (docs/site-healthcheck-runbook.md, same repo) stops describing reality.
+# All real values come from GH Actions secrets; none are committed in either copy.
 
 name: site healthcheck
 
@@ -30,22 +25,52 @@ jobs:
       - name: Probe targets and alert on failure
         env:
           # All real values come from GH Actions secrets in the SOURCE repo — never committed.
-          TARGETS: ${{ secrets.HEALTHCHECK_TARGETS }}   # space-separated real domains
+          # TARGETS: space-separated full URLs, optionally `url|expected_status|body_marker`
+          # (and a 4th field, `|probe_token`, for the readiness rung below). Defaults:
+          # expected_status=200, body_marker empty, probe_token empty. A body_marker cannot
+          # contain a space — the list itself is space-separated.
+          TARGETS: ${{ secrets.HEALTHCHECK_TARGETS }}
           BREVO_KEY: ${{ secrets.BREVO_API_KEY }}       # Brevo transactional api-key
           ALERT_TO: ${{ secrets.ALERT_RECIPIENT }}      # operator inbox
           ALERT_FROM: ${{ secrets.ALERT_SENDER }}       # DKIM/DMARC-authenticated Brevo sender
         run: |
           set -u
           fail=""
-          for url in $TARGETS; do
-            # `|| true`: GH Actions runs steps under `bash -eo pipefail`, so a DNS/connection
-            # failure (curl exit 6/7/28 — exactly the "jarvis/tunnel down" case) would otherwise
-            # ABORT the step before we can alert. curl still writes %{http_code} (000 on no HTTP
-            # response); we treat anything != 200 (including 000) as DOWN and send the alert.
-            code=$(curl -sS -o /dev/null -w '%{http_code}' \
-              --max-time 20 --retry 2 --retry-delay 5 "https://$url/" || true)
+          for spec in $TARGETS; do
+            # Split "url|want|marker|token" left to right. Each `[ "$a" = "$b" ]` test means
+            # "this field was absent, because the expansion left the string unchanged".
+            url=${spec%%|*}; rest=${spec#*|}
+            want=${rest%%|*}; [ "$want" = "$spec" ] && want=200
+            rest2=${rest#*|}; [ "$rest2" = "$rest" ] && rest2=""
+            marker=${rest2%%|*}
+            token=${rest2#*|}; [ "$token" = "$rest2" ] && token=""
+            # A token here is NEVER a credential — it is a deliberately invalid literal, and
+            # that is the whole point. Docora's onRequest auth hook queries Postgres BEFORE
+            # routing, so 401 "Invalid token" proves the datastore answered, while 5xx proves
+            # the API is alive but the datastore is not. /health cannot make that distinction:
+            # it returns process uptime and never touches Postgres.
+            auth=()
+            [ -n "$token" ] && auth=(-H "Authorization: Bearer $token")
+            # `|| true` is LOAD-BEARING: GH Actions runs steps under `bash -eo pipefail`, so a
+            # DNS/connection failure (curl exit 6/7/28 — exactly the "jarvis/tunnel down" case)
+            # would otherwise ABORT the step before we can alert, i.e. the check would fail
+            # silently in precisely the case it exists for. This is the Phase 9 bug. Do not
+            # remove it. curl still writes %{http_code} (000 when there is no HTTP response at
+            # all); anything that is not the expected status, 000 included, is treated as DOWN.
+            out=$(curl -sS -w '\n%{http_code}' \
+              --max-time 20 --retry 2 --retry-delay 5 "${auth[@]}" "$url" || true)
+            code=$(printf '%s' "$out" | tail -n1)
+            body=$(printf '%s' "$out" | sed '$d')
             [ -n "$code" ] || code="000"
-            [ "$code" = "200" ] || fail="$fail $url(=$code)"
+            if [ "$code" != "$want" ]; then fail="$fail $url(=$code)"; continue; fi
+            # Status alone is not a strong enough assertion: a Cloudflare Access 302, a CF
+            # error page or an "always online" cache can satisfy a status-only check while the
+            # thing behind it is gone. Phase 15 measured this — asserting on the status alone
+            # "would have produced a false green on the most important security check of the
+            # window". So an expected status may be paired with a required body marker.
+            if [ -n "$marker" ] && ! printf '%s' "$body" | grep -q "$marker"; then
+              fail="$fail $url(body!~$marker)"
+            fi
           done
           if [ -z "$fail" ]; then
             echo "all up"
